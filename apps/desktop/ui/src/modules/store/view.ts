@@ -7,7 +7,7 @@
    its item row and holds its facts as Cards of rows; the review is the form card with its hold; Installed is the item rows with their
    Switches; Sources is a Card of rows with Switches. The view never fetches: it reads and writes through `StoreProvider`, and shows each
    failure as the host's own sentence. An item's own text is marked `data-store-item`. */
-import { kit } from '@boopis/ui';
+import { brandMarkHTML, kit } from '@boopis/ui';
 import { letters } from '../../core/letters';
 import { clipSpots, tipsIfClipped, watchCuts } from '../../core/clip';
 import { STORE_ITEM } from '../../core/engine-words';
@@ -18,7 +18,7 @@ import '../cards';
 import { useFormsHost } from '../cards/forms-host';
 import {
   errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_GROUP, KIND_LABEL, KIND_SHORT, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, byKind, countsWords, endWord, errorText, filterOf, hostsWords, isFront, licenseWords, pinWords, plural,
-  outOfDate, readingWords, reviewSpec, scanWords, sourceState, stateOf
+  markRef, outOfDate, readingWords, reviewSpec, scanWords, sourceState, stateOf
 } from './model';
 import { projectSwitch } from './policy';
 import { keepFresh, readerFor } from './reading';
@@ -60,9 +60,12 @@ const sinkOf = (h: { submit(id: string, o: FormOutcome): Promise<void>; cancel(i
   submit: h.submit, cancel: h.cancel, signin: () => Promise.reject(new Error('There is nothing to sign in to here.')),
   can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
 });
-/** an item's tile: a mod's glyph (board 15's Mods), else its letters */
-const tile = (i: { kind: StoreKind; title?: string | undefined; item_id?: string }): { markText?: string; markHTML?: string } =>
-  i.kind === 'mod' ? { markHTML: ui.icon('mod') } : { markText: letters(i.title ?? i.item_id ?? '') };
+/** an item's tile: a mod's glyph (board 15's Mods), else its brand's mark in colour (the owner, 27 November: conflict 30), else its letters */
+const tile = (i: Parameters<typeof markRef>[0]): { markText?: string; markHTML?: string } => {
+  if (i.kind === 'mod') return { markHTML: ui.icon('mod') };
+  const mark = brandMarkHTML(markRef(i));
+  return mark ? { markHTML: mark } : { markText: letters(i.title ?? i.item_id ?? '') };
+};
 
 export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   const { store } = deps;

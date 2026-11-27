@@ -58,7 +58,7 @@ export const contract = defineContract<CardOpts>({
   parts: ['Row', 'k7-card__head', 'k7-card__body'],
   tokens: [
     '--accent-text', '--bg-3', '--card-line', '--dur-1', '--dur-out', '--ease-out', '--ease-sharp', '--focus-w', '--fs-m',
-    '--fs-s', '--fs-xs', '--hl', '--hover', '--icon-quiet', '--icon-s', '--lh-m', '--lh-s', '--lh-xs', '--pad-btn-card',
+    '--fs-s', '--fs-xs', '--hl', '--hover', '--icon-quiet', '--icon-s', '--sp-1', '--lh-m', '--lh-s', '--lh-xs', '--pad-btn-card',
     '--pad-card', '--pad-kbd', '--pad-queue', '--pad-set-x', '--pad-set-y', '--pill-h', '--r-card', '--r-nav', '--red-text',
     '--session-h', '--shadow-inline', '--sp-3', '--text', '--text-dim', '--track-s'
   ],

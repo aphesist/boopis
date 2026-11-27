@@ -460,7 +460,7 @@ A `board` row can still hold a derived part or a conflict: its Reference cell sa
 | Connectors for one bot: its own list, none yet, could not be read | yes, story `settings/connectors-for` | derived: as above, with a SelectorItem naming the bot | works today | built, step 7b: the "Connectors for" select over the same page |
 | Adding a connector: from the collection, a URL or a command; the review; an OAuth sign-in | yes, `host/connectors.ts` | derived: the form rows of section 10; `O-B06` "Add GitHub" | works today | not started (no step) |
 | "boopis restarted to read the key" after an install | yes, `host/connectors-notice.ts` | derived: `session/S17` Notice; kit Notice | works today | not started (no step) |
-| An item's mark (a brand, a publisher's tile, letters) | letters, `core/letters.ts` (the v6 `components/item-mark.ts` deleted at step 8; its brand files stay in `vendor/service-marks/`) | board `v7/15-store-*.jpg`; see conflict 30 | works today | matched, step 7b: board 15 draws letters (C7, GH) in every tile, a mod's glyph; brand and publisher marks no longer show on the Store's rows (an owner question, conflict 30) |
+| An item's mark (a brand, a publisher's tile, letters) | yes, `components/item-mark.ts` (`brandMarkHTML`) in the kit's ListRow item tile and the pane's Card row; letters (`core/letters.ts`) where no mark is known; a mod's glyph | board `v7/15-store-*.jpg`; see conflict 30 | works today | decided by the owner at step 8 (27 November): the real brand logos in colour on the Store's, Settings › Connectors' and the pane's connector rows; board 15's letters lose (conflict 30, resolved) |
 
 ## 13. Models and sign-ins
 
@@ -815,7 +815,9 @@ Both sides as they are written or drawn. None is resolved here.
     Connect a chat app"; whether the app can do that could not be determined (no module was found for it). **At step 8:** the card
     shows the dock's row only; the notch and the phone rows show where the host has them (none does).
 30. **An item's mark in the Store.** `docs/UI-COMPONENTS.md`: "Item marks and item rows … (brand colours and publisher tiles:
-    the owner, 23 November 2026)". `v7/15-store-*.jpg` draws grey tiles with two letters ("C7", "GH", "LN").
+    the owner, 23 November 2026)". `v7/15-store-*.jpg` draws grey tiles with two letters ("C7", "GH", "LN"). **Resolved by the owner (27 November, step 8):** the Store, Connectors
+    and the pane's connector rows show the real brand logos in colour (the item-mark path: brand colours with their contrast per
+    preset, a proven publisher's mark) in the kit's item tile; letters only where no mark is known; a mod keeps its glyph.
 31. **Where a floating notice sits.** The spec's Notice: "floating (bottom centre, was the toast)". The app's toast: "one
     line at the top of the work". No board draws a floating notice on a key screen (`v7/03-light-shadows.jpg` draws one as
     a sample).

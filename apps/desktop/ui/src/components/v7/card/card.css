@@ -9,6 +9,7 @@
 .k7-card[data-sq-on]:not(#sq) { box-shadow: var(--sq-shadow); }
 .k7-row { display: flex; align-items: center; gap: var(--sp-3); min-height: var(--session-h); padding: var(--pad-set-y) var(--pad-set-x); box-sizing: border-box; min-width: 0; }
 .k7-row__label { flex: 1 1 auto; min-width: 0; font-size: var(--fs-m); line-height: var(--lh-m); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.k7-row > svg[data-brand] { flex: none; width: var(--icon-s); height: var(--icon-s); margin-inline-end: calc(var(--sp-1) - var(--sp-3)); color: light-dark(var(--mk-l), var(--mk-d)); }   /* a connector's brand mark before its name (the pane; the owner, conflict 30): 4 from the name */
 .k7-row__value { flex: none; font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text-dim); white-space: nowrap; }
 .k7-row__value.k7-mono { font-size: var(--fs-xs); }
 /* a value with a lead (kit.css: a `.row.s.dim` of a 14 mark and the name, 5 apart), and a label's second line (12 --text-dim on the label's line) */

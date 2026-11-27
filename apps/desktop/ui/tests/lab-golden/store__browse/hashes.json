@@ -20,42 +20,42 @@
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@bone": {
-  "sha": "c97dc540576bf5efd4bf48724f05038bbfdda31f",
+  "sha": "63034925c1915239b0241c62919bda64f37573ee",
   "w": 1416,
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@catalog": {
-  "sha": "f499a72862358911f28cd763b370c13942733dfd",
+  "sha": "0afbb1989a264749bcc60a636c79ce0596f62b9b",
   "w": 1416,
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@graphite": {
-  "sha": "a9d4f50b5724d4e1ad9bf5bed449262114741ede",
+  "sha": "37e621d3dac52c937af450b30a3899f1ffdcfff2",
   "w": 1416,
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@typewriter": {
-  "sha": "a9d4f50b5724d4e1ad9bf5bed449262114741ede",
+  "sha": "37e621d3dac52c937af450b30a3899f1ffdcfff2",
   "w": 1416,
   "h": 664
  },
  "connectors-only@bone": {
-  "sha": "c1ebb1d92a8e40b0c9ae8c02434cff267a1844ad",
+  "sha": "290f70c66e8e63e4da2badf5c8137078bd5952ac",
   "w": 1416,
   "h": 664
  },
  "connectors-only@catalog": {
-  "sha": "a7cb850a7eaee48287ebe92efaaecc5e147920b6",
+  "sha": "8569ceb098f5321d2b43f50e4d00cd7d5f380e0d",
   "w": 1416,
   "h": 664
  },
  "connectors-only@graphite": {
-  "sha": "fd755b3db90c9f4af7af3b83854ba312199d5de2",
+  "sha": "6536b21464d797bac8c4a5a14f9120154bb46dc0",
   "w": 1416,
   "h": 664
  },
  "connectors-only@typewriter": {
-  "sha": "fd755b3db90c9f4af7af3b83854ba312199d5de2",
+  "sha": "8aa1cc40affe66eda0b6f2c54dab57620f94e7f6",
   "w": 1416,
   "h": 664
  },
@@ -105,7 +105,7 @@
   "h": 664
  },
  "get-focus@catalog": {
-  "sha": "097689c5a3a6ec5f350a2c5b5c5be96fb05696d0",
+  "sha": "16ddf4be2ccd92cedd8cedd2d1144a9587879fd0",
   "w": 1416,
   "h": 664
  },
@@ -145,7 +145,7 @@
   "h": 664
  },
  "long-names@catalog": {
-  "sha": "028a0177b75fbd24218c128613312f0cbe2045c0",
+  "sha": "ef19bea159d8bcb119350312e117e47778dbb430",
   "w": 1416,
   "h": 664
  },
@@ -285,7 +285,7 @@
   "h": 664
  },
  "out-of-date-several-could-not-be-read-with-the-reasons-one-tap-away@catalog": {
-  "sha": "83eba0844a74412907d4cb5c74e279ba76b81649",
+  "sha": "bfbae503c992509a3446e29c71a339d34f734a2d",
   "w": 1416,
   "h": 664
  },
@@ -310,7 +310,7 @@
   "h": 664
  },
  "row-hover@graphite": {
-  "sha": "8fa88a40ca7ef7c23f027b4c5e1209facb94f324",
+  "sha": "dfb4f8b30fbd6928dad32212b6411268379e5874",
   "w": 1416,
   "h": 664
  },
@@ -340,62 +340,62 @@
   "h": 664
  },
  "search-with-results-across-kinds@bone": {
-  "sha": "46342793633ac7a42657a6a04ac03a29650d40ab",
+  "sha": "0b2d1723d4e7f7eef4670e0aef4ced0d05f2e1e1",
   "w": 1416,
   "h": 664
  },
  "search-with-results-across-kinds@catalog": {
-  "sha": "bb48c621e84c044a60b2375c8bcf63506998fd52",
+  "sha": "097a0c73315a8a9c0280aea28b87178380ecfd33",
   "w": 1416,
   "h": 664
  },
  "search-with-results-across-kinds@graphite": {
-  "sha": "fa5fcf06893b7f7103f1f59df50d5e746e850757",
+  "sha": "20780b8dbf0c2bd55117acabdff8ce504cca3b20",
   "w": 1416,
   "h": 664
  },
  "search-with-results-across-kinds@typewriter": {
-  "sha": "fa5fcf06893b7f7103f1f59df50d5e746e850757",
+  "sha": "20780b8dbf0c2bd55117acabdff8ce504cca3b20",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@bone": {
-  "sha": "ce78cf49dd37d9811bbbf39c1d45a14f7bfa2bba",
+  "sha": "3fece3353da8838faf85f9d493f6e717db688bdd",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@catalog": {
-  "sha": "5039427e1320ae24d691cc26a0c390be466dbacd",
+  "sha": "cd6609407978be312af51fce54bbe3b4439d3301",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@graphite": {
-  "sha": "701d7ae574836f28c3bcd8163546cdf19735223f",
+  "sha": "0b2394a7b3be1bca3f81f4d2cfa4e77a41ab4a04",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@typewriter": {
-  "sha": "fc920af12b2d10a19535370b0d37a63932760a83",
+  "sha": "0b2394a7b3be1bca3f81f4d2cfa4e77a41ab4a04",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@bone": {
-  "sha": "f44fd7f8f121334d3ec8ca072f604be0939971f9",
+  "sha": "36a88cc23ceafc13b8ee6066d732663ffc5b41a8",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@catalog": {
-  "sha": "ed4427ed2882e7c88e82d50dc0e9ad768698b11e",
+  "sha": "8b5c560d91bac86ce94503e964bae6cdfcfd0c80",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@graphite": {
-  "sha": "63a85c0093cc2f2861e6795de2455ec848deae59",
+  "sha": "735a43abec2a35074fb701dfdf5cca01e436dc00",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@typewriter": {
-  "sha": "2b4770cced198043ae1757760b977f9009ecd1c6",
+  "sha": "735a43abec2a35074fb701dfdf5cca01e436dc00",
   "w": 1416,
   "h": 664
  },
@@ -450,7 +450,7 @@
   "h": 664
  },
  "up-to-date-after-a-read@graphite": {
-  "sha": "aa1c0a0fd516cfb3decd9142c958ea0dce4cf057",
+  "sha": "dc237f6ec7948b5a7ddd4054881e252b67bfdbd6",
   "w": 1416,
   "h": 664
  },

@@ -14,6 +14,7 @@ import { botLabel, botState, STATES } from './bot-state';
 import { card } from './card-registry';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
+import type { ItemMarkOpts, ItemRef } from './item-mark';
 import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
 import { icon, iconNames } from './icons';
 import { layer, popover } from './layer';
@@ -77,7 +78,11 @@ const factories = {
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group),
   signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
-  stack: make<StackOpts>(html.stack)
+  stack: make<StackOpts>(html.stack),
+  /** an item's tile: the service a connector connects to, or a proven publisher, else its monogram (item-mark.ts) */
+  itemMark: make<ItemRef & ItemMarkOpts>((o) => html.itemMark(o, o)),
+  /** a publisher's name with its mark first when the kit has one */
+  publisher: make<string>((p) => html.publisher(p))
 };
 /** `ui.markdown(text, ctx)` draws what a bot or an agent wrote (markdown.ts); its properties are the parts the surfaces use */
 const markdown = Object.assign(markdownEl, {
@@ -137,6 +142,8 @@ export type { PresenceActor, PresenceElement, PresenceLayout, PresenceMode, Pres
 export { kbd, keys as keyChips, combo, comboKbds, keysVariants } from './kbd';
 export type { KeysOpts } from './kbd';
 /* every component's variants, for the UI lab's stories (variants.ts) */
+export { serviceMarkOf, publisherMarkOf, monogram, serviceMarks, serviceMark, packageOf, tileMarkOf, brandMarkHTML } from './item-mark';
+export type { ItemRef, ItemMarkOpts, ItemMarkSize, ServiceMark } from './item-mark';
 export { variants } from './variants';
 export type { ComponentName } from './variants';
 export type { InputOpts, BadgeOpts } from './html';

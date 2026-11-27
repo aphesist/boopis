@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fixtures from '../../../../../shared/data/store.fixtures.json';
 import type { InstallPlan, StoreItem, UpdateDiff } from '../../data';
-import { ageWords, byKind, countsWords, endWord, freshness, hostsWords, needsWord, remoteUrl, reviewSpec, rowLine, sourceState, stateOf, TIER_WORDS } from './model';
+import { ageWords, byKind, countsWords, endWord, freshness, hostsWords, markRef, needsWord, remoteUrl, reviewSpec, rowLine, sourceState, stateOf, TIER_WORDS } from './model';
 
 const FX = fixtures as unknown as { items: StoreItem[]; plans: InstallPlan[]; diffs: UpdateDiff[] };
 const plan = (id: string): InstallPlan => FX.plans.find((p) => p.item_id === id) as InstallPlan;
@@ -106,8 +106,15 @@ describe('how an item reads in a list', () => {
     expect(g[0]?.items.map((i) => i.id)).toEqual(FX.items.filter((i) => i.kind === 'skill').map((i) => i.id));
     expect(byKind([])).toEqual([]);
   });
-  it('reads a hosted connector\'s address from its pin', () => {
+  it('draws the tile from the item\'s own evidence: a curated connector\'s collection id, a hosted one\'s address', () => {
+    expect(markRef(item('boopis:firecrawl'))).toMatchObject({ name: 'Firecrawl', kind: 'connector', collection: 'firecrawl' });
+    expect(markRef(item('boopis:release-notes'))).toMatchObject({ publisher: 'Example Org', proven: true });
+    expect(markRef({ ...item('local:focus-theme'), provenance: { ...item('local:focus-theme').provenance, namespace_proof: 'none' } }).proven).toBe(false);
+    expect(markRef({ item_id: 'boopis:skills/pdf', kind: 'skill', source: 'boopis' })).toMatchObject({ publisher: null, proven: false });   /* a receipt names no publisher */
+    expect(markRef(item('boopis:release-notes')).collection).toBeNull();
+    expect(markRef(item('mcp-registry:com.example/tickets')).collection).toBeNull();
     expect(remoteUrl({ type: 'version', value: 'hosted', repo: 'remote:https://mcp.notion.com/mcp' })).toBe('https://mcp.notion.com/mcp');
     expect(remoteUrl({ type: 'commit', value: 'abc', repo: 'https://github.com/x/y' })).toBeNull();
+    expect(markRef({ item_id: 'boopis:notion', kind: 'connector', source: 'boopis', pinned: { type: 'version', value: 'hosted', repo: 'remote:https://mcp.notion.com/mcp' } })).toMatchObject({ name: 'notion', collection: 'notion', url: 'https://mcp.notion.com/mcp' });
   });
 });

@@ -375,6 +375,8 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       });
       placeReading();
     };
+    /* the window changes size: the reading follows its mark */
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { if (screen.k === 'try') placeReading(); }).observe(root);
     /* the reading's menu sits above its mark: its start 8 left of the mark, its foot 8 over the mark's top (ob3-screens.js `place`) */
     const placeReading = (): void => {
       const menu = root.querySelector<HTMLElement>('[data-fr-reading]'), m = root.querySelector<HTMLElement>('[data-fr-try] [data-mark="open"]'), box = root.querySelector<HTMLElement>('.hx-fr__try');

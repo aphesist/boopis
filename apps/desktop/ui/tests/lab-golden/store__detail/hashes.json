@@ -1,46 +1,46 @@
 {
  "a-connector-that-needs-a-key@bone": {
-  "sha": "4478bb17c01af8914986b0a2dfc4735de22ace2f",
+  "sha": "76d5acc024a9be4b3e8b5c854faf40c9c936be08",
   "w": 1416,
   "h": 664
  },
  "a-connector-that-needs-a-key@catalog": {
-  "sha": "a372e046f6f8e20d2a4f73dea0378f4e809106d2",
+  "sha": "79ced3ee0c4428f0fd406f17d1b38f63610888d9",
   "w": 1416,
   "h": 664
  },
  "a-connector-that-needs-a-key@graphite": {
-  "sha": "4b9b412299f698552e62dae8fb2d1d120ad17c8f",
+  "sha": "473ec38fa9454bc3cfdba0685c0a97c507359cc6",
   "w": 1416,
   "h": 664
  },
  "a-connector-that-needs-a-key@typewriter": {
-  "sha": "15cb88fd74987069de03d6f3273b0102887a7791",
+  "sha": "473ec38fa9454bc3cfdba0685c0a97c507359cc6",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@bone": {
-  "sha": "dc1f5b880755aac164fec1662faeddb7ed9de544",
+  "sha": "29ba8cdb273b419d18faf563cbf7beac1cd05f13",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@catalog": {
-  "sha": "0ad053310a947c3cb5fe1f03b78f9893fea1717f",
+  "sha": "9cd2d6719e476d915bad3976d9cd5e5c9cb1904e",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@graphite": {
-  "sha": "a6d39d078ecdfdb0fa09309db0337fcfc8931f05",
+  "sha": "2a9977028b662d64daf868badb265d864ebf0e83",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector-from-the-collection-sign-in@typewriter": {
-  "sha": "a6d39d078ecdfdb0fa09309db0337fcfc8931f05",
+  "sha": "2a9977028b662d64daf868badb265d864ebf0e83",
   "w": 1416,
   "h": 664
  },
  "a-hosted-connector@bone": {
-  "sha": "e3eff492e26efed8cde394bcc7bde325723a7256",
+  "sha": "376554e3484b2f99fe1f93180e929eb5366d61c8",
   "w": 1416,
   "h": 664
  },
@@ -50,7 +50,7 @@
   "h": 664
  },
  "a-hosted-connector@graphite": {
-  "sha": "7a34edc582dc6553fb03d339341a2c6ee85e63eb",
+  "sha": "4e5c0a88ea09958e90184c944f2e4304c93edb5b",
   "w": 1416,
   "h": 664
  },
@@ -65,7 +65,7 @@
   "h": 664
  },
  "a-recommended-connector@catalog": {
-  "sha": "f3e1913762eb66fe51888615d8ae66d63d6e616a",
+  "sha": "0be70de7f6a2eba2e9e22c0691888b7adc6aa336",
   "w": 1416,
   "h": 664
  },
@@ -80,22 +80,22 @@
   "h": 664
  },
  "a-skill-from-the-recommended-list@bone": {
-  "sha": "1e675b32d020bdc0d6efc2d32aef3f38e0e78cfb",
+  "sha": "664d104a3684bbf8016d97ed92123c4d54a7c92a",
   "w": 1416,
   "h": 664
  },
  "a-skill-from-the-recommended-list@catalog": {
-  "sha": "51c35a7ab105f815580617378c9043c7d7f2e7ce",
+  "sha": "10e603dc1feeb01b25918ad255d26e72d3b83b1e",
   "w": 1416,
   "h": 664
  },
  "a-skill-from-the-recommended-list@graphite": {
-  "sha": "e4dc01ff0382fb0ec0072482f619e6e4ebb2b713",
+  "sha": "b10083690ef0e44044785f75f3eafbe255a1d9ca",
   "w": 1416,
   "h": 664
  },
  "a-skill-from-the-recommended-list@typewriter": {
-  "sha": "e4dc01ff0382fb0ec0072482f619e6e4ebb2b713",
+  "sha": "b10083690ef0e44044785f75f3eafbe255a1d9ca",
   "w": 1416,
   "h": 664
  },
@@ -110,7 +110,7 @@
   "h": 664
  },
  "an-engine-plugin-runs-inside-the-engine@graphite": {
-  "sha": "d33c0cf5939ddacda0d2dd4e529add8f1a0106df",
+  "sha": "95b394f3c3e3fbe27beb4c0340aae49fbff0e984",
   "w": 1416,
   "h": 664
  },
@@ -145,7 +145,7 @@
   "h": 664
  },
  "installed-with-an-update@catalog": {
-  "sha": "4e54027530b2e8fd278a42d551de0127a8149aae",
+  "sha": "0f8b998d0b5b749e12da7cde292c46247609157b",
   "w": 1416,
   "h": 664
  },
@@ -155,7 +155,7 @@
   "h": 664
  },
  "installed-with-an-update@typewriter": {
-  "sha": "25a19702f738663afa6b27ab6ce478f13c78ee65",
+  "sha": "8e505708edbbb809cbbe0c60d4b5fbcedb9ce167",
   "w": 1416,
   "h": 664
  },
@@ -225,12 +225,12 @@
   "h": 664
  },
  "taken-down-by-its-source@catalog": {
-  "sha": "ab881ebc499cb5258b38344950e867e7b23401e1",
+  "sha": "3ce3bbcf5443033eb60cf2fd7d3d1ac931d521eb",
   "w": 1416,
   "h": 664
  },
  "taken-down-by-its-source@graphite": {
-  "sha": "5ea9568087ebe720623dbe2e2f1617ee222f3319",
+  "sha": "15a849879d7fce0827503d648ce6e732406dfc35",
   "w": 1416,
   "h": 664
  },

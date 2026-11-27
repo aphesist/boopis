@@ -153,13 +153,14 @@ describe('the Connectors tab', () => {
     expect(document.querySelector('[data-kit~="Menu"]')).toBeNull();
   });
 
-  it('draws an installed connector from the collection with the collection\'s tile letters', async () => {
-    const f = fake([info({ name: 'github' })]);
+  it('draws a connector\'s brand mark in colour in both lists, and letters where none is known', async () => {
+    const f = fake([info({ name: 'github', url: 'https://api.githubcopilot.com/mcp/', command: null, args: [] }), info({ name: 'notes' })]);
     f.catalog = () => Promise.resolve([{ id: 'github', name: 'GitHub', publisher: 'GitHub', description: 'Code.', license: 'MIT', verified: '2026-11-19', variants: [{ id: 'hosted', label: 'Hosted', summary: 'Hosted.', reaches: 'x', pinned: null, default: true }] }]);
     const { panel } = await mount(f);
-    const tiles = [...panel.querySelectorAll('[data-kit~="ListRow"]')].filter((r) => /github/i.test(r.textContent ?? '')).map((r) => r.querySelector('.k7-lrow__mark, [data-kit-part="ListRowMark"]')?.textContent?.trim() ?? r.textContent?.slice(0, 2));
-    expect(tiles.length).toBe(2);
-    expect(new Set(tiles).size).toBe(1);
+    const rows = [...panel.querySelectorAll('[data-kit~="ListRow"]')];
+    const gh = rows.filter((r) => /github/i.test(r.textContent ?? '')).map((r) => r.querySelector('.k7-lrow__mark svg')?.getAttribute('data-mark'));
+    expect(gh).toEqual(['github', 'github']);
+    expect(rows.find((r) => r.textContent?.includes('notes'))?.querySelector('.k7-lrow__mark')?.textContent).toBe('NT');
   });
 
   it('narrows the installed list and the collection as you type, and says when nothing matches', async () => {

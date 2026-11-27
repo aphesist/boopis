@@ -17,7 +17,7 @@
 import { emit, on } from '../../core/bus';
 import { cap1, esc } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { kit, ui } from '@boopis/ui';
+import { brandMarkHTML, kit, ui } from '@boopis/ui';
 import type { DiffLine } from '@boopis/ui';
 import { data } from '../../data';
 import { CAREFUL } from '../../data';
@@ -128,6 +128,8 @@ function connectorsCard(): string {
   /* each connector on one line of the pane's Card: its own name as it is (ADR-0031), what it gives as the row's quiet value, and its
      Switch, or Sign in where it owes one; the store at the foot */
   const rows = list.map((c) => ({
+    /* its service's brand mark in colour where one is known (the owner, 27 November: conflict 30) */
+    ...((m) => (m ? { leadHTML: m } : {}))(brandMarkHTML({ name: c.name, collection: c.name })),
     label: c.name, value: c.hint ?? (c.tools === 1 ? '1 tool' : String(c.tools) + ' tools'),
     control: c.state === 'sign in'
       ? kit.html.button({ label: 'Sign in', size: 28, variant: 'tint', ...(can.signIn ? {} : { disabled: true }), attrs: { 'data-signin': c.name, 'aria-label': 'Sign in to ' + c.name } })

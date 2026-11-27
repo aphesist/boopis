@@ -1,0 +1,23 @@
+{
+  "about": "The boopis bot's first-run examples (boards O-B02 and O-B03, as drawn): the three bots it could make, and the bot each goal gets. Looks are data, like a bot's own.",
+  "looks": {
+    "kai": { "color": "#4fc9a8", "shape": "circle" },
+    "moss": { "color": "#2fd26a", "shape": "squircle" },
+    "iris": { "color": "#3b82f6", "shape": "flower" },
+    "nimbus": { "color": "#9b5cf6", "shape": "cloud" },
+    "nina": { "color": "#f23b5a", "shape": "triangle" }
+  },
+  "examples": [
+    { "id": "kai", "job": "Reviews pull requests" },
+    { "id": "moss", "job": "Runs the tests at night" },
+    { "id": "iris", "job": "Writes the release notes" }
+  ],
+  "goals": [
+    { "label": "Code and reviews", "icon": "fork", "bot": "kai" },
+    { "label": "Research and writing", "icon": "search", "bot": "iris" },
+    { "label": "Videos and posts", "icon": "play", "bot": "nimbus" },
+    { "label": "Data and reports", "icon": "sliders", "bot": "moss" },
+    { "label": "Inbox and calendar", "icon": "clock", "bot": "nina" },
+    { "label": "Something else", "icon": "more", "bot": null }
+  ]
+}

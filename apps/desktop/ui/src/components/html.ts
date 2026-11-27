@@ -2,6 +2,7 @@
    index.ts wrap these and wire the behaviours, so there is one markup for every primitive. Class names and DOM output
    are the v6 library's, so components.css ports 1:1. No colour, family or size lives here. */
 import { attrs, cx, esc, nid } from '../core/dom';
+import { itemMarkHTML, publisherHTML } from './item-mark';
 import type { Attrs } from '../core/dom';
 import { ariaKeys } from '../core/keys';
 import { combo, comboKbds, kbd, keys } from './kbd';
@@ -281,5 +282,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, section, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
-  scroll, tabs, tipBody, badge, input, signinButton, stack
+  scroll, tabs, tipBody, badge, input, signinButton, stack, itemMark: itemMarkHTML, publisher: publisherHTML
 };

@@ -6,7 +6,7 @@
 
    The owner's decisions win over the boards (27 November): only the owner's Approvals list asks (bots have no asks of their own), paying
    with a saved card is a built-in protection, and there is no spending cap by default. */
-import { kit, ui } from '@boopis/ui';
+import { brandMarkHTML, kit, ui } from '@boopis/ui';
 import type { Tile } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, OnboardingSource, TeamPlan } from '../../data';
@@ -14,24 +14,17 @@ import type { Rule } from '../../data/settings-host';
 import { emit } from '../../core/bus';
 import { BUILT_IN, everyBot, isDraft, ruleRow } from '../settings/rule-parts';
 import { letters } from '../../core/letters';
+import examples from './examples.json';
 import { ledger, writeLedger } from './ledger';
 
 /** where the conversation is: one exchange each (the boards draw each on its own: the time, your last answer, the bot's words, the card) */
 export type BotsStep = 'greet' | 'what' | 'goals' | 'place' | 'name' | 'team' | 'rules' | 'built' | 'reach';
 /** the examples the bot shows of what a bot is (O-B02, as drawn), and the bot each goal gets (O-B03) */
-const EXAMPLES: ReadonlyArray<{ id: string; job: string; color: string; shape: string }> = [
-  { id: 'kai', job: 'Reviews pull requests', color: '#4fc9a8', shape: 'circle' },
-  { id: 'moss', job: 'Runs the tests at night', color: '#2fd26a', shape: 'squircle' },
-  { id: 'iris', job: 'Writes the release notes', color: '#3b82f6', shape: 'flower' }
-];
-const GOALS: ReadonlyArray<{ label: string; icon: string; bot: { id: string; color: string; shape: string } | null }> = [
-  { label: 'Code and reviews', icon: 'fork', bot: { id: 'kai', color: '#4fc9a8', shape: 'circle' } },
-  { label: 'Research and writing', icon: 'search', bot: { id: 'iris', color: '#3b82f6', shape: 'flower' } },
-  { label: 'Videos and posts', icon: 'play', bot: { id: 'nimbus', color: '#9b5cf6', shape: 'cloud' } },
-  { label: 'Data and reports', icon: 'sliders', bot: { id: 'moss', color: '#2fd26a', shape: 'squircle' } },
-  { label: 'Inbox and calendar', icon: 'clock', bot: { id: 'nina', color: '#f23b5a', shape: 'triangle' } },
-  { label: 'Something else', icon: 'more', bot: null }
-];
+type Look = { id: string; color: string; shape: string };
+const LOOKS: Readonly<Record<string, { color: string; shape: string }>> = examples.looks;
+const look = (id: string): Look => ({ id, ...(LOOKS[id] ?? { color: '', shape: 'circle' }) });
+const EXAMPLES: ReadonlyArray<Look & { job: string }> = examples.examples.map((e) => ({ ...look(e.id), job: e.job }));
+const GOALS: ReadonlyArray<{ label: string; icon: string; bot: Look | null }> = examples.goals.map((g) => ({ label: g.label, icon: g.icon, bot: g.bot ? look(g.bot) : null }));
 /** the clock the exchange's time is read from (the lab sets the board's) */
 export const botsClock = { now: (): Date => new Date(), /** the lab holds the step the board draws */ hold: false };
 
@@ -134,7 +127,7 @@ async function teamExchange(src: OnboardingSource, time: string): Promise<string
         answers: [{ label: 'Hold to build this team', primary: true, hold: true, value: 'build' }, { label: 'Change it', value: 'change' }, { label: 'Just you and me', value: 'alone' }], ...(S.error ? { error: S.error } : {}), attrs: { 'data-ob': 'team', 'data-plan-hash': plan.hash } })
     : kit.html.askCard({ variant: 'form', state: 'asked', who: 'Team plan', lead: kit.html.avatar({ variant: 'logomark', label: 'boopis' }), word: { text: S.error ? 'failed' : 'thinking', tone: S.error ? 'red' : 'neutral' }, ask: S.error || 'Putting a team together.', attrs: { 'data-ob': 'team' } });
   const connector = offer ? say('They can also use tools you already work in. Each one asks before it does anything.') +
-    kit.html.askCard({ variant: 'form', state: 'asked', who: 'Optional, from the Store', lead: '', word: { text: '' }, ask: '', fields: '<div role="list">' + kit.html.listRow({ variant: 'item', title: offer.name, sub: offer.why, markText: letters(offer.name), action: 'Add ' + offer.name, actionAttrs: { 'data-ob-act': 'connector', 'data-value': offer.id } }) + '</div>',
+    kit.html.askCard({ variant: 'form', state: 'asked', who: 'Optional, from the Store', lead: '', word: { text: '' }, ask: '', fields: '<div role="list">' + kit.html.listRow({ variant: 'item', title: offer.name, sub: offer.why, ...((m) => (m ? { markHTML: m } : { markText: letters(offer.name) }))(brandMarkHTML({ name: offer.name, collection: offer.id })), action: 'Add ' + offer.name, actionAttrs: { 'data-ob-act': 'connector', 'data-value': offer.id } }) + '</div>',
       foot: 'Asks before every change. Remove it any time in Settings, Connectors.', attrs: { 'data-ob': 'connector' } }) : '';
   return time + you(S.you) + say(greet) + card + connector;
 }

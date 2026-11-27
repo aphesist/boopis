@@ -332,13 +332,16 @@ changed most is that it is now the kit's component, one markup for both fields a
 - **Fixed:** Settings > Keyboard laid the keymap's groups in a two-column grid meant for bare `dt`/`dd` and drew each
   row's line twice; it now lists the groups as the shortcut sheet does.
 
-### Item marks and item rows — removed at the repass (step 8)
-- The v6 `itemMark`, `publisher` and `itemRow` (`components/item-mark.ts`) and the v6 search field (`ui.search`) are deleted: since
-  step 7b the Store and Settings › Connectors draw the kit's ListRow item with two letters (board 15), and the palette is the kit's
-  CommandPalette. The letters' one rule is `core/letters.ts` (`letters`), shared by both surfaces; a connector installed from the
-  collection takes the collection's name for its tile, so "github" and "GitHub" read "GH" alike. The brand marks' files stay in
-  `vendor/service-marks/` (Simple Icons, CC0) for the owner's open question (COVERAGE conflict 30): whether rows show brand marks or
-  letters.
+### Item marks — one each (brand colours and publisher tiles: the owner, 23 November 2026; logos over letters: the owner, 27 November 2026)
+- `components/item-mark.ts`: what an installable thing is, from evidence (`vendor/service-marks/map.json`: an id in boopis's collection,
+  an address's host, a package or image it runs, a home page's host, a proven publisher's exact name), in its brand's colours for the
+  scheme (`light-dark(--mk-l, --mk-d)`, each checked at 3:1 per preset by `item-mark.test.ts`). `brandMarkHTML(ref)` is the mark alone,
+  which the Store, Settings › Connectors (the kit's ListRow item tile, 40 at `--r-tile`, the mark 55% of it) and the session pane's
+  connector rows (a 16 mark before the name in the kit's Card row) draw; `itemMark` and `publisher` stay for the item's own tile and
+  "by" lines. Letters (`core/letters.ts`, the one rule) only where no mark is known; a mod keeps its glyph. Board 15's letters lose to
+  the owner's decision (COVERAGE conflict 30).
+- Deleted at step 8: the v6 `itemRow` (no app user since 7b) and the v6 search field (`ui.search`: the palette is the kit's
+  CommandPalette).
 
 ### Orbs and member stacks — one each
 - `orb` draws every bot, through the one look resolver (`lookOf` in `components/look.ts`): the saved look, else the

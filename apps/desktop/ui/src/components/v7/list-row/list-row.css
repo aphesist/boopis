@@ -39,4 +39,7 @@
   display: grid; place-items: center; flex: none; width: var(--item-mark); height: var(--item-mark); border-radius: max(var(--r-floor), calc(var(--r-tile) - var(--gap-row)));
   background: var(--bg-4); box-shadow: inset 0 0 0 var(--hl) var(--hair); font-family: var(--mono); font-size: var(--fs-xs); font-weight: 600; color: var(--text-dim); letter-spacing: 0;
 }
+/* a brand's mark in the tile (the owner, 27 November: the real logos in colour, conflict 30): a little over half the tile, in the brand's
+   colour for the scheme (data from the item's map, `--mk-l` and `--mk-d`, like a bot's look); letters only where no mark is known */
+.k7-lrow__mark > svg[data-brand] { width: 55%; height: 55%; color: light-dark(var(--mk-l), var(--mk-d)); }
 .k7-lrow .ui-dot--flag { box-shadow: 0 0 0 var(--flag-ring) var(--bg-1); }
