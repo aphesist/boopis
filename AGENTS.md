@@ -20,11 +20,13 @@ boopis is a desktop coding harness on **unmodified Hermes Agent**: Hermes does t
 | `plugins/boopis/` | Hermes plugin (Python): tools, governance, ledger, exec kernel, compat, RPC | `plugins/boopis/AGENTS.md` |
 | `crates/` | `hx` binary and libraries: `hx-proto`, `hx-pack`, `hx-txn`, `hx-sandbox` | `crates/AGENTS.md` |
 | `apps/desktop/src-tauri/` | host (Rust): Hermes lifecycle, gateway proxy, keychain, OS | `apps/desktop/AGENTS.md` |
-| `apps/desktop/ui/` | UI (TypeScript), the v6 design system | `apps/desktop/AGENTS.md` |
+| `apps/desktop/ui/` | UI (TypeScript), the v6 design system and the v7 kit | `apps/desktop/AGENTS.md` |
+| `apps/desktop/ui/src/components/v7/` | the v7 kit: one folder per component (view and contract, behaviour, CSS, stories, tests) | `docs/kit/RULES.md` (then `TERMS.md`, `STATE.md`) |
 | `apps/shared/` | the boopis-v1 OpenRPC contract and generated types | `apps/shared/AGENTS.md` |
 | `skills/` | bundled skills (agentskills.io format) | `skills/AGENTS.md` |
 | `packaging/` | the terminal art (`brand/`), the installers' icons, the Arch install script; `scripts/install.sh` and `install.ps1` read it | `packaging/AGENTS.md` |
 | `docs/` | architecture, standards, decisions, protocol, ledger, compat, research | this file |
+| `docs/kit/` | the v7 kit's terms, where state lives, its rules and a new component's checklist; `pnpm kit:docs` writes the article | `docs/kit/RULES.md` |
 | `vendor/hermes-agent/` | upstream Hermes, pinned tag, CI only. Read it, never edit it | — |
 
 ## Commands

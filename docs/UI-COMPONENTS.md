@@ -20,6 +20,17 @@ The owner's v7 kit is built beside the v6 one, in `apps/desktop/ui/src/component
 the lab's v7 checks read. Wave C moves the screens onto it; until then today's screens keep the v6 kit, and the v6 components that
 a v7 one replaces stay as they are (the list is under "Left for wave C").
 
+**The kit's shape (the repass, "kit structure and docs", 27 November 2026).** Every component is a folder,
+`components/v7/<name>/` under its public name in kebab-case: `<name>.ts` (the view, typed props to markup, and its `contract`),
+`behaviour.ts` (keys, focus and pointer; only where it has any), `<name>.css` (tokens only), `<name>.stories.ts` (the lab's states, id
+`kit/<name>`) and `<name>.test.ts` (`story:` and `scene:` cases). A part that only exists inside another (a Card's Row, the chrome's
+TitlePill, a Disclosure's Steps) lives in its parent's folder. `index.ts` stays the barrel, so every import of `@boopis/ui` is as it
+was; `wire.ts` is the registry of the behaviours (same selectors, same order); `kit-v7.css` imports the folders' CSS in the cascade
+order the rules had; `events.ts` is the one event map (`UiEvents`, `emit`, `on`: props down, events up); `contract.test.ts` checks
+every contract against the code. The rules, the terms and where state lives: `docs/kit/RULES.md`, `TERMS.md`, `STATE.md`. The kit
+taught in one page, in dependency order, with live examples and each folder's files: `pnpm kit:docs` (dist-kit-docs/kit-docs.html,
+one self-contained file). A builder adding to the kit (7b, step 8) follows RULES.md section 5.
+
 **The boards bind the kit (the repass, 25 November 2026).** Where a kit component and the approved boards' own `kit.css` or `kit.js`
 (`docs/design/v7/boards/src/`) differ, the component is corrected to the boards: their CSS is ported, not reinterpreted, and
 `pnpm lab:board` measures the result (docs/UI-LAB.md). Corrected so far, with boards 11 and S17: the WindowChrome's controls (the
@@ -69,7 +80,7 @@ in a narrow composer; `kit.composerMarks`, the words a text is read by, as Marks
 | `kit.toolRow({ variant: 'bot' })` | closed; open on its Steps (done, now, to do, each with its end words); `icon` for a shell | kit.css `.tool`, `.steps` |
 | `kit.fileCard` | a file; `opens` makes it a control | kit.css `.file` |
 | `kit.askCard` | approval: head, ask, `rule`, four answers (`inert` for one that cannot be taken yet, `outline` for Deny) | botscreens.js `approval` |
-| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceSetup`; `micOff` (a build with no dictation: the mic starts nothing and says so); `hears`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice {setup}`, `ui:add`, `ui:dictate {on, mode}`, `ui:dictate-unavailable`, `ui:files {files, via}`; `kit.composerDictation(composer, event)` draws what a dictation reports (see "The mic's dictation" below); `kit.mentions` (an "@" Menu), `kit.composerInsert`, `kit.composerSet`. Its own editing is `components/v7/compose.ts`, the same in every composer: undo and redo across chips and marks, a chip as one unit, paste, a file dragged over it (`data-drop`, `kit.composerDropping`) and dropped or pasted, the mic (a press, alt+V, held; `data-listening`) | screens.js `composer`, kit.css `.composer-under`; the drop and listening states have no board (derived) |
+| `kit.composer` | bot, session; its line (plain items, the cost, hints at both ends); `voiceSetup`; `micOff` (a build with no dictation: the mic starts nothing and says so); `hears`; events `ui:send`, `ui:steer`, `ui:stop`, `ui:voice {setup}`, `ui:add`, `ui:dictate {on, mode}`, `ui:dictate-unavailable`, `ui:files {files, via}`; `kit.composerDictation(composer, event)` draws what a dictation reports (see "The mic's dictation" below); `kit.mentions` (an "@" Menu), `kit.composerInsert`, `kit.composerSet`. Its own editing is `components/v7/composer/editing.ts`, the same in every composer: undo and redo across chips and marks, a chip as one unit, paste, a file dragged over it (`data-drop`, `kit.composerDropping`) and dropped or pasted, the mic (a press, alt+V, held; `data-listening`) | screens.js `composer`, kit.css `.composer-under`; the drop and listening states have no board (derived) |
 | `kit.listRow` | session (the model's mark, title, branch and time, Badge or dot), compact (one line), bot, item; `kit.sectionHead` with a count, folding | kit.css `.sess-row`, `.inbox-h` |
 | `kit.selectorItem({ variant: 'launch' })` | a glyph, a model's mark or the five ticks, the value, the chevron; `aria-disabled` for one that cannot be chosen yet | kit.css `.select`, sessionnew.js `launch` |
 | `kit.notice` | a limit: glyph, `title` and words, a ghost action, dismiss | kit.css `.notice` |
@@ -359,7 +370,7 @@ changed most is that it is now the kit's component, one markup for both fields a
 
 The mic is transcription (owner, 26 November): it writes what you say into the composer's text. A dictation source reports its
 states as events, and the kit's Composer draws each with what it already has (the placeholder line, the text, a Notice at the mic).
-The shape, in `data/provider.ts` (the kit's `DictationState` in `components/v7/compose.ts` is the same):
+The shape, in `data/provider.ts` (the kit's `DictationState` in `components/v7/composer/editing.ts` is the same):
 
 ```ts
 export type DictationEvent =
@@ -384,7 +395,7 @@ export interface DictationSource {
 The app starts a source on `ui:dictate {on: true}` and hands its events on (`modules/chat/compose.ts` `dictate`). The function a source
 returns means "stop listening", not "throw it away": when the mic goes off the microphone closes at once, and what was still being
 said may arrive as one last `final` (or an `error`, or nothing). The composer takes that `final` although its mic is off and waits up
-to 3 s for it (`LAST_WORDS` in `components/v7/compose.ts`), then lets go; any other event that arrives while the mic is off is dropped.
+to 3 s for it (`LAST_WORDS` in `components/v7/composer/editing.ts`), then lets go; any other event that arrives while the mic is off is dropped.
 The live source is the host's (`host/dictation.ts`: local whisper.cpp, the model fetched on first use, ADR-0059). A provider with no `dictation` draws the mic with `micOff`: a press says "Dictation is not available
 in this build" (`micTool`). Stories: `kit/composer` "dictation: getting the speech model", "the words arriving", "it failed", "not in
 this build", and "listening".
