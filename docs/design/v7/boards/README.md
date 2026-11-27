@@ -13,6 +13,9 @@ looks.** A screen in the app is done when it matches its board, in dark and ligh
   of 28, the switch in the sidebar; `bots/K02-*.jpg` in the archive): only the files it changed, the rest are `src/`'s
   (`screen.html?s=room&sidebar=open&queue=1&main=44`). Where it and `src/` disagree on the Bots sidebar, K02 is the later decision.
 
+- `src-onboarding/` is the source of the onboarding boards, round 3 (`onboarding/screens/O-*.jpg` in the archive): the files it adds
+  or changed, the rest are `src/`'s (`ob3.html?s=o3P01`, `o3S03`, `o3B06` …; the archive's `jobs3-screens.json` lists every one).
+
 The written spec is `../DESIGN-SYSTEM.md` and `../SESSION-TAB.md`. Where the spec and a board differ, ask the owner.
 
 ## Comparing the app with a board
