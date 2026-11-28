@@ -206,7 +206,7 @@ export function plan(states: ReadonlyMap<string, ProviderState>, filter: Filter,
 const button = (a: Action, way: string, label: string, calm = false): string => {
   /* a sign-in button of a lab with a brand is that lab's own (ADR-0040); its name is its words, so it needs no label of ours */
   const brand = a.do === 'signin' ? brandOf(way) : null;
-  if (brand) return signinButton({ brand, attrs: { 'data-do': a.do, 'data-way': way } });
+  if (brand) return signinButton({ brand, size: 28, variant: 'tint', attrs: { 'data-do': a.do, 'data-way': way } });
   return plainButton(calm ? { ...a, primary: false } : a, way, label);
 };
 const plainButton = (a: Action, way: string, label: string): string => kit.html.button({

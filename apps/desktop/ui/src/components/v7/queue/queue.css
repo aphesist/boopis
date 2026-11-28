@@ -26,6 +26,7 @@
 .k7-queue__body > .k7-mv { flex: 1; min-width: 0; }
 .k7-queue[data-variant="mod"] .k7-queue__row:not([data-open]) .k7-queue__body { max-height: var(--ctl); align-items: center; }
 .k7-queue[data-variant="mod"] .k7-queue__row[data-open] { align-items: flex-start; padding-block: var(--sp-1); }
+.k7-queue[data-variant="mod"] .k7-queue__row[data-open] > .k7-queue__body { align-self: stretch; }
 .k7-queue[data-variant="mod"] .k7-queue__row[data-open] .k7-queue__who { min-height: var(--ctl-s); }
 @media (hover: hover) and (pointer: fine) { .k7-queue[data-variant="mod"] .k7-queue__row:hover { background: none; } }
 .k7-queue [data-queue="fold"] .k7-ic { transition: transform var(--dur-1) var(--ease-out); }

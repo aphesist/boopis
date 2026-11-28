@@ -21,6 +21,5 @@ export const outsideRowMark = (): string => kit.html.badge({ text: OUTSIDE_SHORT
 export function outsideRoomMark(describedBy: string): HTMLElement {
   /* the kit's Badge, with the sentence as its tooltip and its description */
   const n = frag(kit.html.badge({ text: OUTSIDE_LABEL, attrs: { 'data-outside': '', 'data-tip': OUTSIDE_WORDS, tabindex: '0', 'aria-describedby': describedBy } }));
-  n.classList.add('bt-outside');
   return n;
 }

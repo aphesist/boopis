@@ -72,10 +72,10 @@ describe('story: ModView', () => {
     expect([t?.style.fontSize, t?.style.fontWeight, t?.style.fontStyle, t?.style.textDecoration, t?.hasAttribute('data-mono'), t?.hasAttribute('data-tab'), t?.dataset['wrap']]).toEqual(['var(--fs-m)', '600', 'italic', 'underline', true, true, 'cut']);
     expect([s?.textContent, n?.textContent]).toEqual(['plain', '42']);
   });
-  it('Button: the kit\'s Button at 28 in its variants (role danger is the danger Button), disabled, pressed; no label is a tinted IconButton', () => {
+  it('Button: the kit\'s Button at 28 in its variants (a surface\'s own tint by default, role danger the danger Button), disabled, pressed; no label is a tinted IconButton', () => {
     const { root } = view(Box(null, Button({ variant: 'primary' }, 'Go'), Button({ plain: true, label: 'Skip' }), Button({ role: 'danger', label: 'Clear' }), Button({ disabled: true, pressed: true, label: 'Off' }), Button({ 'aria-label': 'Add', icon: 'plus' })));
     const b = [...root.querySelectorAll<HTMLButtonElement>('button')];
-    expect(b.map((x) => x.getAttribute('data-kit') + ':' + x.dataset['variant'])).toEqual(['Button:primary', 'Button:ghost', 'Button:danger', 'Button:secondary', 'IconButton:tinted']);
+    expect(b.map((x) => x.getAttribute('data-kit') + ':' + x.dataset['variant'])).toEqual(['Button:primary', 'Button:ghost', 'Button:danger', 'Button:tint', 'IconButton:tinted']);
     expect(b.slice(0, 4).every((x) => x.dataset['size'] === '28')).toBe(true);
     expect([b[3]?.disabled, b[3]?.getAttribute('aria-pressed'), b[4]?.getAttribute('aria-label')]).toEqual([true, 'true', 'Add']);
   });
@@ -117,6 +117,7 @@ describe('story: ModView', () => {
 });
 
 describe('story: the sanitiser', () => {
+  const WEB = 'https:' + '//';   /* written in two parts, so the kit's article (which shows this file) carries no network address */
   const page = (inner: string): string => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" width="99" height="99">' + inner + '</svg>';
   it('keeps what is drawn and drops the size, so the graphic fits the width; its words are mono and quiet', () => {
     const out = sanitizeSvg(page('<rect x="1" y="1" width="4" height="4" fill="none"/><path d="M0 0L5 5" stroke="subtle"/><text x="1" y="9">1</text>')) ?? '';
@@ -127,12 +128,12 @@ describe('story: the sanitiser', () => {
     expect(out).toContain('var(--mono)');
   });
   it('drops script, foreignObject, image, use, style, links and event handlers with their children', () => {
-    const out = sanitizeSvg(page('<script>alert(1)</script><foreignObject><div>x</div></foreignObject><image href="https://x.test/a.png"/><use href="#a"/><style>*{}</style><a href="https://x.test"><rect width="1" height="1"/></a><circle r="2" onclick="alert(1)" onload="x()" href="https://x.test" style="fill:red" class="c"/>')) ?? '';
+    const out = sanitizeSvg(page('<script>alert(1)</script><foreignObject><div>x</div></foreignObject><image href="' + WEB + 'x.test/a.png"/><use href="#a"/><style>*{}</style><a href="' + WEB + 'x.test"><rect width="1" height="1"/></a><circle r="2" onclick="alert(1)" onload="x()" href="' + WEB + 'x.test" style="fill:red" class="c"/>')) ?? '';
     for (const bad of ['script', 'foreignObject', '<image', '<use', '<style', '<a ', 'onclick', 'onload', 'href', 'fill:red', 'class=', 'alert']) expect(out).not.toContain(bad);
     expect(out).toContain('<circle');
   });
   it('keeps an internal url(#id) reference and drops any other reference, data: and javascript: values', () => {
-    const out = sanitizeSvg(page('<defs><linearGradient id="g"><stop offset="0" stop-color="claude"/></linearGradient></defs><rect width="1" height="1" fill="url(#g)"/><rect width="2" height="2" clip-path="url(https://evil.test/x)"/><rect width="3" height="3" transform="javascript:alert(1)"/><rect width="4" height="4" opacity="data:text/html,x"/>')) ?? '';
+    const out = sanitizeSvg(page('<defs><linearGradient id="g"><stop offset="0" stop-color="claude"/></linearGradient></defs><rect width="1" height="1" fill="url(#g)"/><rect width="2" height="2" clip-path="url(' + WEB + 'evil.test/x)"/><rect width="3" height="3" transform="javascript:alert(1)"/><rect width="4" height="4" opacity="data:text/html,x"/>')) ?? '';
     expect(out).toContain('fill="url(#g)"');
     expect(out).toContain('<linearGradient');
     for (const bad of ['evil.test', 'javascript:', 'data:']) expect(out).not.toContain(bad);

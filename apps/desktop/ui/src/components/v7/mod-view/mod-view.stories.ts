@@ -3,7 +3,7 @@
 import { kit } from '@boopis/ui';
 import { fill, frames, stage } from '../../../lab/story';
 import type { Story } from '../../../lab/types';
-import { LONG_TITLE, UNBROKEN } from '../../../lab/fixtures';
+import { LONG_TITLE, UNBROKEN } from '../../../lab/kit-fixtures';
 
 const { Box, Text, Button, Input, Select, Markdown, Code, Link, Svg } = kit.modH;
 const TREE = Box({ flexDirection: 'column', gap: 1 },
@@ -12,12 +12,11 @@ const TREE = Box({ flexDirection: 'column', gap: 1 },
   Box({ gap: 1 }, Button({ variant: 'primary', onPress: { $handler: 'r' } }, 'Re-run'), Button({ variant: 'ghost', onPress: { $handler: 's' } }, 'Skip'), Button({ role: 'danger', onPress: { $handler: 'c' } }, 'Clear cache')),
   Box({ gap: 1 }, Input({ placeholder: 'Filter tests', onSubmit: { $handler: 'f' }, submitLabel: 'Filter' })),
   Select({ label: 'Show', value: 'all', options: [{ label: 'All tests', value: 'all' }, { label: 'Failing only', value: 'failing' }], onSelect: { $handler: 'w' } }),
-  Markdown({}, 'Failing: `invoice.test.ts` **rounds per line item**'),
-  Code({ path: 'src/money.ts', startLine: 41 }, 'export function roundCents(n: number): number {\n  return Math.round(n * 100) / 100;\n}'),
-  Link({ href: 'https://example.com/runs/412' }, 'Run 412'));
+  Markdown({}, 'Failing: `invoice.test.ts` **rounds per line item**'), Link({ href: 'https://example.com/runs/412' }, 'Run 412'),
+  Code({ path: 'src/money.ts', startLine: 41 }, 'export function roundCents(n: number): number {\n  return Math.round(n * 100) / 100;\n}'));
 const CHART = Svg({ label: 'Tokens per turn', svg: '<svg viewBox="0 0 120 40"><rect x="4" y="20" width="16" height="20" fill="claude"/><rect x="28" y="10" width="16" height="30" fill="#b8a4f0"/><rect x="52" y="26" width="16" height="14" fill="subtle"/><text x="4" y="10">12.4k</text></svg>' });
 const DIFF = Code({ format: 'diff', path: 'src/money.ts' }, '@@ -41,3 +41,3 @@\n-  return Math.round(n * 100);\n+  return Math.round(n * 100) / 100;\n }');
-const LONG = Box({ flexDirection: 'column', gap: 1 }, Text({}, LONG_TITLE + ' ' + UNBROKEN), Code({}, UNBROKEN + UNBROKEN), Box({ gap: 1 }, ...Array.from({ length: 12 }, (_, i) => Button({ onPress: { $handler: 'b' + i } }, 'Action ' + i))));
+const LONG = Box({ flexDirection: 'column', gap: 1 }, Text({}, LONG_TITLE + ' ' + UNBROKEN), Code({}, UNBROKEN + UNBROKEN), Box({ flexDirection: 'column', gap: 1 }, ...Array.from({ length: 6 }, (_, i) => Button({ onPress: { $handler: 'b' + i } }, 'Action ' + i + ' on the long names'))));
 const view = (tree: unknown, surface: 'pane' | 'row' | 'band'): string => kit.html.modView({ tree, surface, label: 'Tests, test-runner mod' });
 const onPane = (html: string): string => kit.html.pane({ variant: 'tools', fixed: ['diff'], extra: [{ value: 'tests', label: 'Tests', tip: 'test-runner mod' }], tab: 'tests', label: 'Tests, test-runner mod', body: html });
 

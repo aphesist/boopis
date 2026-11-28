@@ -72,7 +72,7 @@ describe('what the recording says, drawn', () => {
     follow();
     for (const e of RECORDED) rig.model.handle(SID, e.type, e.payload);
     expect(rig.model.state(SID).panes.map((p) => p.id)).toEqual(['tests', 'usage']);
-    expect(panelTabs()?.items.map((i) => i.label + ', ' + (i.tip ?? ''))).toEqual(['Tests, test-runner mod', 'Token usage, token-meter mod']);
+    expect(panelTabs()?.items.map((i) => i.label)).toEqual(['Tests', 'Token usage']);
     expect(rig.band.querySelector('[data-kit~="Queue"][data-variant="mod"] [data-kit~="ModView"]')?.textContent).toContain('Running tests');
     expect(status()).toEqual(['test-runner 1 failing', 'token-meter 12.4k tokens this turn']);
     expect([...rig.col.querySelectorAll('[data-mod-log]')].map((n) => n.textContent)).toEqual([expect.stringContaining('the cache for money.test.ts is stale'), expect.stringContaining('token-meter is watching this session')]);
@@ -169,10 +169,10 @@ describe('a mod\'s status joins the composer\'s own line (2b: nothing rises)', (
 });
 
 describe('panes: a tab of the tools after their fixed tabs (2b), at every width', () => {
-  it('is a tab named by its title, its mod in the tip; Diff is in front until one is chosen', () => {
+  it('is a tab named by its title (the panel names its mod); Diff is in front until one is chosen', () => {
     follow(); pane('a'); pane('b');
     const t = panelTabs();
-    expect(t?.items).toEqual([{ value: 'a', label: 'A', tip: 'm mod' }, { value: 'b', label: 'B', tip: 'm mod' }]);
+    expect(t?.items).toEqual([{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }]);
     expect([t?.value, t?.label, t?.body()]).toEqual(['diff', 'Diff', null]);
   });
   it('tells each pane where it is: placement dock, and whether it is the one in front', () => {

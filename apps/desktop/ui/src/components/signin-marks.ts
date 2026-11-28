@@ -50,6 +50,7 @@ export interface SigninButtonOpts {
   brand: SigninBrand;
   /** the verb; "Sign in" by default (the owner's own words; OpenAI allows it, as it allows "Continue") */
   verb?: string | undefined;
+  /** in a settings row the kit's row button (tint, 28); on its own the kit's secondary at 36 */ size?: 36 | 28 | undefined; variant?: 'secondary' | 'tint' | undefined;
   disabled?: boolean | undefined;
   attrs?: Record<string, string | null | undefined> | undefined;
 }
@@ -69,5 +70,5 @@ export const signinLogo = (key: SigninBrand | 'copilot'): string => `<span class
 
 /** a lab's sign-in: the kit's Button, led by the lab's mark (its `leadHTML`), the lab carried as `data-brand` */
 export function signinButton(o: SigninButtonOpts): string {
-  return button({ label: signinLabel(o.brand, o.verb), variant: 'secondary', leadHTML: signinLogo(o.brand), disabled: !!o.disabled, attrs: { 'data-brand': o.brand, ...(o.attrs ?? {}) } });
+  return button({ label: signinLabel(o.brand, o.verb), variant: o.variant ?? 'secondary', size: o.size ?? 36, leadHTML: signinLogo(o.brand), disabled: !!o.disabled, attrs: { 'data-brand': o.brand, ...(o.attrs ?? {}) } });
 }

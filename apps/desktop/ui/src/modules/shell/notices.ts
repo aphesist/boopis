@@ -45,7 +45,7 @@ function watch(c: HTMLElement | null): void {
   sizes?.disconnect();
   watched = c;
   if (!c) return;
-  sizes = new ResizeObserver(() => { const host = document.getElementById('hx-notify'); if (host?.querySelector('.k7-notify[data-in]')) placeNotice(host); });
+  sizes = new ResizeObserver(() => { requestAnimationFrame(() => { const host = document.getElementById('hx-notify'); if (host?.querySelector('.k7-notify[data-in]')) placeNotice(host); }); });
   sizes.observe(c);
   for (const k of c.children) sizes.observe(k);
 }

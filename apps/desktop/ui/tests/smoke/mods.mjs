@@ -79,7 +79,7 @@ export async function mods(env, AXE) {
     const inDetails = await page.evaluate(() => document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]').length);
     await page.evaluate(() => __hx.emit('hx:open-panel', { panel: 'changes', from: 'smoke' })); await page.waitForTimeout(900);
     const tabs = await page.evaluate(() => [...document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]')].map((n) => n.textContent + (n.dataset.tip ? ', ' + n.dataset.tip : '')));
-    check('mods', 'each pane is a tab of the tools after the Diff, and the details have no strip', tabs.join('|') === 'Diff|Tests, test-runner mod|Token usage, token-meter mod' && inDetails === 0, { tabs, inDetails });
+    check('mods', 'each pane is a tab of the tools after the Diff, and the details have no strip', tabs.join('|') === 'Diff|Tests|Token usage' && inDetails === 0, { tabs, inDetails });
     await page.click('#hx-right .k7-pane__tabs [data-value="usage"]'); await page.waitForTimeout(400);
     const chart = await page.evaluate(() => { const f = [...document.querySelectorAll('.ss-mod-pane svg rect')].map((r) => getComputedStyle(r).fill); return { n: f.length, fills: [...new Set(f)] }; });
     check('mods', 'the chart is drawn in theme: claude is the accent as a mark, a literal that holds its contrast is kept', chart.n >= 8 && chart.fills.some((x) => x === 'rgb(184, 164, 240)') && chart.fills.length === 2, chart);

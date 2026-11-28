@@ -57,7 +57,7 @@ button.k7-mention { cursor: pointer; }
 }
 /* a source (kit.css `.cite`): its words underlined in --line-strong, a 12 tile (radius 3, --bg-4) where the site's mark would be */
 .k7-cite { display: inline; white-space: normal; color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: var(--gap-xs); border-radius: var(--r-xs); }
-.k7-cite__ic { display: inline-block; width: var(--fs-xs); height: var(--fs-xs); border-radius: var(--gap-xs); background: var(--bg-4); vertical-align: -1px; margin-inline-end: var(--sp-1); }
+.k7-cite__ic { display: inline-block; width: var(--fs-xs); height: var(--fs-xs); border-radius: var(--r-xs); background: var(--bg-4); vertical-align: -1px; margin-inline-end: var(--sp-1); }
 @media (hover: hover) and (pointer: fine) { .k7-cite:hover { text-decoration-color: var(--text-dim); } }
 .k7-model { display: inline; color: var(--text); }
 .k7-model > svg { display: inline-block; vertical-align: -2px; margin-inline-end: var(--sp-1); color: var(--text-dim); }

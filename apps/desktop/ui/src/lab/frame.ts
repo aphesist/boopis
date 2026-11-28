@@ -123,7 +123,9 @@ export async function startFrame(): Promise<void> {
   /* the v7 kit's stories (kit/...) draw on a v7 root: the body, so the v6 theme's inline colours on <html> stay
      underneath; their presets are v7's two themes (a v6 preset id maps to its scheme), with the accent and corners of
      section 18 settable by the checker */
-  const v7 = isKitStory(s);
+  /* the engines' specimens and the host's own screens drawn on the stage (components/..., settings/...) draw on a v7 root too since
+     the v6 library went (2b); the other stage stories put their kit components on a v7 root of their own */
+  const v7 = isKitStory(s) || (!st.app && /^(components|settings)\//.test(s.id));
   /* an app story of the v7 surfaces themes the app as the app does (its v7 roots follow the v6 preset's scheme); a kit story the body */
   if (v7) { if (st.app) themeApi.preset(appPreset(v7Theme(preset))); else kit.applyTheme(document.body, { theme: v7Theme(preset) }); await Promise.all([loadFont('Geist'), loadFont('Geist Mono')]); }
   else if (preset) themeApi.preset(preset);

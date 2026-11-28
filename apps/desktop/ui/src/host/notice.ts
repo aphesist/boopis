@@ -21,17 +21,19 @@ export function showStartupFailure(err: unknown, opts: NoticeOptions = {}): HTML
   const message = err instanceof Error ? err.message : String(err);
   const root = document.createElement('div');
   root.className = 'hx-notice';
+  /* a v7 root of its own (it covers the window outside the app's), in the scheme of the theme */
+  kit.applyTheme(root, { theme: document.documentElement.getAttribute('data-hx-theme') === 'light' ? 'light' : 'dark' });
   const bar = windowBar(opts.windowControls);
   const body = document.createElement('div');
   body.className = 'hx-notice__body';
-  /* one sentence and its action (the copy rules): what failed leads, the engine's own words follow, Retry; the code for a report */
-  body.innerHTML = kit.html.notice({ place: 'page', tone: 'red', title: 'boopis could not reach its engine', text: message ? ': ' + message : '', actions: [{ label: 'Retry', primary: true, value: 'retry' }] }) +
-    (code ? kit.html.inlineChip({ kind: 'code', text: code }) : '');
+  /* one sentence and its action (the copy rules): what failed and Retry; under it the engine's own words, whole, and the code for a report */
+  body.innerHTML = kit.html.notice({ place: 'page', tone: 'red', title: 'boopis could not reach its engine', text: '', actions: [{ label: 'Retry', value: 'retry' }] }) +
+    (message ? kit.html.pageNote({ parts: [message], attrs: { 'data-reason': '' } }) : '') + (code ? kit.html.inlineChip({ kind: 'code', text: code }) : '');
   kit.wire(body);
   const retry = body.querySelector<HTMLButtonElement>('[data-value="retry"]') as HTMLButtonElement;
   retry.addEventListener('click', () => { (opts.retry ?? (() => { location.reload(); }))(); });
   root.append(bar.node, body);
   (opts.mount ?? document.body).append(root);
-  retry.focus();
+  /* the alert says it at once; Retry is the first stop (Tab), not focused: a ring at mount would stand outside the Notice's corner */
   return root;
 }

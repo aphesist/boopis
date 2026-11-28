@@ -47,7 +47,7 @@ export function panelTabs(): PanelTabs | null {
   if (ctl.active !== 'diff' && !list.some((p) => p.id === ctl.active)) ctl.active = 'diff';
   const p = ctl.active === 'diff' ? undefined : paneById(ctl.active);
   return {
-    items: list.map((x) => ({ value: x.id, label: x.title, tip: x.plugin + ' mod' })),
+    items: list.map((x) => ({ value: x.id, label: x.title })),   /* the tab is named by its title; the panel names its mod */
     value: ctl.active, label: p ? p.title + ', ' + p.plugin + ' mod' : 'Diff', sig: p ? p.id + ':' + p.opens + ':' + JSON.stringify(p.drawing ?? null) : '',
     body: () => {
       ctl.roots.clear();

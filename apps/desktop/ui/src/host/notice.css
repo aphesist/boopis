@@ -2,4 +2,5 @@
    kit's Notice (a page's, red) in its middle and the code under it. Placement only: the look is the kit's. */
 .hx-notice { position: fixed; inset: 0; z-index: var(--z-palette); display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg-2); color: var(--text); }
 .hx-notice__body { display: grid; align-content: center; justify-items: center; gap: var(--sp-3); padding: var(--sp-6) var(--sp-4); min-width: 0; }
-.hx-notice__body > [data-kit~="Notice"] { max-width: min(100%, 640px); }
+.hx-notice__body > [data-kit~="Notice"] { width: min(100%, 640px); }
+.hx-notice__body > [data-reason] { max-width: min(100%, 640px); margin: 0; text-align: center; overflow-wrap: anywhere; }

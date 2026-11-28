@@ -4,6 +4,8 @@
 .k7-mv { display: flex; flex-direction: column; min-width: 0; box-sizing: border-box; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); }
 .k7-mv *, .k7-mv *::before, .k7-mv *::after { box-sizing: border-box; }
 .k7-mv > .k7-mv__box { flex: 1; }
+.k7-mv__box > * { min-width: 0; max-width: 100%; }
+.k7-mv__box > :is([data-kit~="Well"], [data-kit~="DiffView"], .k7-mv__md, .k7-mv__svg) { flex: 1 1 100%; }
 
 /* Box: a flex container; a row until it says otherwise, wrapping rather than pushing the window sideways (R-overflow-4) */
 .k7-mv__box { display: flex; flex-direction: row; flex-wrap: wrap; min-width: 0; --mv-border: var(--hair); }
@@ -21,7 +23,8 @@
 .k7-mv__text[data-quiet] { color: var(--text-quiet); font-size: var(--fs-xs); }
 
 /* Input: the kit's Field, with its Button beside it */
-.k7-mv__input { display: flex; align-items: flex-start; gap: var(--sp-2); min-width: 0; flex: 1; }
+.k7-mv__input { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; flex: 1; }
+.k7-mv__input:has(textarea) { align-items: flex-start; }
 .k7-mv__input > .k7-field__input, .k7-mv__input > .k7-field { flex: 1; min-width: 0; }
 
 /* Svg: sanitised, it fits the width; its words in mono */

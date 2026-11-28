@@ -43,7 +43,7 @@ export async function labProbe(env) {
 @font-face { font-family: LabSans; src: local("DejaVu Sans"), local("Liberation Sans"), local("Arial"); font-weight: 100 900; }
 @font-face { font-family: LabSans; font-style: italic; src: local("DejaVu Sans"), local("Liberation Sans"), local("Arial"); font-weight: 100 900; size-adjust: 80%; }
 </style><body style="margin:0;background:#111;color:#eee"><div id="t" style="width:600px;padding:20px">
-  <p style="margin:0;font:400 15px/24px LabSans">staging needs <span class="ui-mention" style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;background:#444;font:500 13px/1 LabSans;vertical-align:${nudge}"><span style="align-self:baseline;line-height:1;text-box:trim-both cap alphabetic;padding-block:calc((20px - 1cap) / 2)">you</span></span> before I deploy.</p></div></body>`);
+  <p style="margin:0;font:400 15px/24px LabSans">staging needs <span class="k7-chip-in" data-kit="InlineChip" data-kind="you" style="display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:10px;background:#444;font:500 13px/1 LabSans;vertical-align:${nudge}"><span style="align-self:baseline;line-height:1;text-box:trim-both cap alphabetic;padding-block:calc((20px - 1cap) / 2)">you</span></span> before I deploy.</p></div></body>`);
     await p.addScriptTag({ path: PROBE });
     return p.evaluate(() => window.__labProbe.run({ scope: '#t', checks: ['inline-baseline'] }).findings.map((f) => f.el + ': ' + f.msg));
   };

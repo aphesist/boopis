@@ -13,7 +13,7 @@
               A border is the hairline; backgroundColor draws a surface token. A Box with `progress` (0 to 100) or role 'progressbar' is
               ModProgress: the kit's ticks (the composer line's look), filled in proportion, or one tick travelling when nothing is known.
      Text     the type scale (xs 11, s 12, m 13, l 14); `mono` the mono face, `tabular` tabular figures.
-     Button   the kit's Button at 28 (primary, ghost, secondary; role danger is the danger Button), or a tinted IconButton with no label.
+     Button   the kit's Button at 28 (primary, ghost, tint as a surface's own; role danger is the danger Button), or a tinted IconButton with no label.
               A `hotkey` that collides with the app's keys is dropped, never stolen; one that does not works while focus is inside.
      Input    the kit's Field (multiline from two rows), with a primary Button at 28 when it has a submit label.
      Select   the kit's SelectorItem (field), opening the kit's Menu.
@@ -165,7 +165,7 @@ function buildText(node: ModElement, path: string): string {
 function buildButton(p: Props, kids: readonly ModChild[], path: string): string {
   const label = p['label'] != null ? str(p['label']) : textOf(kids);
   const danger = p['role'] === 'danger' || p['role'] === 'destructive';
-  const variant = danger ? 'danger' : p['variant'] === 'primary' ? 'primary' : (p['plain'] || p['variant'] === 'plain' || p['variant'] === 'ghost') ? 'ghost' : 'secondary';
+  const variant = danger ? 'danger' : p['variant'] === 'primary' ? 'primary' : (p['plain'] || p['variant'] === 'plain' || p['variant'] === 'ghost') ? 'ghost' : 'tint';   /* the kit's button inside a surface */
   const key = hotkeyOk(p['hotkey']) ? p['hotkey'] : null;
   const icon = typeof p['icon'] === 'string' && iconNames.includes(p['icon']) ? p['icon'] : null;
   const id = handlerId(p['onPress']);

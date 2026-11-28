@@ -75,4 +75,4 @@
 .ui-codeblock__l[data-d="add"] { background: color-mix(in srgb, var(--add) 10%, transparent); }
 .ui-codeblock__l[data-d="del"] { background: color-mix(in srgb, var(--del) 10%, transparent); }
 .ui-codeblock__l[data-d="hunk"] { color: var(--text-quiet); }
-.ui-codeblock__foot { padding: 0 var(--sp-2) var(--sp-2); }
+.ui-codeblock__foot { padding: 0 max(0px, calc(var(--r-outer) - var(--ctl-s) / 2)) max(0px, calc(var(--r-outer) - var(--ctl-s) / 2)); }   /* the kit's 28 Button, a pill concentric with the well's corner */
