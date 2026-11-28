@@ -1,11 +1,11 @@
 {
  "a-key-form-in-place@dark": {
-  "sha": "f929c3d9d9e2e52c30dc18f0bb1a532f8cd55b12",
+  "sha": "3d39d12caf369980c3bff9145071961964109cc6",
   "w": 544,
   "h": 350
  },
  "a-key-form-in-place@light": {
-  "sha": "883651a716da61a9be3d2c8ba4b2d0c522aff4e8",
+  "sha": "b2499a935639aa1e12aca7b80efd5421c51e08a0",
   "w": 544,
   "h": 350
  },
@@ -230,12 +230,12 @@
   "h": 1600
  },
  "remove-asks-first@dark": {
-  "sha": "aeed8351e2857f5508191c00bc24f4cd1cfe63c3",
+  "sha": "4decc0f089eb606003c0512e60f049d573e16c0d",
   "w": 544,
   "h": 260
  },
  "remove-asks-first@light": {
-  "sha": "b507a45bc028efc6a2b21fa3ae773e5c2e9ac86f",
+  "sha": "0e739d35ed513a0d44a34732034726bd01807074",
   "w": 544,
   "h": 260
  },
@@ -260,22 +260,22 @@
   "h": 226
  },
  "the-endpoint-form-first-step@dark": {
-  "sha": "a42602c1b6299b000adfe8429b836ac3dd663691",
+  "sha": "cdbfa5dc4304b81dc042764b293e0e2d509064d0",
   "w": 544,
   "h": 770
  },
  "the-endpoint-form-first-step@light": {
-  "sha": "9963223595db21a236108408d52471f38beae0ce",
+  "sha": "c12b9fe2b00ee3cbdcfdfa5f2b65c3540aaadfc5",
   "w": 544,
   "h": 770
  },
  "the-endpoint-form-models-found@dark": {
-  "sha": "e2773f56530be2a0cdc75d9428df43d8013d9831",
+  "sha": "08965a11ef413689789b0e1645b59ad0e108b1de",
   "w": 544,
   "h": 920
  },
  "the-endpoint-form-models-found@light": {
-  "sha": "f990d6aab1952d96b6ef6585f89e7920d48583b2",
+  "sha": "2326765bba2e5c8760a19f6e54bd4a94ceff9332",
   "w": 544,
   "h": 920
  },

@@ -1,21 +1,21 @@
 {
  "a-long-page-and-code@bone": {
-  "sha": "d219b92f3365684498c61a4220f8ce17090604be",
+  "sha": "f96d0e2cf39661aa3bce5f8b7e6c51b023df38d3",
   "w": 504,
   "h": 308
  },
  "a-long-page-and-code@catalog": {
-  "sha": "8ddb7a90b1cdf26a039ac5727aa33b3093895fcc",
+  "sha": "db4b12f0b5f4c944cce03d9607553599ef1ce285",
   "w": 504,
   "h": 308
  },
  "a-long-page-and-code@graphite": {
-  "sha": "8ddb7a90b1cdf26a039ac5727aa33b3093895fcc",
+  "sha": "db4b12f0b5f4c944cce03d9607553599ef1ce285",
   "w": 504,
   "h": 308
  },
  "a-long-page-and-code@typewriter": {
-  "sha": "8ddb7a90b1cdf26a039ac5727aa33b3093895fcc",
+  "sha": "db4b12f0b5f4c944cce03d9607553599ef1ce285",
   "w": 504,
   "h": 308
  },
@@ -60,27 +60,27 @@
   "h": 86
  },
  "drawn-again-while-a-code-waits@bone": {
-  "sha": "cc541fe8989faf1a40821fff40494df7699c9f1d",
+  "sha": "f1b455a7faf33fc047d3fbe1f0ff0c7aff67ee4c",
   "w": 504,
   "h": 268
  },
  "drawn-again-while-a-code-waits@catalog": {
-  "sha": "609e6fd467ff7d0cd3f2c6f88244436dd337e6bb",
+  "sha": "bb7f66d57c7d772fd0ba22ff260b18d7a522b6f3",
   "w": 504,
   "h": 268
  },
  "drawn-again-while-a-code-waits@graphite": {
-  "sha": "609e6fd467ff7d0cd3f2c6f88244436dd337e6bb",
+  "sha": "bb7f66d57c7d772fd0ba22ff260b18d7a522b6f3",
   "w": 504,
   "h": 268
  },
  "drawn-again-while-a-code-waits@typewriter": {
-  "sha": "609e6fd467ff7d0cd3f2c6f88244436dd337e6bb",
+  "sha": "bb7f66d57c7d772fd0ba22ff260b18d7a522b6f3",
   "w": 504,
   "h": 268
  },
  "getting-a-code@bone": {
-  "sha": "4fee3d7aacc34c8326e85de076982b1bcd18520a",
+  "sha": "8e1eb35c28354cbb7af6fc35d0d36c1ddf4d19a5",
   "w": 504,
   "h": 60
  },
@@ -100,7 +100,7 @@
   "h": 60
  },
  "its-button@bone": {
-  "sha": "02e1a17b5b57765dffd8a35c20fdfc7b4efb332e",
+  "sha": "6fdd65d6db4140c199a1eae9aed2c79a92ed8deb",
   "w": 504,
   "h": 60
  },
@@ -200,22 +200,22 @@
   "h": 42
  },
  "the-code-and-the-page@bone": {
-  "sha": "cc541fe8989faf1a40821fff40494df7699c9f1d",
+  "sha": "f1b455a7faf33fc047d3fbe1f0ff0c7aff67ee4c",
   "w": 504,
   "h": 268
  },
  "the-code-and-the-page@catalog": {
-  "sha": "609e6fd467ff7d0cd3f2c6f88244436dd337e6bb",
+  "sha": "bb7f66d57c7d772fd0ba22ff260b18d7a522b6f3",
   "w": 504,
   "h": 268
  },
  "the-code-and-the-page@graphite": {
-  "sha": "609e6fd467ff7d0cd3f2c6f88244436dd337e6bb",
+  "sha": "bb7f66d57c7d772fd0ba22ff260b18d7a522b6f3",
   "w": 504,
   "h": 268
  },
  "the-code-and-the-page@typewriter": {
-  "sha": "609e6fd467ff7d0cd3f2c6f88244436dd337e6bb",
+  "sha": "bb7f66d57c7d772fd0ba22ff260b18d7a522b6f3",
   "w": 504,
   "h": 268
  },

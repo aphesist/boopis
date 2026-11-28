@@ -20,27 +20,27 @@
   "h": 104
  },
  "chatgpt-a-long-address@bone": {
-  "sha": "51c7a40ff58dae11b2f5655a1009a24395152228",
+  "sha": "a162097697610370910a1cc60832b459a5328bed",
   "w": 1416,
   "h": 282
  },
  "chatgpt-a-long-address@catalog": {
-  "sha": "d3c86821961a8d9e6acfa7e961645af2f72b734a",
+  "sha": "6f8b041917b8a248e2c7ea7565dbed9840a46d70",
   "w": 1416,
   "h": 282
  },
  "chatgpt-a-long-address@graphite": {
-  "sha": "d3c86821961a8d9e6acfa7e961645af2f72b734a",
+  "sha": "6f8b041917b8a248e2c7ea7565dbed9840a46d70",
   "w": 1416,
   "h": 282
  },
  "chatgpt-a-long-address@typewriter": {
-  "sha": "d3c86821961a8d9e6acfa7e961645af2f72b734a",
+  "sha": "6f8b041917b8a248e2c7ea7565dbed9840a46d70",
   "w": 1416,
   "h": 282
  },
  "chatgpt-at-its-button@bone": {
-  "sha": "20bd41b7b869d741456e5f39d3312bd484b248d6",
+  "sha": "9fb24f7fdfcb763a8f85f2021aa3b6881c10d4de",
   "w": 1416,
   "h": 60
  },
@@ -60,22 +60,22 @@
   "h": 60
  },
  "chatgpt-cancel-focus@bone": {
-  "sha": "babc6c253fca1c72b91eb4af40deacfd5d82284e",
+  "sha": "d75120a07408e2a74d9243a59cf82b5446dd0772",
   "w": 1416,
   "h": 242
  },
  "chatgpt-cancel-focus@catalog": {
-  "sha": "3c231ffded313a9b7129d0459f94a216b4f0b568",
+  "sha": "d7e17db514186329987814075dcb4cd15d6708df",
   "w": 1416,
   "h": 242
  },
  "chatgpt-cancel-focus@graphite": {
-  "sha": "3c231ffded313a9b7129d0459f94a216b4f0b568",
+  "sha": "d7e17db514186329987814075dcb4cd15d6708df",
   "w": 1416,
   "h": 242
  },
  "chatgpt-cancel-focus@typewriter": {
-  "sha": "3c231ffded313a9b7129d0459f94a216b4f0b568",
+  "sha": "d7e17db514186329987814075dcb4cd15d6708df",
   "w": 1416,
   "h": 242
  },
@@ -160,27 +160,27 @@
   "h": 86
  },
  "chatgpt-open-button-hover@bone": {
-  "sha": "baabeb379eb928f20def7708da3abacda12c6aa0",
+  "sha": "1f8b338b9acd38e964354f2b34e84707a3603648",
   "w": 1416,
   "h": 242
  },
  "chatgpt-open-button-hover@catalog": {
-  "sha": "65813627bed6af2fb4853281561136c982762b06",
+  "sha": "93cec9a18ab946790ab8ca251fdbdef2b6a23092",
   "w": 1416,
   "h": 242
  },
  "chatgpt-open-button-hover@graphite": {
-  "sha": "65813627bed6af2fb4853281561136c982762b06",
+  "sha": "93cec9a18ab946790ab8ca251fdbdef2b6a23092",
   "w": 1416,
   "h": 242
  },
  "chatgpt-open-button-hover@typewriter": {
-  "sha": "65813627bed6af2fb4853281561136c982762b06",
+  "sha": "93cec9a18ab946790ab8ca251fdbdef2b6a23092",
   "w": 1416,
   "h": 242
  },
  "chatgpt-opening-the-page@bone": {
-  "sha": "5053d7a00ab0954f368f4e7d228a79fc4aa4b16e",
+  "sha": "2f0a90d431f827c46e25ef8ea3da47f3da8e3c38",
   "w": 1416,
   "h": 60
  },
@@ -220,7 +220,7 @@
   "h": 42
  },
  "chatgpt-start-pressed@bone": {
-  "sha": "4d124e2aebdf61bc7129011030691fde026deaff",
+  "sha": "806d9298d7be6c8d6a3711152ebd7da2ab5c6032",
   "w": 1416,
   "h": 60
  },
@@ -280,27 +280,27 @@
   "h": 104
  },
  "chatgpt-waiting-on-openai-s-page@bone": {
-  "sha": "a3dd8b6ef76fb660d7f5c62f907883e1a41fa79b",
+  "sha": "1d2478614cbf51bdae51f69f6d1fd19e277450f6",
   "w": 1416,
   "h": 242
  },
  "chatgpt-waiting-on-openai-s-page@catalog": {
-  "sha": "b6e83efc5ad1e21296084c931093ab3978f88aa9",
+  "sha": "c5fbe6e61111f3bb24dfe26c7ebc627bfbd92ada",
   "w": 1416,
   "h": 242
  },
  "chatgpt-waiting-on-openai-s-page@graphite": {
-  "sha": "b6e83efc5ad1e21296084c931093ab3978f88aa9",
+  "sha": "c5fbe6e61111f3bb24dfe26c7ebc627bfbd92ada",
   "w": 1416,
   "h": 242
  },
  "chatgpt-waiting-on-openai-s-page@typewriter": {
-  "sha": "b6e83efc5ad1e21296084c931093ab3978f88aa9",
+  "sha": "c5fbe6e61111f3bb24dfe26c7ebc627bfbd92ada",
   "w": 1416,
   "h": 242
  },
  "copilot-at-its-button@bone": {
-  "sha": "09568c11d9736ff12255f1e160421d163154945a",
+  "sha": "722cd7c0890a3820e3e9c18788f725547d6b1860",
   "w": 1416,
   "h": 60
  },
@@ -320,22 +320,22 @@
   "h": 60
  },
  "copilot-code-copied@bone": {
-  "sha": "c7d0e6f7ad31f486b6ae759f1937f405807fd402",
+  "sha": "0d3f6e0fb5fe5df5c16b089c97ecfa564f482969",
   "w": 1416,
   "h": 251
  },
  "copilot-code-copied@catalog": {
-  "sha": "7c43b9aabc5b83805c949d864f98ec5f2ee49e2a",
+  "sha": "4bc6d4089dcb76e12f528141bce29e5bd5f4b558",
   "w": 1416,
   "h": 251
  },
  "copilot-code-copied@graphite": {
-  "sha": "7c43b9aabc5b83805c949d864f98ec5f2ee49e2a",
+  "sha": "4bc6d4089dcb76e12f528141bce29e5bd5f4b558",
   "w": 1416,
   "h": 251
  },
  "copilot-code-copied@typewriter": {
-  "sha": "7c43b9aabc5b83805c949d864f98ec5f2ee49e2a",
+  "sha": "4bc6d4089dcb76e12f528141bce29e5bd5f4b558",
   "w": 1416,
   "h": 251
  },
@@ -360,22 +360,22 @@
   "h": 86
  },
  "copilot-copy-hover@bone": {
-  "sha": "fede340a02f3dd84733e743520357b5934821883",
+  "sha": "dba22f825d9c675c173890eeb04d25856add6198",
   "w": 1416,
   "h": 251
  },
  "copilot-copy-hover@catalog": {
-  "sha": "b87d298a392deea5349a5fdd1f8fb0f933e01256",
+  "sha": "f98910cfc150f5e2b5124213f716aead2f3ab55f",
   "w": 1416,
   "h": 251
  },
  "copilot-copy-hover@graphite": {
-  "sha": "b87d298a392deea5349a5fdd1f8fb0f933e01256",
+  "sha": "f98910cfc150f5e2b5124213f716aead2f3ab55f",
   "w": 1416,
   "h": 251
  },
  "copilot-copy-hover@typewriter": {
-  "sha": "b87d298a392deea5349a5fdd1f8fb0f933e01256",
+  "sha": "f98910cfc150f5e2b5124213f716aead2f3ab55f",
   "w": 1416,
   "h": 251
  },
@@ -400,7 +400,7 @@
   "h": 86
  },
  "copilot-getting-a-code@bone": {
-  "sha": "af912e9cb3d10e8408e7c0d1d17a522e34371e45",
+  "sha": "96f64d34dea8f5cef8b216141a02d2e3b77527bd",
   "w": 1416,
   "h": 60
  },
@@ -440,22 +440,22 @@
   "h": 121
  },
  "copilot-open-focus@bone": {
-  "sha": "fcb84cfce4be82c2c823bfa8166c0178fd365717",
+  "sha": "d69abe5678ae3b38115663b93aea4f87ffc78a95",
   "w": 1416,
   "h": 251
  },
  "copilot-open-focus@catalog": {
-  "sha": "1ae53fec77e160fa92927a0ba5706e69ff66c7e9",
+  "sha": "4f5298336c1023c1471ea56455a54677858f98f1",
   "w": 1416,
   "h": 251
  },
  "copilot-open-focus@graphite": {
-  "sha": "1ae53fec77e160fa92927a0ba5706e69ff66c7e9",
+  "sha": "4f5298336c1023c1471ea56455a54677858f98f1",
   "w": 1416,
   "h": 251
  },
  "copilot-open-focus@typewriter": {
-  "sha": "1ae53fec77e160fa92927a0ba5706e69ff66c7e9",
+  "sha": "4f5298336c1023c1471ea56455a54677858f98f1",
   "w": 1416,
   "h": 251
  },
@@ -520,22 +520,22 @@
   "h": 104
  },
  "copilot-waiting-with-the-code@bone": {
-  "sha": "624543134d406c4de2fe8d9d817d993b95d7a929",
+  "sha": "3fe1665cc8e73f09b78fe1a524a5a6f96b581513",
   "w": 1416,
   "h": 251
  },
  "copilot-waiting-with-the-code@catalog": {
-  "sha": "22e7ad2b3e7a6a74f726de1e8ea2a98d5c25d512",
+  "sha": "202c497d44f4a0f6783552aa11e1704839d5c8de",
   "w": 1416,
   "h": 251
  },
  "copilot-waiting-with-the-code@graphite": {
-  "sha": "22e7ad2b3e7a6a74f726de1e8ea2a98d5c25d512",
+  "sha": "202c497d44f4a0f6783552aa11e1704839d5c8de",
   "w": 1416,
   "h": 251
  },
  "copilot-waiting-with-the-code@typewriter": {
-  "sha": "22e7ad2b3e7a6a74f726de1e8ea2a98d5c25d512",
+  "sha": "202c497d44f4a0f6783552aa11e1704839d5c8de",
   "w": 1416,
   "h": 251
  }

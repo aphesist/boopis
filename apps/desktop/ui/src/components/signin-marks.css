@@ -5,3 +5,6 @@
 .hx-sso__ink > svg { display: block; width: 100%; height: 100%; }
 .hx-sso__ink[data-ink="colour"] { display: block; }
 :root[data-hx-theme="light"] .hx-sso__ink[data-ink="black"], :root:not([data-hx-theme="light"]) .hx-sso__ink[data-ink="white"] { display: block; }
+/* on a v7 root its own scheme decides (the kit's roots carry it as data-theme) */
+[data-ui="v7"][data-theme="light"] .hx-sso__ink[data-ink="black"], [data-ui="v7"][data-theme="dark"] .hx-sso__ink[data-ink="white"] { display: block; }
+[data-ui="v7"][data-theme="light"] .hx-sso__ink[data-ink="white"], [data-ui="v7"][data-theme="dark"] .hx-sso__ink[data-ink="black"] { display: none; }
