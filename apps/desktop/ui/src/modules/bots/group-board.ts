@@ -126,13 +126,13 @@ export function mountBoard(host: HTMLElement, deps: BoardDeps): BoardView {
     const cols = columnsOf(v.tasks);
     if (!cols.length) { empty('Nothing on ' + v.board.name + ' yet: the group’s tasks show here, by state.'); return; }
     const t = now();
-    const html = cols.map((c) => '<section class="bt-state" data-state="' + c.key + '" aria-label="' + c.label + '">' + kit.html.sectionHead({ title: c.label, count: String(c.tasks.length) }) +
+    const html = cols.map((c) => '<div class="bt-state" data-state="' + c.key + '">' + kit.section(c.label,
       kit.html.card({ variant: 'settings', rows: [], attrs: { 'data-column': c.key }, body: kit.html.list({ label: c.label, attrs: { 'data-kit-part': null }, rows: c.tasks.map((k) => {
         const who = k.assignee ? assigneeBot(k.assignee) : null;
         const sub = [who ? who.name : 'nobody yet', timeline(k, t), k.problem ? 'stopped: ' + k.problem : ''].filter(Boolean).join(' · ');
         return { variant: 'item' as const, title: k.title || k.id, sub, ...(who ? { markHTML: kit.html.avatar({ bot: who, size: 20, state: 'idle' }) } : { markText: '–' }),
           ...(k.status === 'blocked' ? { endHTML: kit.html.statusWord({ text: 'blocked', tone: 'red' }) } : {}), attrs: { 'data-task': k.id } };
-      }) }) }) + '</section>').join('');
+      }) }) }), String(c.tasks.length)) + '</div>').join('');
     body.replaceChildren(kit.wire(frag('<div class="bt-states">' + html + '</div>')));
     livenIn(body);
   }

@@ -58,8 +58,8 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const writes = () => admin.review(b.id, patch());
   const live = (): boolean => S.sheetOpen && S.sheetFor === b.id;
   const k = (key: string): string => 'bt-' + key + '-' + b.id;
-  const btn = (label: string, act: string, variant: 'secondary' | 'primary' | 'tint' | 'ghost' = 'secondary', more: Record<string, string> = {}): string => kit.html.button({ label, variant, attrs: { 'data-act': act, ...more } });
-  const { body, foot } = sheetFrame(b, sh, btn('Archive ' + b.name, 'archive', 'secondary', { 'data-clip-label': '' }) + btn('Delete…', 'delete') + btn('Review changes', 'review', 'primary', { hidden: '' }) + btn('Done', 'done'));
+  const btn = (label: string, act: string, variant: 'secondary' | 'primary' | 'tint' | 'ghost' = 'ghost', more: Record<string, string> = {}): string => kit.html.button({ label, variant, attrs: { 'data-act': act, ...more } });
+  const { body, foot } = sheetFrame(b, sh, btn('Archive ' + b.name, 'archive', 'ghost', { 'data-clip-label': '' }) + btn('Delete…', 'delete') + btn('Review changes', 'review', 'primary', { hidden: '' }) + btn('Done', 'done'));
 
   /* the two parts that stand in for the sections while they are needed: the diff to review, and the question before a delete */
   const review = el('section', { class: 'bt-review', 'aria-label': 'Review before saving', hidden: true });
@@ -106,12 +106,12 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
       const label = j.name || j.prompt || j.id;
       const meta = [scheduleWords(j.schedule), j.enabled ? (j.next ? 'next ' + j.next : '') : 'paused', j.last && j.last !== 'ok' ? 'last run: ' + j.last : ''].filter(Boolean).join(' · ');
       const row: RowOpts = { label: going ? label + ' (removed when you save)' : label, sub: meta, control: switchHTML('job-' + j.id, label, j.enabled, going) + kit.html.iconButton({ icon: going ? 'check' : 'close', label: (going ? 'Keep routine ' : 'Remove routine ') + label, variant: 'ghost', attrs: { 'data-routine-drop': j.id } }) };
-      const card = cardOf([row], { role: 'listitem', 'data-routine': j.id, ...(going ? { 'data-going': '' } : {}) });
-      const to = deliveryLine(j.deliver); if (to) card.append(to);
-      routines.append(card);
+      const item = el('div', { role: 'listitem', 'data-routine': j.id, ...(going ? { 'data-going': '' } : {}) }, [cardOf([row])]);
+      const to = deliveryLine(j.deliver); if (to) item.append(to);
+      routines.append(item);
     }
     pend.add.forEach((a, i) => {
-      routines.append(cardOf([{ label: a.name || a.prompt, sub: scheduleWords(a.schedule) + ' · added when you save', control: kit.html.iconButton({ icon: 'close', label: 'Do not add routine ' + (a.name || a.schedule), variant: 'ghost', attrs: { 'data-routine-undo': String(i) } }) }], { role: 'listitem', 'data-routine': '', 'data-new': '' }));
+      routines.append(el('div', { role: 'listitem', 'data-routine': '', 'data-new': '' }, [cardOf([{ label: a.name || a.prompt, sub: scheduleWords(a.schedule) + ' · added when you save', control: kit.html.iconButton({ icon: 'close', label: 'Do not add routine ' + (a.name || a.schedule), variant: 'ghost', attrs: { 'data-routine-undo': String(i) } }) }])]));
     });
   }
   routines.addEventListener('ui:change', (e) => {

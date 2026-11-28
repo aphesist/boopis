@@ -29,6 +29,22 @@ No app user, the cascade contained. Each went with its CSS, its stories, its gol
 The lab's v6 aliases for these (`.ui-step` for ToolRow, `.ui-stamp` for StatusWord, `.ui-steps` for Steps, `.ui-presence__shimmer` for
 Live in `tests/lab/v7.mjs`) went with them.
 
+## Deleted at step 2a
+
+The order's items 1 to 3 (27 and 28 November 2026): the bot's settings sheet, the new-bot and new-group forms and a group's board on
+the kit; the toast as the kit's Notice (conflict 31: the v7 spec wins, bottom centre, just above the composer); the selects and the
+listbox as the kit's Menu. Each part went with its CSS, its stories, its goldens and its tests.
+
+| Part | What it was | Now | Stories and goldens that went |
+|---|---|---|---|
+| `toast.ts` (`ui.toast`, `toast.whenReady`, `html.toast`, `.ui-toast`, `--pad-toast`, `--r-in-toast`, `--z-toast`), `modules/mods/toasts.ts`, the session's own `say` Notice | the v6 toast, a mod's toast queue, a second notice in the session | `kit.notify` (`components/v7/notice/notify.ts`): one at a time, "+N", Esc, its action and time, one polite live region; `modules/shell/notices.ts` places it and holds boot-time notices (`notifyWhenReady`); a mod's notice is `modules/mods/notices.ts`. Every `toast` name in the code is gone (`hx:notify`, `deps.notify`, the `notice` mod event) but the plugin's wire method `mod.toast` | `components/toast`, `shell/toast` (now `shell/notice`), `cards/mod-surfaces` "toast with +N" (now "a notice with +N"), `toast.test.ts`, `toast-place.test.ts` |
+| `select.ts`, `select-html.ts` (`ui.select`, `ui.listbox`, `ui.wireSelect`, `ui.modelEntries`, `html.select`, `ui.field({ kind: 'select' \| 'model' })`, `.ui-select`, `.ui-listbox`, `.ui-option`) | the v6 select and its listbox | the kit's SelectorItem opening the kit's Menu: `modules/bots/model-pick.ts` (a model, by provider with marks), `modules/settings/rows.ts` `openSelect` (the board's chooser), `kit.openMenu` (a mod's Select); the Menu's keys gained a word typed quickly and PageUp/PageDown. The list's choices as data: `components/select-entries.ts` | `components/select`, `components/listbox`, `components/variants-select`, `select.test.ts` |
+| `tabs.ts` (`ui.tabs`, `html.tabs`, `fitTabs`, `.ui-tabs`) | the v6 tab strip | the kit's Segmented tabs (the Look editor) | `components/tabs`, `components/variants-tabs` |
+| `ui.segmented`, `ui.switch`, `ui.chip`, `ui.chipGroup`, `ui.field`, `html.input`, `ui.section`, `html.setRow`, `html.setHead`, `html.setSection`, `ui.ladder`, `ui.row` (`html.leadFor`, `html.stateWord`) and their wiring in `wire.ts` | the v6 controls the bot sheet and the forms drew | the kit's Segmented, Switch, Chip, Field, SectionHead, Card rows, ListRow | `components/segmented`, `switch`, `chip`, `chip-group`, `field`, `input`, `section` (its disclosure now `components/disclosure`), `set-row`, `set-section`, `ladder`, `row` and their `variants-*`; `choices.stories.ts`; 130 rules of `components.css` |
+| `modules/bots/settings.ts`, `settings-live.ts`, `look-edit.ts`, `look-picker.ts` (v6) | a bot's settings sheet | the kit's Pane as a sheet (`variant: 'sheet'`, new), folding SectionHeads, Fields, pane Card rows with Switches, Segmenteds, the run limit's Button, the model's Menu, the Look editor as Segmented tabs over Swatches (Swatches gained its keys and `ui:change`, and a face: a bot's shape), the review as DiffView, the foot's Buttons | `bots/settings-sheet` re-taken (new states: a head focused and the next folded, the model menu open) |
+| `modules/bots/new-bot.ts`, `new-group.ts` (v6) | the new-bot and new-group forms | the kit's Dialog (form) drawn in the view; the name and what it does as Fields, the suggestions as ListRows, the members as checking OptionRows led by their orbs (O-B06's look) | `bots/new-bot`, `bots/new-group` re-taken |
+| `modules/bots/group-board.ts` (v6) | a group's kanban board | a read-only Card column per state (Card `body`, new), its tasks as ListRow items carrying the assignee's orb; the chooser the kit's Menu; one EmptyState line | `bots/group-board` re-taken ("a column collapsed" is now "a task hovered": the columns no longer fold) |
+
 ## Components (`src/components/`, not `v7/`)
 
 | File | What | App users | Fate |
@@ -36,11 +52,8 @@ Live in `tests/lab/v7.mjs`) went with them.
 | `html.ts`, `index.ts` (`ui`, `html`) | the v6 library's templates and factories | the members below | port member by member; delete when the last goes |
 | `components.css` | every v6 component's look (about 900 lines; most of `lab:static`'s `tokens.loose` findings) | the members below, and modules that write `ui-` classes by hand (`modules/bots/new-bot.ts` writes `ui-group__head`) | delete section by section with its member |
 | `kit.css` | imports the v6 tokens and the v6 CSS files | `main.ts`, the lab | delete last |
-| `toast.ts` (`ui.toast`) | the v6 toast; the kit's Notice is the merged name (`kit.single`: 274 of its findings are the word "toast") | `host/connectors-notice.ts`, `host/endpoint-form.ts`, `host/live-provider.ts`, `host/window-controls.ts`, `main.ts`, `modules/chat/refs.ts`, `modules/mods/toasts.ts` | port to the kit's Notice (conflict 31: where a floating notice sits is an owner question), then rename the callers |
 | `tooltip.ts`, `layer.ts` (`ui.tooltip`, `ui.popover`, `ui.layer`) | the floating layer and its placement | `main.ts`, `modules/shell/dialogs.ts`, `modules/shell/palette.ts`, `modules/chat/refs.ts`, `modules/shell/index.ts` | keep the placement engine (`layer.ts`, `place.ts`); port the tooltip's look to the kit's Tooltip |
-| `select.ts`, `select-html.ts` (`ui.select`, the v6 listbox) | the v6 select and its listbox (`components/listbox`: 119 of the v7 findings at step 8, `geometry.row`) | `modules/bots/group-board.ts`, `modules/mods/ctl.ts`; `select-html.ts`'s helpers in `modules/session/composer.ts`, `model-menu.ts`, `modules/settings/*` | port the two selects to the kit's Menu with SelectorItem; delete the listbox |
 | `scroll.ts`, `scroll-edges.ts` (`ui.scrollClass`, `ui.scrollEdges`) | the scroll area's class and its edge fades | `modules/bots/room.ts`, `group-room.ts`, `modules/session/conversation.ts`, `main.ts` | keep: a behaviour every scroller uses (R-scroll-9) |
-| `tabs.ts` (`fitTabs`) | the v6 tab strip | `modules/bots/look-picker.ts`, `look-edit.ts`, `modules/mods/panes.ts` | port to the kit's Segmented or its tabs |
 | `markdown.ts`, `md-view.ts` (`ui.markdown`) | what a bot or an agent wrote, as markup | `modules/bots/room.ts`, `group-room.ts`, `modules/chat/*`, `modules/session/conversation.ts` | keep: content rendering; its inline chips already draw the kit's InlineChip |
 | `model-mark.ts`, `model-mark.css`, `model-name.ts` (`ui.modelMark`, `html.modelMark`) | a model's mark and name | 19 files (`host/live/*`, `modules/session/*`, `modules/cards/*`, the kit's own components) | keep: the kit draws it; move the CSS beside the kit when `kit.css` goes |
 | `orb.ts`, `orb-*`, `look.ts`, `shape.ts`, `stack.ts`, `bot-state.ts` | the orbs, a bot's look, the avatar stack | the dock, the rooms, the rail, the kit's Avatar and InlineChip | keep: the kit's engine for bots |
@@ -56,38 +69,30 @@ Live in `tests/lab/v7.mjs`) went with them.
 
 | Member | App users | Fate |
 |---|---|---|
-| `ui.button`, `html.button` | `host/notice.ts`, `host/signin-card.ts`, `modules/bots/new-bot.ts`, `new-group.ts`, `settings.ts`, `settings-live.ts`, `modules/chat/refs.ts` | port the callers to `kit.html.button` |
-| `ui.iconButton` | `host/window-controls.ts`, `modules/bots/look-edit.ts`, `new-bot.ts`, `new-group.ts`, `settings*.ts`, `modules/mods/panes.ts`, `toasts.ts` | port to `kit.html.iconButton` |
-| `ui.segmented` | `modules/bots/look-picker.ts`, `settings*.ts` | port to the kit's Segmented |
-| `ui.chipGroup` (and the v6 chip under it) | `modules/bots/settings*.ts` | port to the kit's Chip |
-| `ui.field`, `html.input` | `modules/bots/new-bot.ts`, `settings*.ts` | port to the kit's Field |
-| `ui.section`, `html.section`, `html.setRow`, `html.switch`, `ui.ladder` | `modules/bots/settings*.ts`, `group-board.ts` | port with the bot's settings sheet (the kit's Card rows) |
-| `ui.select`, `ui.empty`, `html.row`, `html.empty` | `modules/bots/group-board.ts`, `new-group.ts`, `modules/mods/ctl.ts`, `modules/shell/index.ts` | port to the kit's Menu, EmptyState, ListRow |
+| `ui.button`, `html.button` | `host/notice.ts`, `host/signin-card.ts`, `modules/chat/refs.ts` | port the callers to `kit.html.button` |
+| `ui.iconButton` | `host/window-controls.ts`, `modules/mods/panes.ts` | port to `kit.html.iconButton` |
+| `ui.empty`, `html.empty` | `modules/shell/index.ts` | port to the kit's EmptyState |
 | `ui.entry`, `html.request` | `modules/mods/rows.ts`, `theme-card.ts` | port with the mods |
 | `ui.code`, `html.code` | `host/notice.ts`, `host/providers-view.ts` | port to the kit's InlineChip code |
 | `html.badge` | `modules/bots/outside.ts` | port to the kit's Badge |
 | `html.keys`, `html.dot`, `html.model`, `html.inline`, `html.icon` | `modules/shell/index.ts`, `modules/chat/refs.ts`, `modules/session/*`, `modules/onboarding/bots.ts` | port to the kit's Kbd, StatusWord dot, InlineChip; `html.inline` and `html.icon` keep (content and glyphs) |
 | `ui.card` | `host/connectors.ts`, `endpoint-form.ts`, `providers-view.ts`, `modules/cards/index.ts`, `modules/mods/theme-card.ts`, `modules/onboarding/setup.ts`, `modules/session/conversation.ts`, `modules/store/view.ts` | keep: the card host (`hx-card`); its forms draw the kit since 6d |
-| `ui.hydrate` | `host/providers-view.ts`, `modules/bots/group-board.ts`, `settings*.ts` | delete with the v6 controls it wires |
+| `ui.hydrate` | `host/providers-view.ts` | it wires only the hold and the disclosure now (step 2a); delete with them |
 
-Members with no app user left, kept only because another v6 member draws them: `ui.switch`, `ui.chip`, `ui.dot`, `ui.row`, `ui.keys`,
-`ui.inline`, `ui.disclosure`, `ui.scroll`, `ui.tabs`, `ui.hold`, `ui.measure`, `ui.legend`, `ui.request`, `ui.listbox`,
-`ui.modelEntries`, `ui.wireSelect`, `ui.model`, `ui.modelRoute`, `ui.shape`, `html.setHead`, `html.setSection`, `html.tip`,
-`html.combo`, `html.comboKbds`, `html.stateWord`, `html.leadFor`, `html.field`, `html.select`. **Fate: delete** with the member
-that draws each (the bots' settings sheet and the mods hold most of them).
+Members with no app user left, kept only because another v6 member draws them: `ui.dot`, `ui.keys`, `ui.inline`, `ui.disclosure`,
+`ui.scroll`, `ui.hold`, `ui.measure`, `ui.legend`, `ui.request`, `ui.model`, `ui.modelRoute`, `ui.shape`, `html.tip`, `html.combo`,
+`html.comboKbds`. **Fate: delete** with the member that draws each (the mods hold most of them). The switch, chip, row, tabs,
+listbox, setHead, setSection, stateWord, leadFor, field and select went at step 2a.
 
 ## Screens still on v6
 
 | Module | What | Board | Fate |
 |---|---|---|---|
-| `modules/bots/settings.ts`, `settings-live.ts`, `look-edit.ts`, `look-picker.ts` | a bot's settings sheet (its Approvals section is the kit's since 7a+) | none for the sheet's other sections | port to the kit's Pane and Card rows; an owner question for the look |
-| `modules/bots/new-bot.ts`, `new-group.ts` | the new-bot and new-group forms | O-B06's team plan covers making a team, not these forms | port; nearest drawn state meanwhile (rule 6) |
-| `modules/bots/group-board.ts` | a group's kanban board, read only | none | port; owner question |
 | `modules/mods/*` (`panes.ts`, `rows.ts`, `toasts.ts`, `theme-card.ts`, `ctl.ts`, `index.ts`, `mods.css`) | where a mod draws | none (conflict 32) | owner question; port with its answer |
 | `host/window-controls.ts`, `host/notice.ts`, `host/signin-card.ts`, `host/endpoint-form.ts`, `host/connectors-notice.ts`, `host/providers-view.ts` (4 v6 calls) | the window's controls, the startup notice, a sign-in, an endpoint, a connectors notice, Settings › Models' providers | 14 for Models; none for the others | port the v6 controls they still call |
-| `modules/chat/refs.ts` | a mention's card, a path's menu | none | port its button, toast and dot |
+| `modules/chat/refs.ts` | a mention's card, a path's menu | none | port its button and dot (its notices are the kit's since 2a) |
 
-Module CSS that is still v6 look rather than placement: `modules/bots/bots.css` (8 `tokens.loose`), `modules/mods/mods.css` (16),
+Module CSS that is still v6 look rather than placement: `modules/mods/mods.css` (15; `modules/bots/bots.css` is placement only since 2a),
 `modules/shell/shell.css` (15). **Fate:** each goes with its screen's port.
 
 ## Stories and goldens
@@ -99,18 +104,18 @@ v6 parts named below) are not v6.
 
 | Story | What it draws | Goldens | Fate |
 |---|---|---|---|
-| `components/button`, `icon-button`, `hold`, `switch`, `segmented`, `chip`, `chip-group`, `field`, `popover`, `tooltip`, `toast`, `tabs`, `scroll`, `badge`, `input`, `set-section`, `key-combos`, `row`, `section`, `set-row`, `code`, `keys`, `dot`, `ladder`, `measure`, `model-mark`, `orb`, `stack`, `empty`, `select`, `listbox`, `signin-button`, `markdown`, `inline-chips` | the v6 gallery, one specimen per member | `tests/lab-golden/components__*` (34 folders) | delete each with its member; `model-mark`, `orb`, `stack`, `markdown` and `inline-chips` keep (the kit draws them) |
+| `components/button`, `icon-button`, `hold`, `popover`, `tooltip`, `scroll`, `badge`, `key-combos`, `disclosure`, `code`, `keys`, `dot`, `measure`, `model-mark`, `orb`, `stack`, `empty`, `signin-button`, `markdown`, `inline-chips` | the v6 gallery, one specimen per member | `tests/lab-golden/components__*` (the switch, segmented, chip, chip group, field, input, section, set row, set section, ladder, row, tabs, toast, select and listbox folders went at 2a) | delete each with its member; `model-mark`, `orb`, `stack`, `markdown` and `inline-chips` keep (the kit draws them) |
 | `components/variants-*` | every v6 member's variants | `components__variants-*` (22 folders) | delete with `variants.ts` |
 | `composer/entry`, `composer/request` | the v6 call-number entry and the request bubble | `composer__entry`, `composer__request` | delete with the mods' port |
 | `cards/mod-view`, `cards/mod-surfaces` | what a mod draws | `cards__mod-view`, `cards__mod-surfaces` | port with the mods |
-| `bots/settings-sheet`, `bots/new-bot`, `bots/new-group`, `bots/group-board`, `bots/group-details` | the screens above | `bots__settings-sheet`, `bots__new-bot`, `bots__new-group`, `bots__group-board` | port with their screens |
 | `settings/signin-card`, `settings/xai-signin`, `settings/startup-notice` | the sign-in card, xAI's sign-in, the startup notice | their folders | port with `host/signin-card.ts` and `host/notice.ts` |
 
 ## The order proposed for phase 2
 
-1. The bot's settings sheet and the new-bot and new-group forms (they hold most of the v6 members still used).
-2. The toast as the kit's Notice (with conflict 31's answer), which clears the `kit.single` findings.
-3. The selects and the listbox as the kit's Menu.
-4. The mods, once conflict 32 is answered.
+1. ~~The bot's settings sheet and the new-bot and new-group forms~~ (done at 2a, with a group's board).
+2. ~~The toast as the kit's Notice~~ (done at 2a: conflict 31 decided for the spec; the `kit.single` findings for it are gone).
+3. ~~The selects and the listbox as the kit's Menu~~ (done at 2a).
+4. The mods (2b: the band in the held/queued strip's slot, status in the composer's foot line, a pane a tab after the four, rows as
+   SystemLine and ToolRow, notices the kit's Notice already).
 5. The sign-in card, the startup notice, the window's controls; then `variants.ts`, the v6 gallery, `html.ts`'s last members,
    `components.css` and `kit.css`.

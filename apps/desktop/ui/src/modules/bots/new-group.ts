@@ -58,7 +58,7 @@ function build(editId: string | null): void {
   const lead = old
     ? 'The members of a group are fixed when it is made, so this makes a new group called ' + old.name + ' with the bots you pick and archives this one. Its messages stay in Archived.'
     : 'A group is a conversation among ' + min + ' to ' + max + ' of your bots and you. ' + src.nature;
-  const rows = S.bots.map((b) => kit.html.optionRow({ label: b.name, meaning: b.role || ' ', check: true, value: b.id, leadHTML: kit.html.avatar({ bot: b, size: 20, still: true }), attrs: { role: 'menuitemcheckbox', tabindex: '0', 'data-member': b.id, 'aria-label': b.name } }));
+  const rows = S.bots.map((b) => kit.html.optionRow({ label: b.name, meaning: b.role || ' ', check: true, value: b.id, leadHTML: kit.html.avatar({ bot: b, size: 20, still: true }), attrs: { role: 'checkbox', tabindex: '0', 'data-member': b.id, 'aria-label': b.name } }));
   const members = enough
     ? '<div class="bt-members" role="group" aria-label="Members">' + rows.join('') + '</div><p class="k7-pane__note bt-count" role="status" aria-live="polite"></p>'
     : kit.html.emptyState({ text: 'Make another bot first: a group needs two.' });

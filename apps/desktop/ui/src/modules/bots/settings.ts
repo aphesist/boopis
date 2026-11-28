@@ -50,7 +50,8 @@ export const errorOf = (): HTMLElement => el('p', { class: 'k7-pane__note bt-she
 /** say it, or hide it */
 export const sayError = (n: HTMLElement, text: string | null): void => { n.textContent = text ?? ''; n.hidden = !text; };
 /** a card of rows, wired */
-export const cardOf = (rows: readonly RowOpts[], attrs?: Record<string, string>): HTMLElement => kitEl(kit.html.card({ variant: 'settings', rows, ...(attrs ? { attrs } : {}) }));
+/** a card of rows on the sheet: the kit's pane Card (the sheet is the Pane's ground: a settings Card would paint the same, R-colour-4), wired */
+export const cardOf = (rows: readonly RowOpts[], attrs?: Record<string, string>): HTMLElement => kitEl(kit.html.card({ variant: 'pane', rows, ...(attrs ? { attrs } : {}) }));
 /** a Field (text or multiline), wired; its input or textarea is `.k7-field__input` */
 export const fieldOf = (o: Parameters<typeof kit.html.field>[0]): HTMLElement => kitEl(kit.html.field(o));
 export const inputOf = (f: HTMLElement): HTMLInputElement & HTMLTextAreaElement => f.querySelector('.k7-field__input') as HTMLInputElement & HTMLTextAreaElement;
@@ -182,7 +183,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   const catalog = data().bots.catalog();
   const push = (patch: Partial<BotConfig>): void => { data().bots.update(b.id, { cfg: patch }); };
   const changed = (): void => { updateRow(b.id); refreshPresence(); };
-  const { body, foot } = sheetFrame(b, sh, kit.html.button({ label: 'Archive ' + b.name, attrs: { 'data-act': 'archive', 'data-clip-label': '' } }) + kit.html.button({ label: 'Done', variant: 'primary', attrs: { 'data-act': 'done' } }));
+  const { body, foot } = sheetFrame(b, sh, kit.html.button({ label: 'Archive ' + b.name, variant: 'ghost', attrs: { 'data-act': 'archive', 'data-clip-label': '' } }) + kit.html.button({ label: 'Done', variant: 'primary', attrs: { 'data-act': 'done' } }));
   const k = (key: string): string => 'bt-' + key + '-' + b.id;
 
   /* role and instructions */

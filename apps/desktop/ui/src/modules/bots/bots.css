@@ -37,6 +37,7 @@
 .bt-states { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); align-items: start; gap: var(--sp-3); }
 .bt-state { display: flex; flex-direction: column; min-width: 0; }
 .bt-state .k7-list { display: flex; flex-direction: column; }
+.bt-state .k7-card { padding: calc(var(--r-card) - var(--r-tile)); }   /* the tasks' rows sit concentric in their column's card */
 /* ================================================================ the new-bot and new-group forms (step 2a: the kit's Dialog in its form
    shape, drawn in the view in place of the room): placement only */
 .bt-new-scroll { padding-bottom: calc(var(--hx-dock-space, 0px) + var(--sp-6)); }

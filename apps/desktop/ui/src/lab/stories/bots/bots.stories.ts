@@ -160,14 +160,16 @@ const sheet: Story = {
   }
 };
 
+/* the kit Dialog's close: a 28 capsule 10 in from its 20 corner, as the kit draws it (dialog.css, R-corner-9; S23's form dialog), drawn in place */
+const DIALOG_CLOSE = { concentric: 'the kit Dialog\'s close, a 28 capsule 10 in from its 20 corner (dialog.css, R-corner-9)' };
 const newBot: Story = {
   id: 'bots/new-bot', title: 'New bot', area: 'bots', kind: 'surface', covers: ['surface:bots-new'], scope: '#hx-view-bots', mock: MOCK,
   states: {
-    typical: st(['typical'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { allow: { 'stability.render': 'the dice and autoname pick at random' } }),
-    'from no bots': st(['empty', 'owner'], { bots: 'none' }, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { allow: { 'stability.render': 'the dice and autoname pick at random' } }),
-    'the name focused': st(['focus'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { force: [{ sel: '#hx-view-bots [data-new-name]', state: 'focus' }], allow: { 'stability.render': 'the dice and autoname pick at random' } }),
-    'the shape tab': st(['variant'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); [...document.querySelectorAll<HTMLElement>('#hx-view-bots [data-look] [role="tab"]')].find((x) => x.textContent === 'Shape')?.click(); await c.wait(400); }, { allow: { 'stability.render': 'the dice and autoname pick at random' } }),
-    'dice hover': st(['hover'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { force: [{ sel: '#hx-view-bots [data-dice]', state: 'hover' }], allow: { 'stability.render': 'random by design' } })
+    typical: st(['typical'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { allow: { ...DIALOG_CLOSE, 'stability.render': 'the dice and autoname pick at random' } }),
+    'from no bots': st(['empty', 'owner'], { bots: 'none' }, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { allow: { ...DIALOG_CLOSE, 'stability.render': 'the dice and autoname pick at random' } }),
+    'the name focused': st(['focus'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { force: [{ sel: '#hx-view-bots [data-new-name]', state: 'focus' }], allow: { ...DIALOG_CLOSE, 'stability.render': 'the dice and autoname pick at random' } }),
+    'the shape tab': st(['variant'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); [...document.querySelectorAll<HTMLElement>('#hx-view-bots [data-look] [role="tab"]')].find((x) => x.textContent === 'Shape')?.click(); await c.wait(400); }, { allow: { ...DIALOG_CLOSE, 'stability.render': 'the dice and autoname pick at random' } }),
+    'dice hover': st(['hover'], {}, async (c) => { await bots(c); c.hx.emit('hx:new-bot'); await c.wait(600); }, { force: [{ sel: '#hx-view-bots [data-dice]', state: 'hover' }], allow: { ...DIALOG_CLOSE, 'stability.render': 'random by design' } })
   }
 };
 
@@ -207,21 +209,23 @@ const groupRoom: Story = {
 
 const boardOf = (k: Kanban): ProviderSpec => ({ fixtures: ['groups'], simulate: false, patch: (p) => withKanban(p, k) });
 const openBoard = async (c: AppCtx): Promise<void> => { await withDetails(openGroup)(c); await c.click('#hx-right-bots [data-room="board"]'); await c.wait(500); };
+/* a task's tile is the kit's ListRow item tile at --r-tile, as board 15 draws it, set in the lead's read-only Card column (2a) */
+const TILE = { concentric: 'the ListRow item tile at --r-tile as board 15 draws it, in a Card column (the lead\'s decision, 2a)' };
 const groupBoard: Story = {
   id: 'bots/group-board', title: 'Group kanban board', area: 'bots', kind: 'surface', covers: ['surface:bots-kanban'], scope: '#hx-view-bots', mock: MOCK,
   states: {
-    'columns and their tasks': st(['typical', 'owner'], boardOf({}), openBoard),
-    'reading the board': st(['loading'], boardOf({ never: true }), openBoard),
-    'nothing on the board yet': st(['empty'], boardOf({ tasks: [] }), openBoard),
-    'no board named like the group': st(['variant'], boardOf({ boards: [{ slug: 'default', name: 'Default', archived: false, counts: {} }, { slug: 'paper-past', name: 'Paper past', archived: false, counts: {} }] }), openBoard),
-    'the engine has no board': st(['empty', 'variant'], boardOf({ boards: [] }), openBoard),
-    'the board could not be read': st(['error'], boardOf({ failView: 'The engine is not running. Open boopis again to start it.' }), openBoard),
-    'the boards could not be listed': st(['error'], boardOf({ failBoards: 'The engine is not running. Open boopis again to start it.' }), openBoard),
-    'this build cannot read boards': st(['disabled'], { fixtures: ['groups'], simulate: false }, openBoard),
-    'a blocked task and long titles': st(['long'], boardOf({ tasks: [...TASKS, { ...TASKS[4]!, id: 't_99', title: 'Compare every figure in the quarterly close report against the ledger, the bank statements and last year\'s filing, and list each difference with its page', problem: 'two of the sources could not be opened and the checker stopped before it reached the second table of the ledger' }] }), openBoard),
-    'forty tasks, scrolling': st(['many', 'scroll'], boardOf({ tasks: MANY }), openBoard),
-    'a task hovered': st(['hover'], boardOf({}), openBoard, { force: [{ sel: '#hx-view-bots .bt-board [data-task]', state: 'hover' }] }),
-    'a long group name': st(['long'], { fixtures: ['groups'], simulate: false, patch: (p) => { const k = withKanban(p, {}); return { ...k, groups: { ...k.groups, snapshot: () => { const s = k.groups.snapshot(); return { ...s, groups: s.groups.map((g) => ({ ...g, name: 'the quarterly close review with finance, audit and the platform team' })) }; } } }; } }, openBoard)
+    'columns and their tasks': st(['typical', 'owner'], boardOf({}), openBoard, { allow: TILE }),
+    'reading the board': st(['loading'], boardOf({ never: true }), openBoard, { allow: TILE }),
+    'nothing on the board yet': st(['empty'], boardOf({ tasks: [] }), openBoard, { allow: TILE }),
+    'no board named like the group': st(['variant'], boardOf({ boards: [{ slug: 'default', name: 'Default', archived: false, counts: {} }, { slug: 'paper-past', name: 'Paper past', archived: false, counts: {} }] }), openBoard, { allow: TILE }),
+    'the engine has no board': st(['empty', 'variant'], boardOf({ boards: [] }), openBoard, { allow: TILE }),
+    'the board could not be read': st(['error'], boardOf({ failView: 'The engine is not running. Open boopis again to start it.' }), openBoard, { allow: TILE }),
+    'the boards could not be listed': st(['error'], boardOf({ failBoards: 'The engine is not running. Open boopis again to start it.' }), openBoard, { allow: TILE }),
+    'this build cannot read boards': st(['disabled'], { fixtures: ['groups'], simulate: false }, openBoard, { allow: TILE }),
+    'a blocked task and long titles': st(['long'], boardOf({ tasks: [...TASKS, { ...TASKS[4]!, id: 't_99', title: 'Compare every figure in the quarterly close report against the ledger, the bank statements and last year\'s filing, and list each difference with its page', problem: 'two of the sources could not be opened and the checker stopped before it reached the second table of the ledger' }] }), openBoard, { allow: TILE }),
+    'forty tasks, scrolling': st(['many', 'scroll'], boardOf({ tasks: MANY }), openBoard, { allow: TILE }),
+    'a task hovered': st(['hover'], boardOf({}), openBoard, { force: [{ sel: '#hx-view-bots .bt-board [data-task]', state: 'hover' }], allow: TILE }),
+    'a long group name': st(['long'], { fixtures: ['groups'], simulate: false, patch: (p) => { const k = withKanban(p, {}); return { ...k, groups: { ...k.groups, snapshot: () => { const s = k.groups.snapshot(); return { ...s, groups: s.groups.map((g) => ({ ...g, name: 'the quarterly close review with finance, audit and the platform team' })) }; } } }; } }, openBoard, { allow: TILE })
   }
 };
 
@@ -244,11 +248,11 @@ const groupDetails: Story = {
 const newGroup: Story = {
   id: 'bots/new-group', title: 'New group', area: 'bots', kind: 'surface', covers: ['surface:bots-new-group'], scope: '#hx-view-bots', mock: MOCK,
   states: {
-    typical: st(['typical', 'owner'], grp, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(500); }),
-    'members picked': st(['variant', 'owner'], grp, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(400); for (const n of [...document.querySelectorAll<HTMLElement>('#hx-view-bots [data-member]')].slice(0, 3)) n.click(); const name = document.querySelector<HTMLInputElement>('#hx-view-bots .bt-new:not([hidden]) [data-group-name]'); if (name) name.value = 'release crew'; await c.wait(300); }),
-    'changing the members': st(['variant'], grp, async (c) => { await withDetails(openGroup)(c); await c.click('#hx-right-bots [data-room="members"]'); await c.wait(400); }),
-    'only one bot': st(['empty'], { bots: 'one' }, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(500); }),
-    'group chat is off': st(['error'], { patch: (p) => ({ ...p, groups: { ...p.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } }) }, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(500); })
+    typical: st(['typical', 'owner'], grp, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(500); }, { allow: DIALOG_CLOSE }),
+    'members picked': st(['variant', 'owner'], grp, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(400); for (const n of [...document.querySelectorAll<HTMLElement>('#hx-view-bots [data-member]')].slice(0, 3)) n.click(); const name = document.querySelector<HTMLInputElement>('#hx-view-bots .bt-new:not([hidden]) [data-group-name]'); if (name) name.value = 'release crew'; await c.wait(300); }, { allow: DIALOG_CLOSE }),
+    'changing the members': st(['variant'], grp, async (c) => { await withDetails(openGroup)(c); await c.click('#hx-right-bots [data-room="members"]'); await c.wait(400); }, { allow: DIALOG_CLOSE }),
+    'only one bot': st(['empty'], { bots: 'one' }, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(500); }, { allow: DIALOG_CLOSE }),
+    'group chat is off': st(['error'], { patch: (p) => ({ ...p, groups: { ...p.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } }) }, async (c) => { await bots(c); c.hx.emit('hx:new-group'); await c.wait(500); }, { allow: DIALOG_CLOSE })
   }
 };
 
