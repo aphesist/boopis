@@ -3,7 +3,7 @@
    frames in `host/live/*.test.ts`; the lab draws what it shows. */
 import type { Bot, BotInfo, BotsEvent, DataProvider, Group, GroupMember, GroupMessage, GroupsEvent, ThreadMessage } from '../data';
 import { emitter } from '../data/store';
-import { lookFor } from '@boopis/ui';
+import { lookAttrs, lookFor } from '@boopis/ui';
 import { TEAM_SIX } from './fixtures';
 
 const info = (b: Bot): BotInfo => ({
@@ -152,13 +152,13 @@ export function recordsArrive(): void {
   });
   for (const b of team) arrivals.emit({ type: 'bot', bot: { ...b } });
 }
-/** every orb of the six on the page wears its saved look; the mismatches, in words ("kai in the roster: star #3b82f6") */
+/** every orb of the six on the page wears its saved look (Bone and Ink as their theme draws them: `lookAttrs`); the mismatches, in words ("kai in the roster: star #3b82f6") */
 export function lookMismatches(): string[] {
   const out: string[] = [];
   for (const t of TEAM_SIX) {
     for (const o of document.querySelectorAll('.ui-orb[data-bot="' + t.id + '"] > orb-avatar')) {
       const got = o.getAttribute('shape') + ' ' + o.getAttribute('color');
-      if (got !== t.shape + ' ' + t.color) out.push(t.id + ' in ' + (o.closest('#hx-side') ? 'the roster' : o.closest('.dk') ? 'the dock' : o.closest('.bt-p, .bt-presence') ? 'its room' : 'the page') + ': ' + got);
+      if (got !== t.shape + ' ' + lookAttrs({ shape: t.shape, color: t.color }).color) out.push(t.id + ' in ' + (o.closest('#hx-side') ? 'the roster' : o.closest('.dk') ? 'the dock' : o.closest('.bt-p, .bt-presence') ? 'its room' : 'the page') + ': ' + got);
     }
   }
   return out;

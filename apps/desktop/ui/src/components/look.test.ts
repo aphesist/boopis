@@ -60,4 +60,10 @@ describe('lookOf: the one look of a bot', () => {
     expect(Object.keys(lookAttrs(lookOf({ name: 'hex', shape: 'hexagon', color: '#a6a6ab' })))).not.toContain('eye-shape');
     expect(sameLook({ name: 'kai' }, lookFor('kai'))).toBe(true);
   });
+  it('draws Bone and Ink as their theme does, the other swatches as they are', () => {
+    expect(lookAttrs({ shape: 'circle', color: '#efece6' })).toEqual({ shape: 'circle', color: 'var(--look-bone, #efece6)', 'eye-color': 'var(--look-bone-eye, var(--bg-2))' });
+    expect(lookAttrs({ shape: 'circle', color: '#EFECE6' }, '--bg-3')['eye-color']).toBe('var(--look-bone-eye, var(--bg-3))');
+    expect(lookAttrs({ shape: 'drop', color: '#1c1c24' })).toEqual({ shape: 'drop', color: 'var(--look-ink, #1c1c24)', 'eye-color': 'var(--ink-on-dock)' });
+    for (const [hex] of SWATCHES.filter(([c]) => c !== '#efece6' && c !== '#1c1c24')) expect(lookAttrs({ shape: 'circle', color: hex }).color).toBe(hex);
+  });
 });

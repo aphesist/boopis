@@ -9,7 +9,7 @@
    drew the saved look; the roster row kept the orb it had drawn and the dock copied only the state, so both kept the
    name's look. The test walks that sequence. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { kit, lookFor } from '@boopis/ui';
+import { kit, lookAttrs, lookFor } from '@boopis/ui';
 import { data, setProvider } from '../../data';
 import type { DataProvider, Group } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
@@ -89,7 +89,8 @@ const flush = async (ms = 20): Promise<void> => { await vi.advanceTimersByTimeAs
 /** every orb of `id` on the page: its wrapper is `ui.orb`'s, marked with the bot's id */
 const orbsOf = (id: string, root: ParentNode = document): Element[] => [...root.querySelectorAll('.ui-orb[data-bot="' + id + '"] > orb-avatar')];
 const lookOn = (o: Element): string => o.getAttribute('shape') + ' ' + o.getAttribute('color');
-const want = (l: { shape: string; color: string }): string => l.shape + ' ' + l.color;
+/* the colour an orb carries: Bone and Ink as their theme draws them (`lookAttrs`), every other swatch as it is */
+const want = (l: { shape: string; color: string }): string => l.shape + ' ' + lookAttrs(l).color;
 /** the places that must agree, each found on its own so a place that draws nothing fails too */
 function places(id: string): Record<string, Element[]> {
   const card = document.getElementById('one-look-card') as HTMLElement;

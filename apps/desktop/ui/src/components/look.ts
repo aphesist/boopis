@@ -61,10 +61,22 @@ export function lumHex(hex: string | undefined): number {
   const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
   return 0.2126 * (c[0] ?? 0) + 0.7152 * (c[1] ?? 0) + 0.0722 * (c[2] ?? 0);
 }
-/** the attributes of an <orb-avatar> for a look: shape, colour, and the light eyes a dark body takes (luminance under
-    .05, R-orb-7); never `eye-shape` (the eyes are the state's) */
-export function lookAttrs(look: Look): { shape: string; color: string; 'eye-color': string | null } {
-  return { shape: look.shape, color: look.color, 'eye-color': lumHex(look.color) < 0.05 ? 'var(--ink-on-dock)' : null };
+/* The two swatches that fade into their own theme (the owner, 28 November 2026: "black becomes grayish black and white becomes
+   more pearl-sand like"). Bone draws as pearl-sand in the light theme and Ink as graphite in the dark theme, each through a v7
+   token (`--look-bone`, `--look-ink`; scripts/build-tokens-v7.mjs), so one bot follows the theme of the surface it is drawn on
+   (the dock's inside is the dark theme in both). Bone on dark and Ink on light already stand out and keep the swatch. What is
+   stored, rolled and named stays the swatch: only the drawing changes. On pearl-sand the eyes cut to a near-white surface would
+   vanish, so there Bone's eyes are the theme's ink (`--look-bone-eye`); elsewhere they are cut to the surface as before. */
+const SHADED: Readonly<Record<string, { color: string; eye?: (cut: string) => string }>> = {
+  '#efece6': { color: 'var(--look-bone, #efece6)', eye: (cut) => 'var(--look-bone-eye, ' + cut + ')' },
+  '#1c1c24': { color: 'var(--look-ink, #1c1c24)' }
+};
+/** the attributes of an <orb-avatar> for a look on a surface (its token, the ground `--bg-2` when left out): shape, colour (Bone and
+    Ink as their theme draws them, above), and the eyes: light on a dark body (luminance under .05, R-orb-7), the theme's ink on
+    Bone where it is pearl-sand, else null (the caller cuts them to the surface); never `eye-shape` (the eyes are the state's) */
+export function lookAttrs(look: Look, surface = '--bg-2'): { shape: string; color: string; 'eye-color': string | null } {
+  const shade = SHADED[String(look.color).toLowerCase()];
+  return { shape: look.shape, color: shade?.color ?? look.color, 'eye-color': lumHex(look.color) < 0.05 ? 'var(--ink-on-dock)' : shade?.eye ? shade.eye('var(' + surface + ')') : null };
 }
 
 export interface RollOpts {

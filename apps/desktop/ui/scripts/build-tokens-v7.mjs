@@ -51,6 +51,12 @@ for (const [k, v] of Object.entries(t.elevation.light)) if (k.startsWith('--')) 
 both.push('--find-hit: color-mix(in srgb, var(--accent) 24%, transparent);', '--find-hit-now: color-mix(in srgb, var(--accent) 48%, transparent);');
 dark.push('--shadow-inline: none;', '--shadow-pop: none;', '--shadow-modal: none;', '--shadow-window: none;');
 
+/* the bots' two faint swatches as their theme draws them (the owner, 28 November 2026; components/look.ts `lookAttrs`): Bone is
+   pearl-sand in the light theme with the theme's ink for eyes, Ink is graphite in the dark theme. Each theme declares all three, so a
+   dark inside a light window (the dock) and a light inside a dark one get their own; `initial` leaves the eyes cut to the surface */
+dark.push('--look-bone: #efece6;', '--look-bone-eye: initial;', '--look-ink: #42424d;');
+light.push('--look-bone: #ddd2bd;', '--look-bone-eye: var(--ink);', '--look-ink: #1c1c24;');
+
 /* the board constants that change with the theme (ds-v7/src/kit.css and build-v7-css.mjs's last two rules) */
 dark.push('--composer-line: var(--line-strong);', '--float-line: var(--line);', '--bubble-ring: var(--hair);', '--knob: #f5f5f5e6;', '--knob-sh: none;',
   '--track-off: var(--fill-2);', '--seg-on: var(--current);', '--seg-on-sh: none;', '--card-line: var(--hair);');

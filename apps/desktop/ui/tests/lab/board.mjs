@@ -61,7 +61,7 @@ async function serve() {
 }
 
 /* ───────── drawing ───────── */
-const orbBoxes = () => [...document.querySelectorAll('orb-avatar')].map((o) => { const r = o.getBoundingClientRect(); return { shown: o.checkVisibility ? o.checkVisibility({ visibilityProperty: true, opacityProperty: true }) : true, x: r.left, y: r.top, w: r.width, h: r.height, shape: o.getAttribute('shape') || '', color: ((c) => (c.startsWith('var(') ? getComputedStyle(o).getPropertyValue(c.slice(4, -1)).trim() : c))(o.getAttribute('color') || '').toLowerCase(), reaction: o.getAttribute('reaction') || 'idle' }; }).filter((b) => b.w > 0 && b.h > 0 && b.x < innerWidth && b.y < innerHeight && b.shown);
+const orbBoxes = () => [...document.querySelectorAll('orb-avatar')].map((o) => { const r = o.getBoundingClientRect(); return { shown: o.checkVisibility ? o.checkVisibility({ visibilityProperty: true, opacityProperty: true }) : true, x: r.left, y: r.top, w: r.width, h: r.height, shape: o.getAttribute('shape') || '', color: ((c) => { const m = /^var\((--[\w-]+)(?:,\s*(.+))?\)$/.exec(c); return m ? getComputedStyle(o).getPropertyValue(m[1]).trim() || (m[2] ?? '') : c; })(o.getAttribute('color') || '').toLowerCase(), reaction: o.getAttribute('reaction') || 'idle' }; }).filter((b) => b.w > 0 && b.h > 0 && b.x < innerWidth && b.y < innerHeight && b.shown);
 async function shot(browser, url, wait, ready) {
   /* the board is drawn as it was approved; the app rests its live things (the sweep, the breath) as the boards' `still` does */
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, ...(ready ? { reducedMotion: 'reduce' } : {}) });
