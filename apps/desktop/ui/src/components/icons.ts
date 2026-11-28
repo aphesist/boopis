@@ -1,4 +1,4 @@
-/* Icons: any grid, one rendered stroke (components.css .ui-icon). [viewBox, inner]. Chrome glyphs sit on the
+/* Icons: any grid, one rendered stroke (icons.css .ui-icon). [viewBox, inner]. Chrome glyphs sit on the
    shell's 20 grid, content glyphs on the session's 16 grid. */
 import { cx } from '../core/dom';
 

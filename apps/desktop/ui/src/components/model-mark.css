@@ -1,4 +1,4 @@
-/* boopis v6 · model marks (components/model-mark.js). Load after components.css.
+/* Model marks (model-mark.ts): a provider's mark beside a model's name.
    A mark is the provider's logo, drawn in currentColor (mono) or in the brand's colours (the model menu only).
    No colour, family or size lives in the markup except the mark's own px size (--mm-size). */
 .ui-mm { display: inline-block; flex: none; width: var(--mm-size, 16px); height: var(--mm-size, 16px); vertical-align: -0.22em; overflow: visible; }

@@ -1,5 +1,5 @@
 /* corners: the nesting arithmetic of DESIGN-SYSTEM.md §8.2 (owner decision: nested corners fit their container; R-corner-3, R-corner-4, R-corner-9), in
-   one place. components.css declares the same formulas once for every container (`.ui-nest` and the library's own),
+   one place. corners.css declares the same formulas once for every container (`.ui-nest` and the library's own),
    so a screen never sets a radius or an inset in a corner by hand; this module is the same maths for code that needs
    the numbers (tests, the UI lab, a canvas) and the reference the CSS is checked against.
 
@@ -57,7 +57,7 @@ export function concentric(n: Nest): Fit {
   return { outer, rIn, radius, inset, ring, gaveWay: inset < pad, loose: pad >= outer && outer > 0 };
 }
 
-/** the CSS the container rule in components.css declares, as text (the UI lab and the tests compare against it) */
+/** the CSS the container rule in corners.css declares, as text (the UI lab and the tests compare against it) */
 export const CORNER_CSS = {
   rIn: 'min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))))',
   radius: 'min(var(--r-in), calc(var(--corner-size) / 2))',

@@ -1,4 +1,4 @@
-/* The scroll area's edge fade (components.css, "scroll area"; R-scroll-9). A scroller never cuts its content with a straight
+/* The scroll area's edge fade (scroll.css; R-scroll-9). A scroller never cuts its content with a straight
    edge: where more lies beyond an edge, the content fades out over --scroll-fade at that edge; at its start and at its end there
    is nothing beyond, so there is no fade. This module keeps the flags the stylesheet reads, on every .ui-scroll:
      data-more-top, data-more-bottom   (a vertical scroller, and a code block that scrolls both ways)

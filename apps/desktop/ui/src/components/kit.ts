@@ -3,6 +3,7 @@
 import '../styles/tokens.css';
 import './corners.css';
 import './scroll.css';
+import './icons.css';
 import './orb.css';
 import './markdown.css';
 import './model-mark.css';

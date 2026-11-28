@@ -3,6 +3,7 @@
 import './tokens.css';   /* the app's themes (the presets, Settings > Appearance); the v7 kit's own tokens are on a v7 root */
 import '../components/corners.css';   /* the corner engine and the app root */
 import '../components/scroll.css';
+import '../components/icons.css';
 import '../components/orb.css';
 import '../components/markdown.css';
 import '../components/model-mark.css';

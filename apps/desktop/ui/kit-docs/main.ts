@@ -5,6 +5,7 @@
 import '../src/styles/tokens.css';
 import '../src/components/corners.css';
 import '../src/components/scroll.css';
+import '../src/components/icons.css';
 import '../src/components/orb.css';
 import '../src/components/markdown.css';
 import '../src/components/model-mark.css';
