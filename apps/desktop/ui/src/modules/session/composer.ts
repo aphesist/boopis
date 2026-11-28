@@ -13,7 +13,7 @@
 import { emit, on } from '../../core/bus';
 import { LINE_ITEMS, LINE_NAMES, loadLineHidden, saveLineHidden } from '../../core/settings';
 import type { LineItemId } from '../../core/settings';
-import { kit, ui } from '@boopis/ui';
+import { announce, esc, kit, markHTML, modelMark } from '@boopis/ui';
 import type { ComposerChip, LineItem } from '@boopis/ui';
 import { data } from '../../data';
 import type { Attached, GovernanceState, SendMeta } from '../../data';
@@ -26,12 +26,13 @@ import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, SE
 import { launchView, openCarefulFor } from './launch';
 import { kTokens } from './shared';
 import { say, v7Attrs } from './s0';
+import { surface } from '../mods/surfaces';
 
 export { SMART_VALUE };
 /** an entry of the kit's Menu */
 type MenuEntry = Parameters<typeof kit.html.menu>[0]['entries'][number];
 const gov = (): GovernanceState => data().details.governance.get();
-const called = (m: string): string => ui.modelMark.called(m);
+const called = (m: string): string => modelMark.called(m);
 
 /** the one way the session changes governance: the provider owns the state, the UI announces the change */
 export function setGovernance(patch: Partial<Pick<GovernanceState, 'governed' | 'smart' | 'model' | 'cap'>>): void {
@@ -45,6 +46,7 @@ export interface SessionComposer {
   el: HTMLElement; readonly input: HTMLElement | null; readonly value: string;
   setValue(t: string): void; focus(): void; setRunning(on: boolean): void;
   /** the line, the placeholder and whether a typed message has somewhere to go, read again */ sync(): void;
+  /** the line alone, again (a mod's status changed: it joins the line, 2b) */ redrawLine(): void;
 }
 export interface SessionComposerOpts {
   draft: string; sessionId(): string;
@@ -70,7 +72,7 @@ export function lineItems(o: { text: string; attachments: number; sessionId: str
   const choices = d.choices.get();
   const prev = G.smart ? smartPreview(choices, { text: o.text, attachments: o.attachments }) : null;
   const armed = data().council.armed(o.sessionId), asking = armed?.members.length ?? G.council ?? 0;
-  const name = asking ? 'Council of ' + asking : G.smart ? (prev ? 'Smart: ' + (called(prev.choice.model) || prev.choice.model) : 'Smart') : ui.modelMark.short(G.model) || G.model || 'Choose a model';
+  const name = asking ? 'Council of ' + asking : G.smart ? (prev ? 'Smart: ' + (called(prev.choice.model) || prev.choice.model) : 'Smart') : modelMark.short(G.model) || G.model || 'Choose a model';
   const tip = G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next';
   const effort = controls && controls.capabilities.get().launch.efforts.length ? launchView().effortTicks : null;
   items.push(['model', {
@@ -92,7 +94,7 @@ export function modelMenu(o: { current: string; governed: boolean; smart: boolea
     if ('options' in e) {
       out.push({ heading: e.label ?? '' });
       /* S19's two-line rows: the model's mark and name, and what it is on the second line, whole */
-      for (const x of e.options) out.push({ label: x.label ?? '', value: x.value, meaning: x.desc ?? '', leadHTML: ui.html.modelMark(x.value, { size: 16, label: false }), chosen: x.value === now, ...(x.disabled ? { disabled: true } : {}) });
+      for (const x of e.options) out.push({ label: x.label ?? '', value: x.value, meaning: x.desc ?? '', leadHTML: markHTML(x.value, { size: 16, label: false }), chosen: x.value === now, ...(x.disabled ? { disabled: true } : {}) });
     } else out.push({ label: e.label ?? '', value: e.value, meaning: e.desc ?? '', ...(e.icon ? { icon: e.icon } : {}), ...(e.keys ? { keys: e.keys } : {}), chosen: e.value === SMART_VALUE && now === SMART_VALUE, ...(e.disabled ? { disabled: true } : {}) });
   }
   return [...out, ...effortEntries(), '-', { heading: o.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED }];
@@ -135,7 +137,7 @@ export function answersNext(sessionId: string): { name: string; model: string | 
   const G = gov(), asking = data().council.armed(sessionId)?.members.length ?? G.council ?? 0;
   if (asking) return { name: 'Council of ' + asking, model: null, icon: 'bots' };
   if (G.smart || !G.model) return { name: G.smart ? 'Smart' : 'Choose a model', model: null, icon: 'spark' };
-  return { name: ui.modelMark.short(G.model) || G.model, model: G.model, icon: null };
+  return { name: modelMark.short(G.model) || G.model, model: G.model, icon: null };
 }
 
 export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): SessionComposer {
@@ -152,19 +154,20 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
 
   /* as the boards write it: S20 while a change waits, S23 after a turn, "Message" otherwise (S33 and the later boards) */
   const placeholder = (): string => (o.waits() ? 'Send feedback to decline this request' : o.after() ? 'What next?' : 'Message');
-  const line = (): LineItem[] => lineItems({ text: value(), attachments: present().length, sessionId: o.sessionId(), hidden });
+  /* the session's line, then what its mods say (2b: a mod's status joins the composer's own line, nothing rises) */
+  const line = (): LineItem[] => [...lineItems({ text: value(), attachments: present().length, sessionId: o.sessionId(), hidden }), ...(surface.lineItems?.() ?? [])];
   /* "@": a mention names the model that answers this message only; the menu's foot says what that means */
   const choicesNow = () => data().details.choices.get();
   const mentions = {
     label: 'Answer this message with', foot: () => (gov().governed ? FOOT_MENTION_GOVERNED : FOOT_MENTION),
-    entries: () => choicesNow().map((c) => ({ value: mentionName(c, called), label: called(c.model) || c.model, desc: c.providerName, leadHTML: ui.html.modelMark(c.value, { size: 16, label: false }) })),
+    entries: () => choicesNow().map((c) => ({ value: mentionName(c, called), label: called(c.model) || c.model, desc: c.providerName, leadHTML: markHTML(c.value, { size: 16, label: false }) })),
     chips: (t: string): ComposerChip[] => findMentions(t, choicesNow(), called).map((m) => ({ at: m.start, text: m.text, html: kit.html.inlineChip({ kind: 'model', model: m.choice.value, text: m.text.slice(1), words: m.text }) }))
   };
   /** to whom the message goes when it names one model: said on the line */
   const routeHint = (t: string): string => { const r = routeMentions(t, choicesNow(), called); return r.kind === 'one' ? 'to ' + mentionName(r.choice, called) + ' only' + (gov().governed ? ', ungoverned' : '') : ''; };
   let hintNow = '';
   function draw(): void {
-    const keep = text()?.innerHTML ?? ui.esc(o.draft);
+    const keep = text()?.innerHTML ?? esc(o.draft);
     ph = placeholder(); hintNow = routeHint(value() || o.draft);
     const items = line();
     lineSig = JSON.stringify([items, hintNow]);
@@ -232,7 +235,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
       return;
     }
     setGovernance({ governed: !G.governed });
-    ui.announce(gov().governed ? 'Governed' : 'Ungoverned');
+    announce(gov().governed ? 'Governed' : 'Ungoverned');
   }
   const lineItem = (id: LineItemId): HTMLElement => slot.querySelector<HTMLElement>('[data-line="' + id + '"]') ?? slot.querySelector<HTMLElement>('.k7-composer__box') ?? slot;
   function openModel(viaKeyboard: boolean, anchor: HTMLElement = lineItem('model')): void {
@@ -270,7 +273,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
       label: 'How to read ' + word, place: 'above', align: 'start', attrs: v7Attrs(),
       entries: [{ heading: k.title + ' "' + word + '"' }, ...optionsFor(k, word).map((x) => ({ label: x.label, value: x.value, desc: x.desc, checked: x.value === r.value, role: 'menuitemradio' })), '-', { label: 'Leave it as words', value: '__drop', icon: 'close' }, { heading: 'Dashed: my guess. Solid: your choice.' }],
       onSelect: (v) => {
-        if (v === '__drop') { r.dropped = true; ui.announce('Dropped ' + word); } else { r.value = v; r.confirmed = true; }
+        if (v === '__drop') { r.dropped = true; announce('Dropped ' + word); } else { r.value = v; r.confirmed = true; }
         marks(); drawLine(); requestAnimationFrame(() => api.focus());
       }
     });
@@ -382,6 +385,7 @@ export function sessionComposer(slot: HTMLElement, o: SessionComposerOpts): Sess
     setValue(t) { const n = text(); if (!n) return; n.focus(); kit.composerSet(n, t); },
     focus() { text()?.focus(); },
     setRunning(on) { running = on; sync(); },
+    redrawLine() { drawLine(); },
     sync
   };
   draw();

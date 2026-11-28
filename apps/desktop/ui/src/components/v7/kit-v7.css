@@ -50,6 +50,7 @@
 @import './files-card/files-card.css';
 @import './queue/queue.css';
 @import './diff-view/diff-view.css';
+@import './mod-view/mod-view.css';
 @import './composer/composer.css';
 @import './hover-bar/hover-bar.css';
 @import './team-plan/team-plan.css';

@@ -13,6 +13,10 @@
 .k7-well__head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) 0; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-dim); }
 .k7-well__head .k7-mono { font-size: var(--fs-xs); }
 .k7-well__prompt { color: var(--ok-text); }
+/* code with its lines numbered (2b, derived: a mod's Code): the numbers in a quiet gutter that is not selected with the text; wrapped, the
+   long lines break where they must */
+.k7-well__n { display: inline-block; min-width: 3ch; margin-right: var(--sp-3); text-align: right; color: var(--text-quiet); user-select: none; }
+.k7-well[data-wrap] .k7-well__pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ── Well, a thread (6e, derived: a handed-off task's transcript): the deepest surface, the words in 12 on the code's inset, its turns
    8 apart, at most 240 tall then it scrolls ── */

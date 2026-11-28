@@ -59,6 +59,10 @@ import { TOOL_KINDS, TOOL_STATES, toolRow } from './tool-row/tool-row';
 import { filesCard } from './files-card/files-card';
 import { fileCard } from './file-card/file-card';
 import { queue } from './queue/queue';
+import { modView } from './mod-view/mod-view';
+import { modViewUpdate, setModMenu } from './mod-view/behaviour';
+import { h as modH, LIMITS as MOD_LIMITS, validateTree } from './mod-view/tree';
+import { sanitizeSvg } from './mod-view/svg';
 import { diffView } from './diff-view/diff-view';
 import { composer, COMPOSER_KINDS } from './composer/composer';
 import { composerChips, composerInsert, composerInsertChip, composerMarks, composerMentions, composerRunning } from './composer/behaviour';
@@ -82,7 +86,7 @@ const html = {
   card, block, menu, menuRow, optionRow, listRow, sectionHead, commandPalette, commandPaletteList,
   notice, systemLine, bubble, well, steps, disclosure, turnFoot, hoverBar,
   timeSeparator, emptyState, list, findBar,
-  toolRow, askCard, filesCard, fileCard, queue, diffView, composer, teamPlan, tiles,
+  toolRow, askCard, filesCard, fileCard, queue, modView, diffView, composer, teamPlan, tiles,
   windowChrome, titlePill, searchHint, page, pageNote, setupPage, pane, dialog, rail, sidebarFoot, notch, dock
 };
 type Html = typeof html;
@@ -178,10 +182,16 @@ const mentions = (c: HTMLElement, src: KitMentions): void => {
   composerMentions(c, src, (anchor, o) => { unsaid(anchor); const m = openMenu(anchor, { label: o.label, entries: o.entries as MenuOpts['entries'], place: 'above', align: 'start', onSelect: o.onSelect }); anchor.removeAttribute('aria-expanded'); return m; }, () => { layer.close(); });
 };
 
+setModMenu(openMenu);
+/** a mod's tree checked against the limits before it is drawn: ok, or why it is refused (the app keeps its own drawing and says so) */
+const modViewCheck = (tree: unknown): { ok: true } | { ok: false; reason: string } => { const v = validateTree(tree); return v.ok ? { ok: true } : v; };
+
 export const kit = {
   html, ...factories, composerInsert, composerInsertChip, composerChips, composerMarks, composerRunning, composerSet, composerUndo, composerDropping, composerDictation, composerDictate, hoverBeside, mentions, section, dockGeometry: DOCK_GEOMETRY,
   /** the Dock's parts as markup, for the app's live dock, which keeps its orbs connected and writes each part in place */
-  dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, notifyQueued, notifyDismiss, notifyReset, keyNames, variants: kitVariants, on, emit
+  dockParts: { slab: slabPath, orb: dockOrb, cap: dockCap, ask: dockAsk, more: dockMore, panel: dockPanel }, wire, wireHold, wireMenu, markReveal, openMenu, openNotice, closeMenu: () => layer.close(), applyTheme, deriveAccent, botFill, notify, notifyText, notifyQueued, notifyDismiss, notifyReset, keyNames, variants: kitVariants, on, emit,
+  /** a mod's drawing (ModView): its tree checked, drawn again in place, its element constructors and limits, its graphics' sanitiser */
+  modViewCheck, modViewUpdate, modH, modLimits: MOD_LIMITS, sanitizeSvg
 };
 export type Kit = typeof kit;
 export type { ButtonOpts } from './button/button';
@@ -206,7 +216,11 @@ export type { ToolRowOpts } from './tool-row/tool-row';
 export type { AskCardOpts, AskAnswer, AskChoice } from './ask-card/ask-card';
 export type { FilesCardOpts, FileRow } from './files-card/files-card';
 export type { FileCardOpts } from './file-card/file-card';
-export type { QueueOpts } from './queue/queue';
+export type { QueueOpts, QueueMod } from './queue/queue';
+export type { ModViewOpts } from './mod-view/mod-view';
+export type { ModChild, ModElement } from './mod-view/tree';
+export type { Surface as ModSurface } from './mod-view/colours';
+export { MARK as MOD_MARK, parseLiteral, setTokenReader } from './mod-view/colours';
 export type { DiffViewOpts, DiffLine, DiffComment } from './diff-view/diff-view';
 export type { ComposerOpts, LineItem } from './composer/composer';
 export type { TeamPlanOpts, PlanAction } from './team-plan/team-plan';

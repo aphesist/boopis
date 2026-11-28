@@ -12,12 +12,13 @@
    files, each a kit DiffView that folds; a FilesCard's "Open diff" (or D on a turn) opens it. Review comments, the scope and
    Split are 0.3.0 and are not drawn.
 
-   A mod's pane is a tab of this panel (MODS.md section 3; `surface.panelTabs`). Reads the provider's details and sends its
+   A mod's pane is a tab of the tools after their fixed tabs (2b, the lead's decision for conflict 32: here, after Diff, the one this
+   screen has; MODS.md section 3; `surface.panelTabs`). Reads the provider's details and sends its
    commands (compact, the cap, a connector, a sign-in); nothing here is kept, so a redraw is the whole state. */
 import { emit, on } from '../../core/bus';
 import { cap1, esc } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { itemTile, kit, ui } from '@boopis/ui';
+import { announce, itemTile, kit, markHTML } from '@boopis/ui';
 import type { DiffLine } from '@boopis/ui';
 import { data } from '../../data';
 import { CAREFUL } from '../../data';
@@ -30,6 +31,7 @@ import { kTokens } from './shared';
 import { v7Attrs } from './s0';
 import { onChanged } from './state';
 import { surface } from '../mods/surfaces';
+import type { PanelTabs } from '../mods/surfaces';
 
 export type PanelKind = 'details' | 'diff';
 const P = {
@@ -64,6 +66,8 @@ export function openDetails(part?: string): void {
 }
 /** the session's changed files, as the tools' Diff */
 export function openDiff(): void { show('diff'); }
+/** a mod's pane comes forward (its mod asked, `focus`): the tools open on its tab */
+surface.openTools = (): void => { show('diff'); };
 export const panelKind = (): PanelKind => P.kind;
 
 /* ───────── the details (board S40) ───────── */
@@ -84,7 +88,7 @@ function sessionCard(): string {
   const controls = data().sessionControls;
   const who = answersNext(VIEW.current), view = launchView();
   const rows = [
-    { label: 'Model', control: sel('model', 'Model', who.name, who.model ? { leadHTML: ui.html.modelMark(who.model, { size: 14, label: false }) } : { icon: who.icon ?? 'spark' }) },
+    { label: 'Model', control: sel('model', 'Model', who.name, who.model ? { leadHTML: markHTML(who.model, { size: 14, label: false }) } : { icon: who.icon ?? 'spark' }) },
     ...(view.effort !== null ? [{ label: 'Effort', control: sel('effort', 'Effort', view.effort) }] : []),
     ...(controls ? [{ label: 'How careful', control: sel('careful', 'How careful', CAREFUL[view.careful].name) }] : []),
     /* where it works: a worktree once that choice exists (S40); until then the folder it was started in, which is what is known */
@@ -164,13 +168,18 @@ export function diffLines(f: DiffFile): DiffLine[] {
   }
   return out;
 }
-export function diffHTML(o: { overlay?: boolean } = {}): string {
+export function diffHTML(o: { overlay?: boolean; tabs?: PanelTabs | null } = {}): string {
   const files = data().sessions.diff(VIEW.current, { blank: VIEW.blank });
   const add = files.reduce((a, f) => a + f.add, 0), del = files.reduce((a, f) => a + f.del, 0);
   const summaryHTML = files.length ? esc(files.length + (files.length === 1 ? ' file' : ' files')) + '<span class="k7-files__counts k7-mono"><span data-tone="add">+' + add + '</span><span data-tone="del">−' + del + '</span></span>' : 'Diff';
   const body = files.length
     ? files.map((f, i) => kit.html.diffView({ path: f.path, lines: diffLines(f), add: f.add, del: f.del, fold: true, open: P.opened.has(f.path) || (i === 0 && !P.folded.has(f.path)), attrs: { 'data-file': f.path } })).join('')
     : kit.html.emptyState({ text: data().info.live ? 'Nothing has shipped in this session.' : 'No changes yet.' });
+  /* a mod's panes are tabs after the fixed ones (Diff, the one this screen has): the strip shows only while there is one */
+  if (o.tabs) {
+    const modTab = o.tabs.value !== 'diff';
+    return kit.html.pane({ variant: 'tools', fixed: ['diff'], extra: o.tabs.items, tab: o.tabs.value, label: modTab ? o.tabs.label : 'Diff', ...(o.overlay ? { overlay: true } : {}), body: modTab ? '<div class="ss-pane__mod" role="tabpanel" aria-label="' + esc(o.tabs.label) + '"></div>' : body + note('changes') });
+  }
   return kit.html.pane({ variant: 'tools', tabs: false, summary: summaryHTML, label: 'Diff', ...(o.overlay ? { overlay: true } : {}), body: body + note('changes') });
 }
 
@@ -184,13 +193,10 @@ export function mountDetails(root: HTMLElement): void {
 
   function draw(): void {
     if (!isOpen()) { if (last) { root.replaceChildren(); last = ''; } if (P.kind === 'diff') { P.kind = 'details'; document.documentElement.removeAttribute('data-right-tools'); } return; }
-    /* a mod's panes are tabs of this panel (MODS.md section 3): the strip shows only while there is one */
-    const tabs = P.kind === 'details' ? surface.panelTabs?.() ?? null : null;
-    const strip = tabs ? { label: 'Session details and mod panes', items: tabs.items, value: tabs.value } : undefined;
-    const mod = tabs && tabs.value !== 'details' ? tabs.body() : null;
-    const html = P.kind === 'diff' ? diffHTML({ overlay: overlay() })
-      : mod ? kit.html.pane({ variant: 'session', label: tabs?.label ?? 'Mod pane', ...(overlay() ? { overlay: true } : {}), ...(strip ? { strip } : {}), body: '<div class="ss-pane__mod" role="tabpanel"></div>' })
-      : detailsHTML({ overlay: overlay(), ...(strip ? { strip } : {}) });
+    /* a mod's panes are tabs of the tools, after their fixed tabs (2b): the strip shows only while there is one */
+    const tabs = P.kind === 'diff' ? surface.panelTabs?.() ?? null : null;
+    const mod = tabs && tabs.value !== 'diff' ? tabs.body() : null;
+    const html = P.kind === 'diff' ? diffHTML({ overlay: overlay(), tabs }) : detailsHTML({ overlay: overlay() });
     const sig = html + (mod ? '\u0000' + (tabs?.sig ?? '') : '');
     if (sig === last) return;
     const a = document.activeElement as HTMLElement | null, held = a && root.contains(a) ? a.closest<HTMLElement>('[data-pane], [data-conn], [data-file], [data-pane-more], [data-pane-close]') : null;
@@ -232,7 +238,7 @@ export function mountDetails(root: HTMLElement): void {
     const t = e.target as HTMLElement, v = (e as CustomEvent<{ value: boolean | string }>).detail.value;
     const conn = t.closest<HTMLElement>('[data-conn]');
     if (conn) { d().setConnector(conn.dataset['conn'] as string, v === true); return; }
-    /* the strip: the session's details, or a mod's pane */
+    /* the tools' strip: the Diff, or a mod's pane */
     if (t.closest('.k7-pane__tabs')) { surface.panelTabs?.()?.select(String(v)); draw(); requestAnimationFrame(() => { root.querySelector<HTMLElement>('.k7-pane__tabs [aria-selected="true"], .k7-pane__tabs [aria-checked="true"]')?.focus(); }); }
   });
   /* which of the diff's files are open is the reader's, kept across a redraw; the context's own chevron folds it away again */
@@ -262,8 +268,8 @@ export function mountDetails(root: HTMLElement): void {
   function openOverflow(anchor: HTMLElement): void {
     const id = VIEW.current, s = summary();
     kit.openMenu(anchor, { label: 'More for this session', place: 'below', align: 'end', attrs: v7Attrs(), entries: overflowEntries(), onSelect: (v) => {
-      if (v === 'fork') { const n = data().sessions.fork(id); if (n) { selectSession(n.id); ui.announce('Forked ' + (s?.title ?? '')); } }
-      else if (v === 'settle') { data().sessions.archive(id); ui.announce('Settled ' + (s?.title ?? '')); }
+      if (v === 'fork') { const n = data().sessions.fork(id); if (n) { selectSession(n.id); announce('Forked ' + (s?.title ?? '')); } }
+      else if (v === 'settle') { data().sessions.archive(id); announce('Settled ' + (s?.title ?? '')); }
       else if (v === 'restore') data().sessions.restore(id);
     } });
   }

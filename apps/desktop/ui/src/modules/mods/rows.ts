@@ -1,35 +1,42 @@
-/* Placed rows (docs/MODS.md section 3; DESIGN-SYSTEM.md 14.29): a row in the conversation from the mod, never from the agent. Its
-   glyph and name sit in the call-number margin with the time; the tree sits on the ground at 14px. Two things become one:
-   what a mod logs (`$.ui.log`, a quiet line the model does not read; `plugin: ''` is boopis speaking about the mods) and a
-   row a mod places (the `Placed` site, which the plugin does not send yet: `$.ui.place` is not in boopis, docs/MODS.md
-   section 9). They are gone when the conversation is redrawn and not kept on resume, as in Claude Code. */
+/* A mod's rows in the conversation (docs/MODS.md section 3; 2b, the lead's decision for conflict 32: the kit's SystemLine and ToolRow).
+   What a mod logs (`$.ui.log`, a quiet line the model does not read; `plugin: ''` is boopis speaking about the mods) is a SystemLine: the
+   mod's glyph, its name and its words, the time at its end; a warning's name in amber. A row a mod places (the `Placed` site, which the
+   plugin does not send yet: `$.ui.place` is not in boopis, docs/MODS.md section 9) is a ToolRow led by the mod's glyph and name with the
+   time at its end, and what the mod draws under its head (the kit's ModView). They are gone when the conversation is redrawn and are not
+   kept on resume, as in Claude Code. */
 import { hhmm } from '../../core/dom';
 import { logger } from '../../core/log';
-import { ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import type { ModLogLine, ModPlaced, ModTree } from '../../data';
 import { surface } from './surfaces';
-import { dispatcher } from './ctl';
+import { viewOf } from './panes';
 
 const log = logger('mods');
 const clock = (ms: number): string => hhmm(new Date(ms));
+const frag = (html: string): HTMLElement => { const t = document.createElement('template'); t.innerHTML = html; return t.content.firstElementChild as HTMLElement; };
 
-/** one row: `plugin` is the mod (null or '' when it is not known or boopis speaks about the mods) */
+/** a placed row: `plugin` is the mod (null or '' when it is not known or boopis speaks about the mods) */
 export function placedRow(plugin: string | null, tree: ModTree, at: number, sessionId: string): HTMLElement | null {
   const t = clock(at), name = plugin || 'Mods';
-  const art = ui.entry({ kind: 'mod', who: ui.html.mod(name), callno: [t], label: (plugin ? plugin + ' mod' : 'Mods') + ', ' + t, body: '' });
-  art.setAttribute('data-mod-row', plugin ?? '');
-  const root = ui.modView(tree, { surface: 'ground', dispatch: dispatcher(sessionId), onInvalid: (r) => { log.warn(name + ': row skipped, ' + r); } });
+  const root = viewOf(tree, { surface: 'row', sessionId, refused: (r) => { log.warn(name + ': row skipped, ' + r); } });
   if (!root) return null;
-  art.querySelector('.ui-entry__body')?.append(root);
-  return art;
+  const row = kit.wire(frag(kit.html.toolRow({ icon: 'mod', tool: name, text: true, word: t, attrs: { 'data-mod-row': plugin ?? '', 'aria-label': (plugin ? plugin + ' mod' : 'Mods') + ', ' + t } })));
+  const after = document.createElement('div');
+  after.className = 'k7-tool__after';
+  after.append(root);
+  row.append(after);
+  return row;
 }
 
-/** a log line as a tree: quiet text, in the warning ink when it warns */
-export const logTree = (l: ModLogLine): ModTree => ({ type: 'Text', props: { color: l.level === 'warn' ? 'warning' : 'subtle' }, children: [l.text] });
+/** a log line: the kit's SystemLine, the mod's glyph and name, its words, the time */
+export function logLine(l: ModLogLine): HTMLElement {
+  const name = l.plugin || 'Mods';
+  return frag(kit.html.systemLine({ icon: 'mod', word: { text: name, tone: l.level === 'warn' ? 'owe' : 'neutral' }, text: l.text, meta: clock(l.at), attrs: { 'data-mod-log': l.level, 'data-mod-row': l.plugin ?? '' } }));
+}
 
-export function placeLog(l: ModLogLine, sessionId: string, quiet: boolean): HTMLElement | null {
-  const row = placedRow(l.plugin, logTree(l), l.at, sessionId);
-  if (row) { row.setAttribute('data-mod-log', l.level); surface.place?.(row, { quiet }); }
+export function placeLog(l: ModLogLine, _sessionId: string, quiet: boolean): HTMLElement {
+  const row = logLine(l);
+  surface.place?.(row, { quiet });
   return row;
 }
 export function placePlaced(p: ModPlaced, sessionId: string, quiet: boolean): HTMLElement | null {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ELEMENT_TYPES, LIMITS, h, handlerId, textOf, validateTree } from './mod-tree';
-import type { ModElement } from './mod-tree';
+import { ELEMENT_TYPES, LIMITS, h, handlerId, textOf, validateTree } from './tree';
+import type { ModElement } from './tree';
 
 const text = (n: number): string => 'x'.repeat(n);
 const deep = (n: number): ModElement => { let t: ModElement = h.Text(null, 'leaf'); for (let i = 1; i < n; i++) t = h.Box(null, t); return t; };

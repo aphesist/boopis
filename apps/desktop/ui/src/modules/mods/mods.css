@@ -1,79 +1,18 @@
-/* boopis v6 · mods (proposal; MODS.md §3). The surfaces a mod draws into: a pane tab, the band above the composer,
-   the status line, a placed row, a toast, the mod as an origin. Only what is its own; every piece it holds is the
-   library's (components.css, mod-view.css, cards.css). Tokens only: no literal colour, family, radius or off-scale size. */
+/* Where a mod's parts stand in the session (2b, the lead's decisions for conflict 32). Placement only: every look is the kit's (Queue
+   for the band, ModView for what a mod draws, SystemLine and ToolRow for its rows, the Notice, the AskCard in the theme card). */
 
-/* ───────────── the slots in the session's composer host: empty ones take no room ───────────── */
-.ss-mods:empty { display: none; }
-.ss-mods--band { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+/* the band: the held or queued strip's slot over the composer, 8 above it; an empty slot takes no room */
+.ss-strip { display: flex; flex-direction: column; margin-bottom: var(--sp-2); }
+.ss-strip[hidden] { display: none; }
 
-/* ───────────── the drawer: the band and an inline pane share it. Inset (what the system set into the work), the
-   corner of a card, concentric with the controls at its edge (DESIGN-SYSTEM §8.2) ───────────── */
-.mod-band, .mod-inline {
-  --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px;   /* a container (.ui-nest) whose corner controls are 24px: inset 8, radius 12 */
-  --mod-row-h: 32px;   /* a row and an inline pane's head: the 24px control centred in it */
-  /* the control at the end of a row sits --corner-inset from the side and, centred in its row, as far from the top and the bottom
-     (concentric with the drawer, R-corner-3: the v7 composer's --r-m is 20, so the inset is 8 on every side of that corner) */
-  box-sizing: border-box; border-radius: var(--r-outer);
-  padding: max(0px, calc(var(--corner-inset) - (var(--mod-row-h) - var(--corner-size)) / 2)) var(--corner-inset) max(0px, calc(var(--corner-inset) - (var(--mod-row-h) - var(--corner-size)) / 2)) var(--pad);
-  --sq-bg: var(--bg-0); background: var(--sq-bg); --sq-line: var(--hair); box-shadow: inset 0 0 0 1px var(--hair);
-  font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-transform: none;
-}
-.mod-band *, .mod-inline * { box-sizing: border-box; }
+/* a pane: a tab of the tools; its tree on the Pane's ground, as wide as the Diff's files */
+.ss-mod-pane { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
 
-/* a row: its mod, what it says, the fold. 32px, so the composer under it stays the loudest thing */
-.mod-row { display: grid; grid-template-columns: var(--mod-who-w, 112px) minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp-3); min-height: var(--mod-row-h); padding-left: 10px; }
-.mod-row + .mod-row { box-shadow: inset 0 1px 0 var(--hair); }
-.mod-row__who .mv-by { max-width: 100%; }
-.mod-row__who { min-width: 0; overflow: hidden; font: 400 var(--fs-xs)/1 var(--sans); color: var(--text-dim); }
-.mod-row__body { min-width: 0; display: flex; }
-.mod-row__body > .mv-root { flex: 1; min-width: 0; }
-.mod-row[data-open="true"] { align-items: start; padding-block: 2px; }
-.mod-row[data-open="true"] .mod-row__who { padding-top: 9px; }
-.mod-row[data-open="true"] .mod-row__body { padding-block: 4px 6px; }
-.mod-row[data-open="true"] .mod-chev { margin-top: 4px; }
-.mod-chev .ui-icon { transition: transform var(--dur-2) var(--ease); }
-.mod-chev[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
-.mod-row .mv-root .ui-btn--s { height: calc(var(--ctl-s) - 4px); border-radius: var(--r-in); }
+/* the theme card, and a placed row, at the thread's width */
+.ss-mod-card { display: flex; min-width: 0; }
+.ss-mod-card > hx-card { width: 100%; }
 
-/* an inline pane (narrow windows): a head, then the tree in its own scroll */
-.mod-inline__head { display: flex; align-items: center; gap: var(--sp-1); height: var(--mod-row-h); padding-left: 10px; }
-.mod-inline__head .mv-by { color: var(--text-dim); font-size: var(--fs-xs); }
-.mod-inline__title { flex: 1; min-width: 0; margin-left: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--fs-s)/1 var(--sans); color: var(--text-strong); }
-.mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); }   /* a scroll area (.ui-scroll) */
-
-/* ───────────── a pane: a tab in the details panel ───────────── */
-.mod-pane { box-shadow: inset 0 1px 0 var(--hair); }
-.mod-pane__head { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px 0 20px; }
-.mod-pane__head .mv-by { color: var(--text-quiet); font: 400 var(--fs-xs)/1 var(--sans); }
-.mod-pane__head .ui-ib { border-radius: var(--r-s); }
-.mod-pane__body { padding: var(--sp-1) 20px var(--sp-4); }
-.mod-note { margin: 0; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); }
-
-/* ───────────── the status line, under the composer: mono 11, the mod's name first, quiet ───────────── */
-.ss-mods--status:not(:empty) { display: flex; flex-wrap: wrap; column-gap: var(--sp-4); height: 22px; padding: 6px 14px 0; overflow: hidden; }   /* what does not fit on the one line is left out, never cut in half */
-.mod-status__i { flex: 0 1 auto; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--fs-2xs)/16px var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); text-transform: none; }
-.mod-status__n { color: var(--text-dim); }
-.mod-status__t { font-variant-numeric: tabular-nums; }
-
-/* ───────────── a placed row: the mod's glyph and name in the call-number margin; the tree sits on the ground ───────────── */
-.ui-entry[data-kind="mod"] .ui-callno__who .mv-by__g { color: var(--icon); }
-.ui-entry[data-kind="mod"] .mv-root { width: 100%; font-size: var(--fs-m); line-height: var(--lh); }
-.ui-entry[data-kind="mod"][data-mod-card] hx-card { width: 100%; }
-.ui-entry[data-kind="mod"][data-mod-row] .mv-box { max-width: 100%; }
-
-
-/* ───────────── the mod as an origin (cards.js draws it; these are its details) ───────────── */
-
-/* ───────────── narrow ───────────── */
-@media (max-width: 560px) {
-  .mod-row { --mod-who-w: 84px; column-gap: var(--sp-3); padding-left: 8px; }
-  .ss-mods--status:not(:empty) { padding-inline: 10px; gap: var(--sp-3); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mod-chev .ui-icon { transition: none; }
-}
-
-/* ───────────── the composer's rise (riseComposer in mods.js): the ghosts are visual copies of what is leaving ───────────── */
-.mod-ghost { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; pointer-events: none; }
-.mod-status--ghost { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none; }
-
+/* a mod's status on the composer's line: it gives way first, cut by its ellipsis, so the line never runs past the composer */
+.ss-composer .k7-composer__line { overflow: hidden; }
+.ss-composer .k7-composer__item[data-mod-status] { flex: 0 1 auto; min-width: 0; }
+.ss-composer .k7-composer__item[data-mod-status] > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

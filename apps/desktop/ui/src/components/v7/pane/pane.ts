@@ -25,6 +25,9 @@ export interface PaneOpts {
   /** `tools`: false draws the one tool there is alone, with no strip of tabs (S24's Diff until a second tab exists); `summary` (markup)
       then stands where the tabs would, before the close button */
   tabs?: U<boolean>; summary?: U<string>;
+  /** `tools` (2b, the lead's decision for conflict 32): which of the four fixed tabs this screen has (all four unless said; a tab whose
+      feature does not exist yet is not drawn), and the tabs after them (a mod's pane, named by its title, its mod in the tip) */
+  fixed?: U<readonly ('diff' | 'files' | 'terminal' | 'pr')[]>; extra?: U<readonly SegItem[]>;
   /** `details` and `session`: what else shares the pane, as tabs over its head (a mod's pane beside the session's details) */
   strip?: U<{ label: string; items: readonly SegItem[]; value: string }>;
   /** `sheet` (a bot's settings, 2a: no board draws it, the nearest drawn state is S40's head): its actions at the foot, as kit Buttons'
@@ -36,7 +39,8 @@ export function pane(o: PaneOpts): string {
   const a = kitAttrs('Pane', { 'data-variant': v, 'data-open': o.open === false ? null : '', 'data-overlay': o.overlay ? '' : null, role: 'complementary', 'aria-label': o.label ?? (v === 'tools' ? 'Tools' : 'Details'), ...(o.attrs ?? {}) });
   const body = '<div class="k7-pane__body">' + (o.body ?? '') + '</div></aside>';
   if (v === 'tools') {
-    const tabs: SegItem[] = [{ value: 'diff', label: 'Diff' }, { value: 'files', label: 'Files' }, { value: 'terminal', label: 'Terminal' }, { value: 'pr', label: 'PR' }, ...(o.sideChat ? [{ value: 'chat', label: 'Side chat' }] : [])];
+    const four: SegItem[] = [{ value: 'diff', label: 'Diff' }, { value: 'files', label: 'Files' }, { value: 'terminal', label: 'Terminal' }, { value: 'pr', label: 'PR' }];
+    const tabs: SegItem[] = [...four.filter((t) => !o.fixed || (o.fixed as readonly string[]).includes(t.value)), ...(o.sideChat ? [{ value: 'chat', label: 'Side chat' }] : []), ...(o.extra ?? [])];
     return '<aside class="k7-pane"' + a + '><div class="k7-pane__grip" role="separator" aria-orientation="vertical" aria-label="Resize the tools" tabindex="0" aria-valuenow="520" aria-valuemin="356" aria-valuemax="900"></div>' +
       '<div class="k7-pane__tabs">' + (o.tabs === false ? '<div class="k7-pane__summary">' + (o.summary ?? '') + '</div>' : segmented({ label: 'Tools', items: tabs, value: o.tab ?? 'diff', variant: 'tabs' })) + '<span class="k7-grow"></span>' + iconButton({ icon: 'close', label: 'Close the tools', variant: 'tinted', attrs: { 'data-pane-close': '' } }) + '</div>' + body;
   }
@@ -84,6 +88,8 @@ export const contract = defineContract<PaneOpts>({
     more: 'session: the overflow menu\'s button',
     tabs: 'tools: false draws the one tool alone, with no tabs',
     summary: 'tools without tabs: what stands where the tabs would',
+    fixed: 'tools: which of the four fixed tabs this screen has (all four unless said)',
+    extra: 'tools: the tabs after the fixed ones (a mod\'s pane)',
     strip: 'what else shares the pane, as tabs over its head',
     foot: 'sheet: its actions, as kit Buttons\' markup',
     closeLabel: 'sheet: the close button\'s name',

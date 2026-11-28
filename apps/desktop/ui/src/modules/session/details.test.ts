@@ -249,24 +249,30 @@ describe('the ways in, a mod\'s pane, and a narrow window', () => {
     openDetails();
     expect(q('[data-kit~="Pane"]').dataset['variant']).toBe('session');
   });
-  it('a mod\'s pane is a tab of the panel: the strip is the kit\'s tabs, and choosing one puts that pane in the body', () => {
+  it('a mod\'s pane is a tab of the tools after their fixed tabs (2b): the strip is the kit\'s tabs, and choosing one puts that pane in the body', () => {
     boot();
-    let active = 'details';
-    const body = document.createElement('div'); body.className = 'mod-pane'; body.textContent = 'tests pane';
-    surface.panelTabs = () => ({ items: [{ value: 'details', label: 'Details' }, { value: 'tests', label: 'TESTS', tip: 'test-runner mod' }], value: active, label: active === 'details' ? 'Session details' : 'TESTS, test-runner mod', sig: active, body: () => (active === 'details' ? null : body), select: (id) => { active = id; } });
-    surface.redrawRight?.();
+    let active = 'diff';
+    const body = document.createElement('div'); body.className = 'ss-mod-pane'; body.textContent = 'tests pane';
+    surface.panelTabs = () => ({ items: [{ value: 'tests', label: 'TESTS', tip: 'test-runner mod' }], value: active, label: active === 'diff' ? 'Diff' : 'TESTS, test-runner mod', sig: active, body: () => (active === 'diff' ? null : body), select: (id) => { active = id; } });
+    openDetails();
+    expect(root.querySelector('.k7-pane__tabs')).toBeNull();   /* the details have no strip: a mod's pane is the tools' */
+    openDiff();
     const tabs = [...root.querySelectorAll<HTMLElement>('.k7-pane__tabs .k7-seg__item')];
-    expect(tabs.map((t) => t.textContent)).toEqual(['Details', 'TESTS']);
-    expect(q('.k7-pane__name').textContent).toBe('Fix the dock\'s half paint');
+    expect(tabs.map((t) => t.textContent)).toEqual(['Diff', 'TESTS']);
     tabs[1]?.click();
     expect(active).toBe('tests');
     expect(q('.ss-pane__mod').textContent).toBe('tests pane');
     expect(q('[data-kit~="Pane"]').getAttribute('aria-label')).toBe('TESTS, test-runner mod');
-    expect(root.querySelector('.k7-pane__name')).toBeNull();
-    /* with no pane left the strip goes */
+    /* with no pane left the Diff is alone again, with no strip */
     surface.panelTabs = () => null;
     surface.redrawRight?.();
-    expect(root.querySelector('.k7-pane__tabs')).toBeNull();
+    expect(root.querySelector('.k7-pane__tabs .k7-seg__item')).toBeNull();
+  });
+  it('a mod\'s pane that comes forward opens the tools on its tab', () => {
+    boot();
+    openDetails();
+    surface.openTools?.();
+    expect(panelKind()).toBe('diff');
   });
   it('under 900 wide the pane is drawn as an overlay (the shell lays it over the work)', () => {
     boot();

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-/* The surfaces a mod draws into, against the events the real plugin sent (the recording of plugins/boopis/tests/test_mods_frames.py)
-   and small fakes: the band, the status line and the composer's rise, panes at both widths, notices, placed rows, and the theme
-   card with every way a preview ends. */
+/* The places a mod draws into (2b, the lead's decisions for conflict 32), against the events the real plugin sent (the recording of
+   plugins/boopis/tests/test_mods_frames.py) and small fakes: the band in the strip's slot over the composer (the kit's Queue), a mod's
+   status on the composer's own line, panes as tabs of the tools after their fixed tabs, notices, a log line as a SystemLine and a
+   placed row as a ToolRow, and the theme card with every way a preview ends. */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setProvider } from '../../data';
 import type { DataProvider, ModsSource, ModSession } from '../../data';
@@ -16,14 +17,13 @@ import '../cards';
 import { ctl } from './ctl';
 import { resetMods } from './index';
 import { panelTabs } from './panes';
+import { statusItems } from './status';
 import { surface } from './surfaces';
 import { openCards, previewingCard, recheck, themeCard, themeColors, placeThemeCard, swatchesOf } from './theme-card';
 import type { HxCard } from '../cards';
 
 /* jsdom has no stylesheet: the catalog preset's colours go on the page, so the theme card's contrast guard reads what a browser would */
 beforeAll(() => { installPreset('catalog'); });
-let reducedMotion = false;
-vi.mock('../../core/dom', async (orig) => ({ ...(await orig<typeof import('../../core/dom')>()), reduced: () => reducedMotion }));
 
 const RECORDED = fixtures.mods.filter((r) => r.dir === 'in' && r.frame['method'] === 'event')
   .map((r) => r.frame['params'] as { type: string; session_id: string; payload: Record<string, unknown> })
@@ -31,15 +31,15 @@ const RECORDED = fixtures.mods.filter((r) => r.dir === 'in' && r.frame['method']
 const SID = 's1';
 const tree = (text: string): Record<string, unknown> => ({ type: 'Box', props: {}, children: [{ type: 'Text', props: {}, children: [text] }] });
 
-interface Rig { model: ReturnType<typeof createModsModel>; calls: Array<[string, ...unknown[]]>; col: HTMLElement; band: HTMLElement; status: HTMLElement; composer: HTMLElement; host: HTMLElement }
+interface Rig { model: ReturnType<typeof createModsModel>; calls: Array<[string, ...unknown[]]>; col: HTMLElement; band: HTMLElement; lines: number; tools: number }
 let rig: Rig;
 const play = (type: string, payload: Record<string, unknown>): void => { rig.model.handle(SID, type, payload); };
 const pane = (id: string, plugin = 'm', extra: Record<string, unknown> = {}): void => { play('mod.pane', { action: 'open', plugin, id, title: id.toUpperCase(), ...extra }); play('mod.render', { component: 'Pane', id, kind: 'tree', tree: tree('body of ' + id) }); };
-const width = (w: number): void => { Object.defineProperty(window, 'innerWidth', { value: w, configurable: true, writable: true }); window.dispatchEvent(new Event('resize')); };
+const status = (): string[] => statusItems().map((i) => i.value);
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 function build(): Rig {
-  document.body.innerHTML = '<div id="hx-app"><div class="ss-view"><div class="ss-col"></div><div class="ss-composer"><div class="ss-mods ss-mods--band"></div><div class="composer"></div><div class="ss-mods ss-mods--status"></div></div></div></div>';
+  document.body.innerHTML = '<div id="hx-app"><div class="ss-view"><div class="ss-col"></div><div class="ss-composer"><div class="ss-strip" hidden></div><div class="ss-composer__slot"></div></div></div></div>';
   const q = (s: string): HTMLElement => document.querySelector<HTMLElement>(s) as HTMLElement;
   const model = createModsModel(() => Date.UTC(2026, 10, 19, 12, 0));
   const calls: Rig['calls'] = [];
@@ -48,70 +48,72 @@ function build(): Rig {
     press: (...a) => calls.push(['press', ...a]), input: (...a) => calls.push(['input', ...a]), select: (...a) => calls.push(['select', ...a]), props: (...a) => calls.push(['props', ...a])
   };
   setProvider({ ...createMockProvider({ simulate: false }), mods } as DataProvider);
-  const r: Rig = { model, calls, col: q('.ss-col'), band: q('.ss-mods--band'), status: q('.ss-mods--status'), composer: q('.composer'), host: q('.ss-composer') };
-  surface.slots = { band: r.band, status: r.status };
+  const r: Rig = { model, calls, col: q('.ss-col'), band: q('.ss-strip'), lines: 0, tools: 0 };
+  surface.band = r.band;
   surface.place = (n) => { r.col.append(n); };
   surface.redrawRight = null;
+  surface.redrawLine = () => { r.lines++; };
+  surface.openTools = () => { r.tools++; };
   return r;
 }
 const follow = (): void => { surface.onConversation?.(SID); };
 
 beforeAll(() => { setProvider(createMockProvider({ simulate: false })); });
 beforeEach(() => {
-  reducedMotion = false; width(1440);
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-  setTokenReader((t) => ({ '--bg-0': '#0c0b0a', '--bg-1': '#14130f', '--bg-2': '#1c1a17', '--text': '#e9e4da' } as Record<string, string>)[t] ?? null);
+  setTokenReader((t) => ({ '--bg-0': '#0c0b0a', '--bg-1': '#14130f', '--bg-2': '#1c1a17', '--bg-3': '#23211e', '--bg-pane': '#161616', '--text': '#e9e4da' } as Record<string, string>)[t] ?? null);
   rig = build();
   resetMods(); kit.notifyReset();
 });
 afterEach(() => { themeApi.endPreview(false); themeApi.reset(); themeApi.preset('catalog'); setTokenReader(null); });
 
 describe('what the recording says, drawn', () => {
-  it('draws every surface from the real events: panes, the band, two status lines, the log in the conversation and a theme card', () => {
+  it('draws every surface from the real events: panes as tabs, the band, two statuses on the line, the log in the conversation and a theme card', () => {
     follow();
     for (const e of RECORDED) rig.model.handle(SID, e.type, e.payload);
     expect(rig.model.state(SID).panes.map((p) => p.id)).toEqual(['tests', 'usage']);
-    expect(rig.band.querySelectorAll('.mod-inline').length).toBe(0);   // 1440: panes are tabs, not inline
-    expect(rig.band.querySelector('.mod-band .mv-root')?.textContent).toContain('Running tests');
-    expect([...rig.status.querySelectorAll('.mod-status__i')].map((n) => n.textContent)).toEqual(['test-runner 1 failing', 'token-meter 12.4k tokens this turn']);
+    expect(panelTabs()?.items.map((i) => i.label + ', ' + (i.tip ?? ''))).toEqual(['Tests, test-runner mod', 'Token usage, token-meter mod']);
+    expect(rig.band.querySelector('[data-kit~="Queue"][data-variant="mod"] [data-kit~="ModView"]')?.textContent).toContain('Running tests');
+    expect(status()).toEqual(['test-runner 1 failing', 'token-meter 12.4k tokens this turn']);
     expect([...rig.col.querySelectorAll('[data-mod-log]')].map((n) => n.textContent)).toEqual([expect.stringContaining('the cache for money.test.ts is stale'), expect.stringContaining('token-meter is watching this session')]);
     expect(rig.col.querySelector('hx-card[data-kind="form"] .k7-swatches')).toBeTruthy();
   });
-  it('names each mod as its glyph and its name, the band after the mod that drew it, and a band with no name as "Mods" when several are loaded', () => {
+  it('names each mod by its glyph and its name, the band after the mod that drew it, and a band with no name as "Mods" when several are loaded', () => {
     follow();
     for (const e of RECORDED) rig.model.handle(SID, e.type, e.payload);
-    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('test-runner mod');   // two mods are loaded: the event says which drew the row
-    expect(rig.band.querySelector('.mod-row__who svg.mv-by__g')).toBeTruthy();
-    expect(rig.col.querySelector('[data-mod-log] .mv-by__n')?.textContent).toBe('test-runner');
-    expect(rig.col.querySelector('[data-mod-log] .ui-callno')?.textContent).toMatch(/\d\d:\d\d/);
+    const row = (): Element | null => rig.band.querySelector('[data-kit-part~="QueueRow"]');
+    expect(row()?.getAttribute('aria-label')).toBe('test-runner mod');   // two mods are loaded: the event says which drew the row
+    expect(row()?.querySelector('.k7-queue__who svg')).toBeTruthy();
+    expect(rig.col.querySelector('[data-mod-log] [data-kit~="StatusWord"]')?.textContent).toBe('test-runner');
+    expect(rig.col.querySelector('[data-mod-log] .k7-sys__meta')?.textContent).toMatch(/\d\d:\d\d/);
     rig.model.list(SID, { plugins: [{ name: 'only-one' }] });
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x') });
-    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('only-one mod');
+    expect(row()?.getAttribute('aria-label')).toBe('only-one mod');
     rig.model.list(SID, { plugins: [{ name: 'a' }, { name: 'b' }] });
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x') });
-    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('Mods');   // no mod named, several loaded: never a guess
+    expect(row()?.getAttribute('aria-label')).toBe('Mods');   // no mod named, several loaded: never a guess
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x'), plugin: 'b' });
-    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('b mod');
+    expect(row()?.getAttribute('aria-label')).toBe('b mod');
   });
 });
 
-describe('the band', () => {
-  it('is one collapsible row on the inset, empty slots take no room, and "no mod drew it" is an empty band', () => {
+describe('the band, in the held or queued strip\'s slot over the composer (2b)', () => {
+  it('is the kit\'s Queue (mod), one folding row on the strip; an empty slot is hidden, and "no mod drew it" empties it', () => {
     follow();
-    expect(rig.band.childElementCount).toBe(0);
+    expect([rig.band.childElementCount, rig.band.hidden]).toEqual([0, true]);
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('Tests idle') });
-    expect(rig.band.querySelectorAll('.mod-band .mod-row').length).toBe(1);
-    expect(rig.band.querySelector('.mv-root')?.getAttribute('data-surface')).toBe('inset');
-    expect(rig.band.querySelector('.mod-row')?.getAttribute('data-open')).toBe('false');
+    expect(rig.band.hidden).toBe(false);
+    expect(rig.band.querySelectorAll('[data-kit~="Queue"] [data-kit-part~="QueueRow"]').length).toBe(1);
+    expect(rig.band.querySelector('[data-kit~="ModView"]')?.getAttribute('data-surface')).toBe('band');
+    expect(rig.band.querySelector('[data-queue="fold"]')?.getAttribute('aria-expanded')).toBe('false');
     play('mod.render', { component: 'AbovePrompt', kind: 'default' });
-    expect(rig.band.childElementCount).toBe(0);
+    expect([rig.band.childElementCount, rig.band.hidden]).toEqual([0, true]);
   });
   it('redraws a changed tree in place, so a field in it keeps focus', () => {
     follow();
     const input = (v: string): Record<string, unknown> => ({ type: 'Box', props: {}, children: [{ type: 'Input', props: { value: v, onInput: { $handler: 'h' } }, children: [] }] });
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: input('a') });
-    const f = rig.band.querySelector<HTMLInputElement>('input');
-    f?.focus();
+    rig.band.querySelector<HTMLInputElement>('input')?.focus();
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: input('ab') });
     const g = rig.band.querySelector<HTMLInputElement>('input');
     expect([g?.value, document.activeElement === g]).toEqual(['ab', true]);
@@ -124,166 +126,92 @@ describe('the band', () => {
     surface.onWorking?.(true); surface.onWorking?.(true);
     expect(bandProps()).toEqual([{ isWorking: false, isCollapsed: true }, { isWorking: true, isCollapsed: true }]);
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x') });
-    rig.band.querySelector<HTMLButtonElement>('.mod-chev')?.click();
+    rig.band.querySelector<HTMLButtonElement>('[data-queue="fold"]')?.click();
     expect(bandProps().at(-1)).toEqual({ isWorking: true, isCollapsed: false });
-    expect(rig.band.querySelector('.mod-row')?.getAttribute('data-open')).toBe('true');
+    expect(rig.band.querySelector('[data-kit-part~="QueueRow"]')?.hasAttribute('data-open')).toBe(true);
   });
   it('sends a press from the band to the mod by id, for the session the tree was drawn for', () => {
     follow();
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: { type: 'Box', props: {}, children: [{ type: 'Button', props: { label: 'Re-run', onPress: { $handler: '0.h9' } }, children: [] }] } });
-    rig.band.querySelector<HTMLButtonElement>('.mv-root button')?.click();
+    rig.band.querySelector<HTMLButtonElement>('[data-kit~="ModView"] button')?.click();
     expect(rig.calls.filter((c) => c[0] === 'press')).toEqual([['press', SID, '0.h9']]);
   });
 });
 
-describe('the status line and the composer rising 22px (owner decision, 19 November 2026)', () => {
-  interface Anim { el: Element; frames: Keyframe[]; opts: KeyframeAnimationOptions }
-  let anims: Anim[];
-  beforeEach(() => {
-    anims = [];
-    /* a composer at 600 that sits 22px higher while a status line is showing: the layout the browser would make */
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      const lifted = rig.status.childElementCount > 0 ? 22 : 0;
-      const top = this === rig.composer ? 600 - lifted : this === rig.band ? 560 - lifted : this === rig.host ? 540 : 0;
-      return { top, left: 0, right: 400, bottom: top + 80, width: 400, height: this === rig.composer ? 80 : 40, x: 0, y: top, toJSON: () => ({}) } as DOMRect;
-    });
-    /* jsdom has no Web Animations: a recording stand-in on the prototype, removed after */
-    Object.defineProperty(HTMLElement.prototype, 'animate', { configurable: true, writable: true, value(this: HTMLElement, frames: Keyframe[], opts: KeyframeAnimationOptions) {
-      anims.push({ el: this, frames, opts });
-      return { cancel() { /* a fake */ }, onfinish: null } as unknown as Animation;
-    } });
+describe('a mod\'s status joins the composer\'s own line (2b: nothing rises)', () => {
+  it('is a plain item of the line that only says: the mod\'s glyph, its name and its words in mono, left out first when narrow', () => {
     follow();
+    play('mod.status', { plugin: 'test-runner', text: '1 failing' });
+    const [item] = statusItems();
+    expect(item).toMatchObject({ plain: true, still: true, icon: 'mod', mono: true, fold: true, label: 'test-runner mod', value: 'test-runner 1 failing' });
   });
-  afterEach(() => { delete (HTMLElement.prototype as { animate?: unknown }).animate; });
-  const movers = (): Anim[] => anims.filter((a) => a.frames.some((f) => 'transform' in f));
-
-  it('lifts the composer and the band 22px by a transform when the first status appears: a FLIP over --dur-3 on --spring, never a layout animation', () => {
-    play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x') });
-    anims.length = 0;
-    play('mod.status', { plugin: 'a', text: '1 failing' });
-    const m = movers();
-    expect(m.map((a) => a.el)).toEqual([rig.composer, rig.band]);
-    for (const a of m) {
-      expect(a.frames).toEqual([{ transform: 'translateY(22px)' }, { transform: 'translateY(0)' }]);
-      expect(a.opts.duration).toBe(300);
-      expect(a.opts.easing).toBe('cubic-bezier(.22, 1, .36, 1)');
-      expect(a.frames.every((f) => Object.keys(f).every((k) => k === 'transform' || k === 'offset'))).toBe(true);   // no top, bottom or height
-    }
-    const line = anims.find((a) => a.el === rig.status);
-    expect(line?.frames).toEqual([{ opacity: 0 }, { opacity: 1 }]);   // the line fades in as the composer leaves its place
-  });
-  it('adds no height for a second status, so nothing moves', () => {
-    play('mod.status', { plugin: 'a', text: '1' });
-    anims.length = 0;
-    play('mod.status', { plugin: 'b', text: '2' });
-    expect(anims).toEqual([]);
-    expect(rig.status.querySelectorAll('.mod-status__i').length).toBe(2);
-  });
-  it('settles back when the last status clears, in the same way and in reverse, with a copy of the line fading in the vacated place', () => {
-    play('mod.status', { plugin: 'a', text: '1' });
-    anims.length = 0;
+  it('draws the line again when a status comes, changes or clears, and not when nothing changed', () => {
+    follow();
+    const n0 = rig.lines;
+    play('mod.status', { plugin: 'a', text: 'one' });
+    expect(rig.lines).toBe(n0 + 1);
+    play('mod.status', { plugin: 'a', text: 'one' });
+    expect(rig.lines).toBe(n0 + 1);
+    play('mod.status', { plugin: 'a', text: 'two' });
     play('mod.status', { plugin: 'a', text: '' });
-    expect(movers().map((a) => [a.el, a.frames])).toEqual([[rig.composer, [{ transform: 'translateY(-22px)' }, { transform: 'translateY(0)' }]]]);
-    expect(rig.status.childElementCount).toBe(0);
-    const ghost = rig.host.querySelector('.mod-status--ghost');
-    expect(ghost?.getAttribute('aria-hidden')).toBe('true');
-    expect(anims.some((a) => a.el === ghost && a.frames.some((f) => f.opacity === 0))).toBe(true);
+    expect(rig.lines).toBe(n0 + 3);
+    expect(status()).toEqual([]);
   });
-  it('under reduced motion: no travel, a short crossfade from a ghost of where the composer was', () => {
-    reducedMotion = true;
-    play('mod.status', { plugin: 'a', text: '1' });
-    expect(movers()).toEqual([]);
-    const ghost = rig.host.querySelector('.mod-ghost');
-    expect(ghost).toBeTruthy();
-    expect((ghost as HTMLElement).inert).toBe(true);
-    expect(anims.filter((a) => a.el === rig.composer).map((a) => [a.frames, a.opts.duration])).toEqual([[[{ opacity: 0 }, { opacity: 1 }], 120]]);
-    expect(anims.find((a) => a.el === ghost)?.frames).toEqual([{ opacity: 1 }, { opacity: 0 }]);
-  });
-  it('does not animate a switch of session: the line is there, the composer is where it is', () => {
-    play('mod.status', { plugin: 'a', text: '1' });
-    anims.length = 0;
-    rig.model.handle('s2', 'mod.status', { plugin: 'b', text: 'two' });
-    resetMods();
-    surface.onConversation?.('s2');
-    expect(rig.status.textContent).toBe('b two');
-    expect(anims).toEqual([]);
-  });
-  it('says what it is to assistive tech and keeps what does not fit on one line out of the way', () => {
-    play('mod.status', { plugin: 'a', text: 'x' });
-    expect([rig.status.getAttribute('role'), rig.status.getAttribute('aria-label')]).toEqual(['region', 'Mod status']);
+  it('is drawn by the kit\'s composer as a plain item after the line\'s own, before its end', () => {
+    follow();
+    play('mod.status', { plugin: 'test-runner', text: '1 failing' });
+    const t = document.createElement('template');
+    t.innerHTML = kit.html.composer({ kind: 'session', line: [{ label: 'Branch', value: 'main', plain: true, still: true }, ...statusItems(), { label: 'Context', value: '12%', end: true }] });
+    const items = [...t.content.querySelectorAll('.k7-composer__line > *')].map((n) => n.textContent ?? '');
+    expect(items.indexOf('test-runner 1 failing')).toBe(1);
+    expect(t.content.querySelector('[data-mod-status="test-runner"]')?.getAttribute('aria-label')).toBe('test-runner mod: test-runner 1 failing');
   });
 });
 
-describe('panes: a tab from 1200px, inline below it (owner decision, 19 November 2026)', () => {
-  it('at 1200 a pane is a tab after Details, and nothing is inline', () => {
-    width(1200); follow(); pane('tests', 'test-runner'); pane('usage', 'token-meter');
-    expect(rig.band.querySelectorAll('.mod-inline').length).toBe(0);
+describe('panes: a tab of the tools after their fixed tabs (2b), at every width', () => {
+  it('is a tab named by its title, its mod in the tip; Diff is in front until one is chosen', () => {
+    follow(); pane('a'); pane('b');
     const t = panelTabs();
-    expect(t?.items).toEqual([{ value: 'details', label: 'Details' }, { value: 'tests', label: 'TESTS', tip: 'test-runner mod' }, { value: 'usage', label: 'USAGE', tip: 'token-meter mod' }]);
-    expect([t?.value, t?.label, t?.body()]).toEqual(['details', 'Session details', null]);
+    expect(t?.items).toEqual([{ value: 'a', label: 'A', tip: 'm mod' }, { value: 'b', label: 'B', tip: 'm mod' }]);
+    expect([t?.value, t?.label, t?.body()]).toEqual(['diff', 'Diff', null]);
   });
-  it('at 1199 the same panes are inline above the composer, one open and the others folded to a head, and the panel is left as it was', () => {
-    width(1199); follow(); pane('tests', 'test-runner'); pane('usage', 'token-meter');
-    const secs = [...rig.band.querySelectorAll<HTMLElement>('.mod-inline')];
-    expect(secs.map((s) => [s.dataset['pane'], s.dataset['open']])).toEqual([['tests', 'false'], ['usage', 'true']]);
-    expect(secs[0]?.querySelector('.mod-inline__body')).toBeNull();
-    expect(secs[1]?.querySelector('.mod-inline__body .mv-root')?.getAttribute('data-surface')).toBe('inset');
-    expect(panelTabs()).toBeNull();
+  it('tells each pane where it is: placement dock, and whether it is the one in front', () => {
+    follow(); pane('a');
+    const paneProps = (): unknown[] => rig.calls.filter((c) => c[0] === 'props' && c[2] === 'Pane').map((c) => c[4]);
+    expect(paneProps().at(-1)).toEqual({ title: 'A', placement: 'dock', isFocused: false });
+    panelTabs()?.select('a');
+    expect(paneProps().at(-1)).toEqual({ title: 'A', placement: 'dock', isFocused: true });
   });
-  it('unfolds one inline pane and folds the other, and moves focus back to its chevron', () => {
-    width(1000); follow(); pane('a'); pane('b');
-    rig.band.querySelector<HTMLButtonElement>('[data-pane="a"] .mod-chev')?.click();
-    expect([...rig.band.querySelectorAll<HTMLElement>('.mod-inline')].map((s) => s.dataset['open'])).toEqual(['true', 'false']);
-  });
-  it('redraws as the window crosses 1200, in both directions', () => {
-    width(1300); follow(); pane('a');
-    expect(rig.band.querySelectorAll('.mod-inline').length).toBe(0);
-    width(1100);
-    expect(rig.band.querySelectorAll('.mod-inline').length).toBe(1);
-    width(1200);
-    expect(rig.band.querySelectorAll('.mod-inline').length).toBe(0);
-  });
-  it('tells each pane where it is: placement dock or inline, and whether it is the one in front', () => {
-    width(1300); follow(); pane('a'); pane('b');
-    const props = (): unknown[] => rig.calls.filter((c) => c[0] === 'props' && c[2] === 'Pane').map((c) => [c[3], (c[4] as { placement: string; isFocused: boolean }).placement, (c[4] as { isFocused: boolean }).isFocused]);
-    expect(props()).toEqual([['a', 'dock', false], ['b', 'dock', false]]);
-    rig.calls.length = 0;
-    width(1100);
-    expect(props().every((p) => (p as string[])[1] === 'inline')).toBe(true);
-  });
-  it('choosing a tab brings that pane in front: its name is the panel\'s, its tree its body (the strip itself is the kit\'s tabs: modules/session/details.test.ts)', () => {
-    width(1300); follow(); pane('a'); pane('b');
+  it('choosing a tab brings that pane in front: its name is the panel\'s, its tree its body (the strip is the kit\'s: modules/session/details.test.ts)', () => {
+    follow(); pane('a'); pane('b');
     panelTabs()?.select('b');
     expect(ctl.active).toBe('b');
     const t = panelTabs();
     expect([t?.value, t?.label]).toEqual(['b', 'B, m mod']);
-    expect(t?.body()?.querySelector('.mod-pane__body')).not.toBeNull();
-    t?.select('details');
+    expect(t?.body()?.querySelector('[data-kit~="ModView"]')?.getAttribute('data-surface')).toBe('pane');
+    t?.select('diff');
     expect(panelTabs()?.body()).toBeNull();
   });
-  it('draws a pane the plugin refused, or that no mod drew, as a sentence and not as nothing', () => {
-    width(1300); follow();
+  it('draws a pane the plugin refused, or that no mod drew, as one line and not as nothing', () => {
+    follow();
     play('mod.pane', { action: 'open', plugin: 'm', id: 'bad', title: 'Bad' });
     play('mod.render', { component: 'Pane', id: 'bad', kind: 'skipped', reason: 'deeper than 32' });
     ctl.active = 'bad';
-    expect(panelTabs()?.body()?.textContent).toContain('sent a tree the renderer refused');
+    expect(panelTabs()?.body()?.querySelector('[data-kit~="EmptyState"]')?.textContent).toBe('This pane can’t be drawn.');
     play('mod.render', { component: 'Pane', id: 'bad', kind: 'default' });
-    expect(panelTabs()?.body()?.textContent).toContain('has not drawn this pane');
+    expect(panelTabs()?.body()?.textContent).toBe('m hasn’t drawn this pane.');
   });
-  it('a pane the user closes goes, and comes back when the mod opens it again', () => {
-    width(1300); follow(); pane('a');
-    ctl.active = 'a';
-    panelTabs()?.body()?.querySelector<HTMLButtonElement>('.mod-pane__head .ui-ib')?.click();
-    expect(panelTabs()).toBeNull();
-    play('mod.pane', { action: 'open', plugin: 'm', id: 'a', title: 'A' });
-    expect(panelTabs()).not.toBeNull();
-  });
-  it('a pane that opens with focus comes forward and opens the details panel', () => {
-    width(1300); follow();
+  it('a pane that opens with focus comes forward: its tab, the tools open', () => {
+    follow();
     state.right = 'closed' as never;
     play('mod.pane', { action: 'open', plugin: 'm', id: 'f', title: 'F', focus: true });
-    expect(ctl.active).toBe('f');
-    expect(state.right).toBe('open');
+    expect([ctl.active, rig.tools, state.right]).toEqual(['f', 1, 'open']);
+  });
+  it('a pane opened without focus waits as a tab: nothing opens', () => {
+    follow();
+    state.right = 'closed' as never;
+    pane('q');
+    expect([ctl.active, rig.tools, state.right]).toEqual(['diff', 0, 'closed']);
   });
 });
 
@@ -337,18 +265,17 @@ describe('notices: the kit\'s Notice, one at a time, with "+N" (owner decision, 
   });
 });
 
-describe('placed rows: from the mod, never from the agent', () => {
-  it('a log line is a quiet row in the conversation with the mod in the margin, in the warning ink when it warns', () => {
+describe('a mod\'s rows in the conversation (2b: the kit\'s SystemLine and ToolRow), never from the agent', () => {
+  it('a log line is a SystemLine: the mod\'s glyph and name, its words, the time; a warning\'s name in amber, boopis speaking as "Mods"', () => {
     follow();
     play('mod.log', { plugin: 'a', level: 'info', text: 'hello' });
     play('mod.log', { plugin: '', level: 'warn', text: 'a mod stopped' });
     const rows = [...rig.col.querySelectorAll<HTMLElement>('[data-mod-log]')];
-    expect(rows.map((r) => r.dataset['modLog'])).toEqual(['info', 'warn']);
-    expect(rows[0]?.getAttribute('data-kind')).toBe('mod');
-    expect(rows[0]?.querySelector<HTMLElement>('.mv-text')?.style.color).toBe('var(--text-quiet)');
-    expect(rows[1]?.querySelector<HTMLElement>('.mv-text')?.style.color).toBe('var(--warn)');
-    expect(rows[1]?.querySelector('.mv-by__n')?.textContent).toBe('Mods');
-    expect(rows[1]?.querySelector('.mv-root')?.getAttribute('data-surface')).toBe('ground');
+    expect(rows.map((r) => [r.dataset['modLog'], r.getAttribute('data-kit')])).toEqual([['info', 'SystemLine'], ['warn', 'SystemLine']]);
+    expect(rows[0]?.querySelector('.k7-sys__text')?.textContent).toBe('hello');
+    expect(rows[0]?.querySelector('[data-kit~="StatusWord"]')?.getAttribute('data-tone')).toBe('neutral');
+    expect(rows[1]?.querySelector('[data-kit~="StatusWord"]')?.getAttribute('data-tone')).toBe('owe');
+    expect(rows[1]?.querySelector('[data-kit~="StatusWord"]')?.textContent).toBe('Mods');
   });
   it('a debug line is never shown', () => {
     follow();
@@ -362,11 +289,14 @@ describe('placed rows: from the mod, never from the agent', () => {
     follow();
     expect(rig.col.querySelectorAll('[data-mod-log]').length).toBe(1);
   });
-  it('a Placed draw is a row, replaced by the next draw of the same id and removed by a default one', () => {
+  it('a Placed draw is a ToolRow led by the mod, what it draws under its head; replaced by the next draw of the same id, removed by a default one', () => {
     follow();
     play('mod.render', { component: 'Placed', id: 'r', kind: 'tree', tree: tree('first') });
     play('mod.render', { component: 'Placed', id: 'r', kind: 'tree', tree: tree('second') });
-    expect([...rig.col.querySelectorAll('[data-mod-placed]')].map((n) => n.textContent)).toEqual([expect.stringContaining('second')]);
+    const rows = [...rig.col.querySelectorAll('[data-mod-placed]')];
+    expect(rows.map((n) => n.getAttribute('data-kit'))).toEqual(['ToolRow']);
+    expect(rows[0]?.querySelector('.k7-tool__after [data-kit~="ModView"]')?.getAttribute('data-surface')).toBe('row');
+    expect(rows[0]?.textContent).toContain('second');
     play('mod.render', { component: 'Placed', id: 'r', kind: 'default' });
     expect(rig.col.querySelectorAll('[data-mod-placed]').length).toBe(0);
   });
@@ -381,17 +311,17 @@ describe('refusals: nothing pretends to work', () => {
     play('mod.render', { component: 'Backdrop', kind: 'tree', tree: tree('scene') });
     expect(document.body.innerHTML).toBe(before);
   });
-  it('a tree the renderer refuses leaves the band empty and the reason in the log, not a half drawing', () => {
+  it('a tree the renderer refuses leaves the band without a drawing and the reason in the log, not a half drawing', () => {
     follow();
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: { type: 'Client', props: {}, children: [] } });
-    expect(rig.band.querySelector('.mod-row .mv-root')).toBeNull();
+    expect(rig.band.querySelector('[data-kit~="ModView"]')).toBeNull();
   });
   it('a worker that exited clears what it drew (the plugin tells through mod.list) and says so in the conversation', () => {
     follow(); pane('a'); play('mod.status', { plugin: 'm', text: 'x' });
     rig.model.list(SID, { plugins: [], exited: 'the worker was killed' });
     const s: ModSession = rig.model.state(SID);
     expect([s.stopped, s.panes.length, s.status.length]).toEqual(['the worker was killed', 0, 0]);
-    expect(rig.status.childElementCount).toBe(0);
+    expect(status()).toEqual([]);
   });
 });
 
@@ -408,7 +338,7 @@ describe('the theme card, and every way its preview ends', () => {
     follow();
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, right: 10, bottom: 10, width: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) } as DOMRect);
   });
-  afterEach(() => { for (const c of openCards()) c.closest('.ui-entry')?.remove(); recheck(); });
+  afterEach(() => { for (const c of openCards()) c.closest('[data-mod-card]')?.remove(); recheck(); });
   const click = (c: HxCard, action: string): void => { c.querySelector<HTMLButtonElement>('[data-action="' + action + '"]')?.click(); };
 
   it('maps a mod colours onto the app tokens: its own tokens, and Claude Code names that have one, and says which it left out', () => {
@@ -487,7 +417,7 @@ describe('the theme card, and every way its preview ends', () => {
     it('a card Kept without a preview showing it is checked before it is stored', async () => {
       const c = offer(DARK_TEXT);
       /* the card is set aside (another tab): no preview holds it, and Keep is still the guard's */
-      c.closest('.ui-entry')?.setAttribute('hidden', '');
+      c.closest('[data-mod-card]')?.setAttribute('hidden', '');
       recheck();
       expect(themeApi.previewing()).toBe(false);
       click(c, 'submit'); await tick();
@@ -519,7 +449,7 @@ describe('the theme card, and every way its preview ends', () => {
   });
   it('closing or removing the card restores it, and so does the conversation being redrawn', () => {
     const c = offer(DUSK);
-    c.closest('.ui-entry')?.remove();
+    c.closest('[data-mod-card]')?.remove();
     recheck();
     expect([themeApi.previewing(), brass()]).toEqual([false, '']);
     play('mod.theme', { action: 'set', plugin: 'dusk', theme: { colors: DUSK } });

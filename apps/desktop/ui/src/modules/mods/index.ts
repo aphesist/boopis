@@ -1,35 +1,35 @@
 /* boopis mods: what a session's Claude Code mods draw (docs/MODS.md sections 2 and 3, DESIGN-SYSTEM.md 14.29), in the owner's
-   approved places. Reads `data().mods` (the `mod.*` events of the plugin, folded into one `ModSession` per session) and draws
-   it with `ui.modView` into: a pane tab in the details panel (inline above the composer below 1200px), the band above the
-   composer, the status line (the composer rises 22px), placed rows in the conversation (a mod's log lines), toasts (one at a
-   time, with "+N"), and the theme card with its live preview. A mod's `$.ui.ask` is a form with the mod's origin and goes
+   places (2b, the lead's decisions for conflict 32). Reads `data().mods` (the `mod.*` events of the plugin, folded into one `ModSession`
+   per session) and draws it with the kit's ModView into: a tab of the session's tools after their fixed tabs, the band in the held or
+   queued strip's slot over the composer (the kit's Queue), the composer's own line (a mod's status, nothing rises), its rows in the
+   conversation (a log line is the kit's SystemLine, a placed row a ToolRow), its notices (the kit's Notice, one at a time with "+N"),
+   and the theme card with its live preview. A mod's `$.ui.ask` is a form with the mod's origin and goes
    the way every form goes (the conversation, the dock's queue, answered in one place); nothing here draws it.
    What the user does to an element goes back to the mod by handler id (`mod.press`, `mod.input`, `mod.select`), and each
-   site is told where it is (`mod.props`: a pane's placement, the band's `isWorking` and `isCollapsed`).
+   site is told where it is (`mod.props`: a pane's placement, always `dock` now that a pane is a tab of the tools at every width, and
+   the band's `isWorking` and `isCollapsed`).
    Refusals: a `$` namespace boopis does not serve never reaches this module as an event, so nothing here pretends to serve
    it (no commands list, no backdrop, no redraw of Claude Code's own parts). Listens: hx:theme (literal colours re-read),
-   resize. Every colour, family, radius and size is a token. */
+   Every colour, family, radius and size is a token. */
 import { setState, state } from '../../core/state';
 import { logger } from '../../core/log';
-import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { ModSession } from '../../data';
 import { NO_MODS } from '../../data/mods-model';
 import { inTauri } from '../../host/bridge';
 import type { HxCard } from '../cards';
-import { ctl, docked } from './ctl';
-import { bringForward, panelTabs, dockedPanes, drawBand, setOnChange, updateTrees } from './panes';
+import { ctl } from './ctl';
+import { bringForward, panelTabs, drawBand, setOnChange, updateTrees } from './panes';
 import { placeLog, placePlaced } from './rows';
-import { setStatus } from './status';
+import { setStatus, statusItems } from './status';
 import { themeCard, placeThemeCard, withdraw } from './theme-card';
 import { modNotice } from './notices';
 import { surface } from './surfaces';
 
 const log = logger('mods');
-ui.squircle.auto('.mod-band, .mod-inline, .mv-code, .mod-swatches');
 
 let unsub: (() => void) | null = null, unsubEvents: (() => void) | null = null;
-let ready = false, working = false, wasDocked = docked();
+let ready = false, working = false;
 /** the props last sent for each site of the session, so a site is told only when something changed */
 const sent = new Map<string, string>();
 let themeEl: HxCard | null = null;
@@ -51,8 +51,7 @@ function tell(component: string, id: string | null, props: Record<string, unknow
 /** a pane's placement and focus, the band's working and collapsed state: what Claude Code gives a `ui.render` hook as props */
 function syncProps(): void {
   if (!ctl.id || !ctl.s.active) return;
-  const dock = docked();
-  for (const p of ctl.s.panes) tell('Pane', p.id, { title: p.title, placement: dock ? 'dock' : 'inline', isFocused: dock ? ctl.active === p.id : !ctl.folded.get(p.id) });
+  for (const p of ctl.s.panes) tell('Pane', p.id, { title: p.title, placement: 'dock', isFocused: ctl.active === p.id });
   tell('AbovePrompt', null, { isWorking: working, isCollapsed: !ctl.bandOpen });
 }
 
@@ -68,11 +67,11 @@ function placeConversationParts(): void {
 }
 
 /* ───────── drawing ───────── */
-function drawAll(animate: boolean): void {
-  if (ctl.active !== 'details' && !dockedPanes().some((p) => p.id === ctl.active)) ctl.active = 'details';
+function drawAll(): void {
+  if (ctl.active !== 'diff' && !ctl.s.panes.some((p) => p.id === ctl.active)) ctl.active = 'diff';
   drawBand();
   surface.redrawRight?.();
-  setStatus(ctl.s.status, { animate });
+  setStatus(ctl.s.status);
 }
 
 function apply(next: ModSession): void {
@@ -82,14 +81,13 @@ function apply(next: ModSession): void {
     for (const p of next.panes) {
       const was = prev.panes.find((x) => x.id === p.id);
       if (!was || was.opens !== p.opens) {
-        /* inline, the pane opened last is the one open (one at a time, so the composer keeps the screen); docked, a pane comes forward only when its mod asks (`focus`) */
-        if (!docked() || p.focus) bringForward(p.id);
-        if (docked() && p.focus && state.right !== 'open') setState({ right: 'open' });
+        /* a pane comes forward only when its mod asks (`focus`): its tab, and the tools open on it */
+        if (p.focus) { bringForward(p.id); if (state.right !== 'open') setState({ right: 'open' }); }
       }
     }
-    drawAll(true);
+    drawAll();
   } else if (prev !== next) updateTrees();
-  if (prev.status !== next.status) setStatus(next.status, { animate: true });
+  if (prev.status !== next.status) setStatus(next.status);
   /* what the mods said into the conversation since the last state: new log lines and placed rows, and a new or withdrawn theme */
   const sid = ctl.id;
   if (sid) {
@@ -112,15 +110,15 @@ function apply(next: ModSession): void {
 function follow(id: string): void {
   init();
   /* the same session drawn again (a re-render of the conversation): its slots are new and empty, so the band and the status line go back into them, with the status line's role and name, as well as the rows and log lines */
-  if (id === ctl.id) { drawBand(); setStatus(ctl.s.status, { animate: false }); placeConversationParts(); return; }
+  if (id === ctl.id) { drawBand(); setStatus(ctl.s.status); placeConversationParts(); return; }
   unsub?.();
   ctl.id = id;
   const w = data().mods.session(id);
   ctl.s = w.get();
-  ctl.active = 'details';
-  ctl.folded.clear(); ctl.bandOpen = false;
+  ctl.active = 'diff';
+  ctl.bandOpen = false;
   unsub = w.subscribe(apply);
-  drawAll(false);
+  drawAll();
   placeConversationParts();
   syncProps();
 }
@@ -139,21 +137,15 @@ function init(): void {
     else notify(e.title || e.plugin, e.text);
   });
   setOnChange(() => { syncProps(); });
-  window.addEventListener('resize', () => {
-    const d = docked();
-    if (d === wasDocked) return;
-    wasDocked = d;
-    drawAll(false);
-    syncProps();
-  });
 }
 
 surface.onConversation = follow;
 surface.onWorking = (on) => { working = on; syncProps(); };
 surface.panelTabs = panelTabs;
+surface.lineItems = statusItems;
 
 /** for the tests: forget the session and every site's state */
 export function resetMods(): void {
-  unsub?.(); unsub = null; unsubEvents?.(); unsubEvents = null; ready = false; ctl.id = null; ctl.s = NO_MODS; ctl.active = 'details'; ctl.folded.clear(); ctl.roots.clear(); ctl.bandOpen = false;
-  sent.clear(); themeEl = null; working = false; wasDocked = docked();
+  unsub?.(); unsub = null; unsubEvents?.(); unsubEvents = null; ready = false; ctl.id = null; ctl.s = NO_MODS; ctl.active = 'diff'; ctl.roots.clear(); ctl.bandOpen = false;
+  sent.clear(); themeEl = null; working = false; setStatus([]);
 }

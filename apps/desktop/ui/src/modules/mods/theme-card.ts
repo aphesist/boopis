@@ -12,8 +12,7 @@
    stores only what was applied (docs/MODS.md section 10). */
 import { on } from '../../core/bus';
 import { logger } from '../../core/log';
-import { ui } from '@boopis/ui';
-import { MARK, parseLiteral } from '@boopis/ui';
+import { card as cardOf, MOD_MARK as MARK, parseLiteral } from '@boopis/ui';
 import type { HxCard } from '../cards';
 import type { FormSpec, ModTheme } from '../../data';
 import { EDITABLE, GROUPS, skippedSentence, themeApi } from '../../styles/theme';
@@ -130,7 +129,7 @@ export function themeCard(t: ModTheme): HxCard | null {
     receipt: 'Kept ' + plugin + '’s colours. Undo in Settings, Appearance', cancelledText: 'Rejected. The theme is back as it was', deferredText: 'Later. The theme stays as it was'
   };
   const was = decided.get(t);
-  const card = ui.card('form', data as unknown as Record<string, unknown>, { size: 'inline', ...(was ? { state: was } : {}) }) as HxCard;
+  const card = cardOf('form', data as unknown as Record<string, unknown>, { size: 'inline', ...(was ? { state: was } : {}) }) as HxCard;
   card.dataset['modTheme'] = plugin;
   const meta: Meta = { colors, visible: false, paused: false, ending: false, plugin, unused, guard: null };
   META.set(card, meta);
@@ -165,16 +164,17 @@ export function themeCard(t: ModTheme): HxCard | null {
 
 /** puts the card in the conversation, at the point the mod raised it: no margin text, the card's own byline names the mod */
 export function placeThemeCard(card: HxCard): void {
-  const art = ui.entry({ kind: 'mod', callno: [], body: '' });
+  const art = document.createElement('div');
+  art.className = 'ss-mod-card';
   art.setAttribute('data-mod-card', '');
-  art.querySelector('.ui-entry__body')?.append(card);
+  art.append(card);
   surface.place?.(art, { quiet: true });
   recheck();
 }
 
 /** a card whose offer was withdrawn (`$.theme.clear`) or replaced leaves the page; its preview goes with it */
 export function withdraw(card: HxCard): void {
-  card.closest('.ui-entry')?.remove();
+  card.closest('[data-mod-card]')?.remove();
   CARDS.delete(card);
   reconcile();
 }

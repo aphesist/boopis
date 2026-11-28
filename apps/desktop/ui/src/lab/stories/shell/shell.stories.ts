@@ -3,6 +3,7 @@
 import { store } from '../../../data/store';
 import type { DataProvider } from '../../../data/provider';
 import { boardS20, boardS23 } from '../../board-fixtures';
+import { withQueue } from '../../live-bots';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 import { kit } from '@boopis/ui';
 import type { NotifyOpts } from '@boopis/ui';
@@ -38,7 +39,7 @@ const titleBar: Story = {
     'close only, hover': st(['hover'], async (c) => { c.hx.emit('hx:window-controls', { layout: 'close' }); await c.wait(150); }, {}, { force: [{ sel: '#hx-btn-close', state: 'hover' }] }),
     'command field hover': st(['hover'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'hover' }] }),
     'command field focus': st(['focus'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'focus' }] }),
-    'sidebar button tooltip': st(['tooltip'], async (c) => { const b = c.$('#hx-btn-left'); b.focus(); c.hx.ui.tooltip.show(b); await c.wait(250); }, {}, { overlay: { anchor: '#hx-btn-left', layer: '.ui-tip' } }),
+    'sidebar button tooltip': st(['tooltip'], async (c) => { const b = c.$('#hx-btn-left'); b.focus(); c.hx.tooltip.show(b); await c.wait(250); }, {}, { overlay: { anchor: '#hx-btn-left', layer: '.k7-tip' } }),
     'a long session title': st(['long'], async (c) => { c.hx.emit('hx:title', { title: 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors' }); await c.wait(100); })
   }
 };
@@ -75,6 +76,8 @@ const notices: Story = {
     'with an action': st(['variant'], over([['Archived audit log export', { action: { label: 'Undo' } }]])),
     'two more waiting (+2)': st(['many'], over([['Archived audit log export', { action: { label: 'Undo' } }], ['Saved kai'], ['Copied']])),
     'over the Bots tab, above its composer': st(['variant'], async (c) => { await c.key('2', { altKey: true }); await c.wait(600); await over([['Archived nina', { action: { label: 'Undo' } }]])(c); }),
+    /* the owner's review of 2a: the Notice sits above the topmost element of the composer stack, never over the held strip's words */
+    'over a held message, above the strip': st(['variant', 'owner'], async (c) => { await c.key('2', { altKey: true }); await c.wait(600); await c.click('.bt-group-rows > [data-kit~="ListRow"]'); await c.wait(600); await over([['Archived nina', { action: { label: 'Undo' } }]])(c); }, { fixtures: ['groups'], patch: (p) => withQueue(p, ['and could you add the changelog to the notes?']) }),
     'a mod\'s notice': st(['variant'], over([[' 1 test failing in invoice.test.ts', { title: 'test-runner mod', icon: 'mod' }]])),
     'the dismiss hovered': st(['hover'], over([['Archived audit log export', { action: { label: 'Undo' } }]]), {}, { force: [{ sel: '#hx-notify [data-dismiss]', state: 'hover' }] }),
     long: st(['long'], over([['Archived Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors arrive', { action: { label: 'Undo' } }]]))

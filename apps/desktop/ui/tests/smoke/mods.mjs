@@ -1,8 +1,9 @@
 /* Mods, on the live provider over a recording of real mod events (plugins/boopis/tests/test_mods_frames.py: two mods in the real
-   hx worker, their events captured as the plugin emitted them and spliced into a recorded session). Checks the owner's decisions
-   of 19 November 2026 in a real engine: the surfaces, panes in the details panel from 1200px and inline below it, dot progress in
-   the band, the composer rising 22px by a transform, one notice at a time with "+N", the theme card with its live preview and
-   every way the preview ends, a mod's question in the conversation, and the refusals. */
+   hx worker, their events captured as the plugin emitted them and spliced into a recorded session). Checks the places of 2b (the
+   lead's decisions for conflict 32) in a real engine: the band in the held or queued strip's slot (the kit's Queue), a mod's status on
+   the composer's own line with nothing rising, panes as tabs of the tools after their fixed tabs at every width, tick progress in the
+   band, one notice at a time with "+N", the theme card with its live preview and every way the preview ends, a mod's question in the
+   conversation, and the refusals. */
 import { check, scenario } from './harness.mjs';
 
 const URL = 'provider=live-replay&frames=mods';
@@ -25,7 +26,7 @@ const send = async (page) => {
   await page.keyboard.press('Enter');
   await page.waitForTimeout(2200);
 };
-const composerTop = (page) => page.evaluate(() => document.querySelector('.ss-composer').children[1].getBoundingClientRect().top);
+const composerTop = (page) => page.evaluate(() => document.querySelector('.ss-composer .ss-composer__slot').getBoundingClientRect().top);
 /** the room the shell keeps for the dock: none until a session has started (this recording has no bots, and the dock only rises with the first message) */
 const dockSpace = (page) => page.evaluate(() => parseFloat(document.getElementById('hx-app').style.getPropertyValue('--hx-dock-space-to')) || 0);
 
@@ -37,25 +38,23 @@ export async function mods(env, AXE) {
     const top0 = await composerTop(page), room0 = await dockSpace(page);
     await send(page);
     const st = await page.evaluate(() => ({
-      status: [...document.querySelectorAll('.ss-mods--status .mod-status__i')].map((n) => n.textContent),
-      band: document.querySelector('.ss-mods--band .mod-row')?.textContent ?? '',
-      /* the band's hairline: its inset shadow, or, once its corner is drawn (data-sq-on), the drawn edge in the same ink */
-      bandInset: (() => { const b = document.querySelector('.ss-mods--band .mod-band'); if (!b) return 'none'; const sh = getComputedStyle(b).boxShadow; if (sh !== 'none') return sh; const e = getComputedStyle(b, '::after'); return b.hasAttribute('data-sq-on') && e.content !== 'none' && !/rgba\(0, 0, 0, 0\)|transparent/.test(e.backgroundColor) ? 'edge ' + e.backgroundColor : 'none'; })(),
+      status: [...document.querySelectorAll('.ss-composer .k7-composer__line [data-mod-status]')].map((n) => n.textContent),
+      band: document.querySelector('.ss-strip [data-kit~="Queue"][data-variant="mod"] [data-kit-part~="QueueRow"]')?.textContent ?? '',
+      bandGlyph: !!document.querySelector('.ss-strip .k7-queue__who svg'),
       notice: document.querySelector('.k7-notify .k7-notice__text')?.textContent ?? '', noticeWho: document.querySelector('.k7-notify .k7-notice__title')?.textContent ?? '', noticeMore: document.querySelector('.k7-notify .k7-notice__more')?.textContent ?? '',
-      logs: [...document.querySelectorAll('[data-mod-log] .mv-by__n')].map((n) => n.textContent),
-      glyphs: document.querySelectorAll('[data-mod-log] svg.mv-by__g').length
+      logs: [...document.querySelectorAll('[data-mod-log][data-kit~="SystemLine"] [data-kit~="StatusWord"]')].map((n) => n.textContent),
+      glyphs: document.querySelectorAll('[data-mod-log] > svg').length
     }));
     check('mods', 'boots on the recording with no console errors', page.errors.length === 0, page.errors);
-    check('mods', 'the status line names each mod, in the order they spoke', st.status.join('|') === 'test-runner 1 failing|token-meter 12.4k tokens this turn', st.status);
-    check('mods', 'the band shows the mod\'s row (a puzzle glyph and a name), inset', /Tests idle/.test(st.band) && st.bandInset !== 'none', st);
-    check('mods', 'the log lines are quiet rows with the mod\'s glyph and name in the margin', st.logs.join() === 'test-runner,token-meter' && st.glyphs === 2, st);
+    check('mods', 'each mod\'s status joins the composer\'s own line, in the order they spoke', st.status.join('|') === 'test-runner 1 failing|token-meter 12.4k tokens this turn', st.status);
+    check('mods', 'the band is the kit\'s Queue in the strip\'s slot: the mod\'s row (its glyph and name)', /Tests idle/.test(st.band) && st.bandGlyph, st);
+    check('mods', 'the log lines are the kit\'s SystemLine, the mod\'s glyph and name leading', st.logs.join() === 'test-runner,token-meter' && st.glyphs === 2, st);
 
-    /* the composer rose 22px: the layout moved by the status line's height and the move was a transform, never a layout animation */
+    /* nothing rises (2b): the composer's line holds the status, so the composer stays where it was but for the room the dock now keeps */
     const top1 = await composerTop(page);
-    const rise = await page.evaluate(() => window.__anims.filter((a) => a.frames.some((f) => 'transform' in f) && /k7-composer|ss-composer__slot|ss-mods--band/.test(a.cls || '')));
+    const rise = await page.evaluate(() => window.__anims.filter((a) => a.frames.some((f) => 'transform' in f) && /k7-composer|ss-composer__slot/.test(a.cls || '')));
     const room1 = await dockSpace(page);
-    check('mods', 'the status line lifts the composer 22px (the room the dock now keeps is its own)', Math.abs((top0 - top1) - (room1 - room0) - 22) <= 1, { top0, top1, room0, room1 });
-    check('mods', 'the rise is a FLIP on transform over --dur-3 (translateY(22px) to 0), with no top, bottom or height', rise.length >= 1 && rise.every((a) => a.frames.every((f) => Object.keys(f).every((k) => k === 'transform' || k === 'offset')) && a.frames[0].transform === 'translateY(22px)' && a.frames[1].transform === 'translateY(0)') && rise[0].duration > 100, rise);
+    check('mods', 'a status lifts nothing: the composer moves only by the room the dock keeps, and nothing travels', Math.abs((top0 - top1) - (room1 - room0)) <= 1 && rise.length === 0, { top0, top1, room0, room1, rise });
 
     /* notices (the kit's floating Notice): one at a time, in order, led by the mod, with a quiet "+N" */
     check('mods', 'notices show one at a time, led by "name mod", with "+2" while two wait', /1 test failing/.test(st.notice) && /mod$/.test(st.noticeWho) && st.noticeMore === '+2', st);
@@ -72,32 +71,34 @@ export async function mods(env, AXE) {
     check('mods', 'a preview is never saved, and the dock stays pitch black in it', !/b8a4f0/.test(pv.saved ?? '') && pv.dock === 'rgb(0, 0, 0)', pv);
 
     /* continuous corners: only leaf controls are clipped, never a container of a mod's drawing */
-    const clipped = await page.evaluate(() => [...document.querySelectorAll('.mod-band, .mod-row, .mv-root, .mv-box, .mv-code, hx-card[data-mod-theme], .ss-mods')].filter((n) => getComputedStyle(n).clipPath !== 'none').map((n) => n.className));
+    const clipped = await page.evaluate(() => [...document.querySelectorAll('.ss-strip, .ss-strip [data-kit~="Queue"], .k7-mv, .k7-mv__box, hx-card[data-mod-theme]')].filter((n) => getComputedStyle(n).clipPath !== 'none').map((n) => n.className));
     check('mods', 'no container of a mod\'s drawing is clipped (only leaf controls are)', clipped.length === 0, clipped);
 
-    /* the details panel: a tab per pane after Details; the tabs follow the keys */
+    /* the tools: a tab per pane after their fixed tabs (here the Diff); the details have none */
     await page.keyboard.press('Control+i'); await page.waitForTimeout(900);
+    const inDetails = await page.evaluate(() => document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]').length);
+    await page.evaluate(() => __hx.emit('hx:open-panel', { panel: 'changes', from: 'smoke' })); await page.waitForTimeout(900);
     const tabs = await page.evaluate(() => [...document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]')].map((n) => n.textContent + (n.dataset.tip ? ', ' + n.dataset.tip : '')));
-    check('mods', 'at 1440 each pane is a tab of the details panel after Details, and none is inline', tabs.join('|') === 'Details|Tests, test-runner mod|Token usage, token-meter mod' && (await page.evaluate(() => document.querySelectorAll('.mod-inline').length)) === 0, tabs);
+    check('mods', 'each pane is a tab of the tools after the Diff, and the details have no strip', tabs.join('|') === 'Diff|Tests, test-runner mod|Token usage, token-meter mod' && inDetails === 0, { tabs, inDetails });
     await page.click('#hx-right .k7-pane__tabs [data-value="usage"]'); await page.waitForTimeout(400);
-    const chart = await page.evaluate(() => { const f = [...document.querySelectorAll('.mod-pane svg rect')].map((r) => getComputedStyle(r).fill); return { n: f.length, fills: [...new Set(f)] }; });
+    const chart = await page.evaluate(() => { const f = [...document.querySelectorAll('.ss-mod-pane svg rect')].map((r) => getComputedStyle(r).fill); return { n: f.length, fills: [...new Set(f)] }; });
     check('mods', 'the chart is drawn in theme: claude is the accent as a mark, a literal that holds its contrast is kept', chart.n >= 8 && chart.fills.some((x) => x === 'rgb(184, 164, 240)') && chart.fills.length === 2, chart);
 
     /* the pane and its handlers: a press, a select and an input go back by id */
     await page.click('#hx-right .k7-pane__tabs [data-value="tests"]'); await page.waitForTimeout(400);
-    await page.click('.mod-pane .ui-btn:has-text("Re-run")'); await page.waitForTimeout(700);
-    const run = await page.evaluate(() => ({ dots: !!document.querySelector('.ss-mods--band .mv-dots[data-indeterminate]'), runner: document.querySelector('.mod-pane')?.textContent.includes('Running tests'), req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.mod.press').map((r) => r.params) }));
-    check('mods', 'Re-run sends the id of its handler to the mod, and the band and the pane redraw: dots, never a bar', run.req.length === 1 && /^0\.h\d+\.\d+$/.test(run.req[0].handler) && run.req[0].session_id.startsWith('local-') && run.dots && run.runner, run);
-    const bar = await page.evaluate(() => document.querySelectorAll('.ss-mods--band [role="progressbar"] :is(progress, meter), .ss-mods--band progress, .ss-mods--band meter').length);
-    check('mods', 'progress is dots: no bar element, one dot that travels', bar === 0, bar);
-    await page.click('.mod-pane .mv-select'); await page.waitForTimeout(250);
+    await page.click('.ss-mod-pane [data-kit~="Button"]:has-text("Re-run")'); await page.waitForTimeout(700);
+    const run = await page.evaluate(() => ({ dots: !!document.querySelector('.ss-strip [data-kit-part~="ModProgress"][data-indeterminate]'), runner: document.querySelector('.ss-mod-pane')?.textContent.includes('Running tests'), req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.mod.press').map((r) => r.params) }));
+    check('mods', 'Re-run sends the id of its handler to the mod, and the band and the pane redraw: ticks, never a bar', run.req.length === 1 && /^0\.h\d+\.\d+$/.test(run.req[0].handler) && run.req[0].session_id.startsWith('local-') && run.dots && run.runner, run);
+    const bar = await page.evaluate(() => document.querySelectorAll('.ss-strip progress, .ss-strip meter').length);
+    check('mods', 'progress is ticks: no bar element, one tick that travels', bar === 0, bar);
+    await page.click('.ss-mod-pane [data-kit~="SelectorItem"]'); await page.waitForTimeout(250);
     await page.click('.k7-menu[data-floating] [data-kit~="MenuRow"]:has-text("Failing only")'); await page.waitForTimeout(500);
     const sel = await page.evaluate(() => window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.mod.select').map((r) => r.params.value));
     check('mods', 'a choice in a Select goes back as ui.select with its value', sel.join() === 'failing', sel);
 
     /* a mod's question: a form with the mod as its origin, in the conversation and among what waits on you (the v7 dock carries your bots' approvals only) */
     const waits0 = await page.evaluate(() => __hx.data().waits.snapshot().filter((w) => w.kind === 'form').length);
-    await page.click('.mod-pane .ui-btn:has-text("Ask which")'); await page.waitForTimeout(1200);
+    await page.click('.ss-mod-pane [data-kit~="Button"]:has-text("Ask which")'); await page.waitForTimeout(1200);
     const ask = await page.evaluate(() => ({
       inline: [...document.querySelectorAll('.ss-col hx-card[data-kind="form"]')].filter((c) => c.querySelector('[data-kit~="AskCard"][data-origin="mod"]')).map((c) => c.querySelector('.k7-ask__ask')?.textContent),
       by: document.querySelector('.ss-col hx-card[data-kind="form"] [data-kit~="AskCard"][data-origin="mod"] .k7-ask__who')?.textContent.replace(/\s+/g, ' ').trim(),
@@ -193,38 +194,24 @@ export async function mods(env, AXE) {
   });
 
   await s.safe('mods', async () => {
-    /* below 1200px a pane is inline above the composer: one open, the rest folded to a head */
+    /* at every width a pane is a tab of the tools (2b): nothing is drawn over the composer but the band, and nothing runs off the window */
     for (const w of [1199, 1000, 390]) {
       const page = await s.fresh({ q: URL, w, h: 800, settle: 1500 });
       await send(page);
-      const r = await page.evaluate(() => ({ tabs: document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]').length, inline: [...document.querySelectorAll('.ss-mods--band .mod-inline')].map((n) => n.dataset.open), over: document.documentElement.scrollWidth > innerWidth }));
-      check('mods', `at ${w} the panes are inline above the composer, one open and the other folded`, r.tabs === 0 && r.inline.join() === 'false,true' && !r.over, r);
+      await page.evaluate(() => __hx.emit('hx:open-panel', { panel: 'changes', from: 'smoke' })); await page.waitForTimeout(900);
+      const r = await page.evaluate(() => ({ tabs: [...document.querySelectorAll('#hx-right .k7-pane__tabs [role="tab"]')].map((n) => n.textContent), band: document.querySelectorAll('.ss-strip [data-kit-part~="QueueRow"]').length, over: document.documentElement.scrollWidth > innerWidth }));
+      check('mods', `at ${w} the panes are tabs of the tools, and the band is the one row over the composer`, r.tabs.join('|') === 'Diff|Tests|Token usage' && r.band === 1 && !r.over, r);
     }
-    const page = await s.fresh({ q: URL, w: 1000, h: 800, settle: 1500 });
-    await send(page);
-    await page.click('.mod-inline[data-open="false"] .mod-chev'); await page.waitForTimeout(400);
-    const swap = await page.evaluate(() => [...document.querySelectorAll('.mod-inline')].map((n) => n.dataset.open).join());
-    check('mods', 'unfolding one folds the other, so the composer keeps the screen', swap === 'true,false', swap);
-    await page.setViewportSize({ width: 1300, height: 800 }); await page.waitForTimeout(500);
-    check('mods', 'crossing 1200px takes the panes out of the composer and into the details panel', (await page.evaluate(() => document.querySelectorAll('.mod-inline').length)) === 0);
-  });
-
-  await s.safe('mods', async () => {
-    /* reduced motion reduces and never freezes: no travel, a short crossfade */
-    const page = await s.fresh({ q: URL, reduced: true, settle: 1500 });
-    await send(page);
-    const a = await page.evaluate(() => ({ travel: window.__anims.filter((x) => x.frames.some((f) => 'transform' in f) && /k7-composer|ss-mods--band/.test(x.cls || '')).length, fade: window.__anims.filter((x) => x.duration === 120 && x.frames.some((f) => 'opacity' in f)).length, ghost: window.__anims.some((x) => /mod-ghost/.test(x.cls || '')) }));
-    check('mods', 'under reduced motion the composer does not travel: a ghost crossfades over 120ms', a.travel === 0 && a.fade >= 2 && a.ghost, a);
   });
 
   await s.safe('mods', async () => {
     const page = await s.fresh({ q: URL, settle: 1500 });
     await send(page);
-    await page.keyboard.press('Control+i'); await page.waitForTimeout(900);
+    await page.evaluate(() => __hx.emit('hx:open-panel', { panel: 'changes', from: 'smoke' })); await page.waitForTimeout(900);
     await page.click('#hx-right .k7-pane__tabs [data-value="tests"]'); await page.waitForTimeout(500);
     await page.addScriptTag({ content: AXE });
     const v = await page.evaluate(async () => { const res = await axe.run({ include: [['.ss-view'], ['#hx-right'], ['#hx-dock']] }, { resultTypes: ['violations'], preload: false, rules: { region: { enabled: false } } }); return res.violations.map((x) => ({ id: x.id, impact: x.impact, n: x.nodes.length, t: x.nodes.slice(0, 3).map((n) => n.target.join(' ') + (n.any[0] ? ' - ' + n.any[0].message.slice(0, 90) : '')) })); });
-    check('mods', 'axe (the conversation, the details panel and the dock): the session with the band, the status line, the pane, the notice, a placed row and the theme card', v.length === 0, v);
+    check('mods', 'axe (the conversation, the tools and the dock): the session with the band, the status on the line, the pane, the notice, a log line and the theme card', v.length === 0, v);
   });
   await s.close();
 }

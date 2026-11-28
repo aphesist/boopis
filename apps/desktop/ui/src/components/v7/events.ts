@@ -39,12 +39,17 @@ export interface UiEvents {
   'ui:refused': Record<string, never>;
   /** a word the composer's text is read by was pressed (or alt ArrowDown in it): what is it read as? */
   'ui:mark': { text: string; kind: string; el: HTMLElement };
+  /** a mod's element was used (ModView): a Button pressed, a Field changed or submitted, a choice made; `id` is the mod's handler */
+  'ui:mod': { type: 'ui.press' | 'ui.input' | 'ui.select' | 'ui.submit'; id: string; value?: string };
+  /** the band's fold over the composer was pressed (Queue, mod): the row opens or closes. Cancelable */
+  'ui:fold': { open: boolean; row: string };
 }
 export type UiEventName = keyof UiEvents;
 /* one entry per event of the map: the compiler fails here when an event is added to the map and not listed */
 const LISTED: { readonly [K in UiEventName]: true } = {
   'ui:change': true, 'ui:commit': true, 'ui:toggle': true, 'ui:select': true, 'ui:act': true, 'ui:send': true, 'ui:steer': true, 'ui:stop': true,
-  'ui:voice': true, 'ui:add': true, 'ui:dictate': true, 'ui:dictate-unavailable': true, 'ui:files': true, 'ui:refused': true, 'ui:mark': true
+  'ui:voice': true, 'ui:add': true, 'ui:dictate': true, 'ui:dictate-unavailable': true, 'ui:files': true, 'ui:refused': true, 'ui:mark': true,
+  'ui:mod': true, 'ui:fold': true
 };
 /** every event the kit dispatches, for tests and docs */
 export const UI_EVENTS = Object.keys(LISTED) as UiEventName[];

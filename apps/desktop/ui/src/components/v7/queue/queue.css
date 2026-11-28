@@ -18,3 +18,15 @@
 /* its Edit (the list rows' own) shows with the pointer over the row or the focus in it: at rest the row is as the board draws it */
 .k7-queue[data-variant="held"] [data-queue="edit"] { opacity: 0; transition: opacity var(--dur-1) var(--ease-out); }
 .k7-queue[data-variant="held"] .k7-queue__row:is(:hover, :focus-within) [data-queue="edit"] { opacity: 1; }
+/* mod (2b, derived: no board draws a mod; the lead put a mod's band in this slot): the mod's glyph and name in --text-dim (at most
+   two fifths of the row), what it draws, its fold 4 in from the end. A folded row is one line; an open one grows with what the mod draws */
+.k7-queue__who { flex: 0 1 auto; display: inline-flex; align-items: center; gap: var(--gap-s); max-width: 40%; min-width: 0; font-size: var(--fs-xs); color: var(--text-dim); }
+.k7-queue__who > .k7-ic { flex: none; color: var(--icon-quiet); }
+.k7-queue__body { flex: 1 1 auto; min-width: 0; display: flex; overflow: hidden; }
+.k7-queue__body > .k7-mv { flex: 1; min-width: 0; }
+.k7-queue[data-variant="mod"] .k7-queue__row:not([data-open]) .k7-queue__body { max-height: var(--ctl); align-items: center; }
+.k7-queue[data-variant="mod"] .k7-queue__row[data-open] { align-items: flex-start; padding-block: var(--sp-1); }
+.k7-queue[data-variant="mod"] .k7-queue__row[data-open] .k7-queue__who { min-height: var(--ctl-s); }
+@media (hover: hover) and (pointer: fine) { .k7-queue[data-variant="mod"] .k7-queue__row:hover { background: none; } }
+.k7-queue [data-queue="fold"] .k7-ic { transition: transform var(--dur-1) var(--ease-out); }
+.k7-queue [data-queue="fold"][aria-expanded="true"] .k7-ic { transform: rotate(90deg); }

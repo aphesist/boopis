@@ -12,7 +12,7 @@ import { followZone, atEnd } from '../chat/follow-zone';
 import { emit, on } from '../../core/bus';
 import { el, isMac, reduced } from '../../core/dom';
 import { provide } from '../../core/registry';
-import { kit, ui } from '@boopis/ui';
+import { announce, card as hostCard, esc, inlineCodeHTML, kit, markdown, scrollClass } from '@boopis/ui';
 import { data } from '../../data';
 import type { AgentTurn, GateFail, ConversationEvent, FormSpec, FormStatus, SessionSummary, ThreadLine, Turn, UserTurn } from '../../data';
 import { clock } from '../../host/map';
@@ -80,7 +80,7 @@ const proseText = (paras: readonly string[], bullets?: readonly string[]): strin
 const base = (path: string): string => path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
 const roots = (): string[] => { const c = data().details.environment.get().cwd; return c ? [c] : []; };
 function prose(text: string): HTMLElement {
-  const p = ui.markdown(text, { kit: true });
+  const p = markdown(text, {});
   void resolvePaths(p, roots());
   return p;
 }
@@ -127,7 +127,7 @@ function answer(f: FormSpec, choice: string | null, note?: string): void {
   const names = f.schema.properties?.['choice']?.enum?.map(String) ?? [];
   const deny = choice === 'deny' || choice === null;
   const send = deny && !names.includes('deny') ? forms().cancel(f.id) : forms().submit(f.id, { values: askShape(f) === 'tool' ? { choice: deny ? 'deny' : choice } : {}, secrets: {} });
-  send.then(() => { answered(f, { status: deny ? 'cancelled' : 'submitted', ...(choice ? { choice } : {}), ...(note ? { note } : {}) }); ui.announce(deny ? 'Declined' : 'Allowed'); })
+  send.then(() => { answered(f, { status: deny ? 'cancelled' : 'submitted', ...(choice ? { choice } : {}), ...(note ? { note } : {}) }); announce(deny ? 'Declined' : 'Allowed'); })
     .catch((e: unknown) => { say(e instanceof Error ? e.message : 'The answer was not delivered.'); });
 }
 /** decline the waiting change with the words typed in the composer (S09: "Send feedback to decline this request") */
@@ -150,17 +150,17 @@ function wireAsk(node: HTMLElement, f: FormSpec): HTMLElement {
 }
 /* the forms the kit has no drawing for yet (fields, sign-ins, plans): the form card, answered here or in the dock */
 const FORM_STATE = { submitted: 'done', cancelled: 'cancelled', expired: 'expired' } as const;
-function formCard(f: FormSpec): HTMLElement { const c = ui.card('form', f as unknown as Record<string, unknown>, { size: 'inline' }); c.dataset['formId'] = f.id; return c; }
+function formCard(f: FormSpec): HTMLElement { const c = hostCard('form', f as unknown as Record<string, unknown>, { size: 'inline' }); c.dataset['formId'] = f.id; return c; }
 
 /** the blank's sentence at the end of the answer: the question until it is answered; then the sentence written around your answer (a
     Mark, filled), or around the agent's guess once the blank lapsed ("(my guess)", board S23) */
 function blankLine(a: AgentTurn): string {
   const q = a.blank; if (!q) return '';
   const ans = VIEW.blank, word = ans ?? q.guess ?? null, rw = word ? q.rewrites?.[word] : null;
-  if (!word) return ui.esc(q.question);
+  if (!word) return esc(q.question);
   const s: readonly [string, string] = rw ? [rw.lead, rw.tail] : (q.free ?? ['Your answer:', '. I will follow it before the PR.']);
   const mark = ans ? kit.html.mark({ kind: 'blank', blank: 'filled', text: ans }) : kit.html.mark({ text: word, state: 'shown', attrs: { 'data-guess': '' } });
-  return ui.html.inline(s[0]) + ' ' + mark + (/^[.,;]/.test(s[1]) ? '' : ' ') + ui.html.inline(s[1]) + (ans ? '' : ' (my guess).');
+  return inlineCodeHTML(s[0]) + ' ' + mark + (/^[.,;]/.test(s[1]) ? '' : ' ') + inlineCodeHTML(s[1]) + (ans ? '' : ' (my guess).');
 }
 /** the blank as the kit's AskCard (question): its options as answers, "Something else" for your own words; answering again changes it */
 function blankCard(a: AgentTurn): HTMLElement {
@@ -351,7 +351,7 @@ function ticking(a: AgentTurn): void {
 function streamText(a: AgentTurn): void {
   const md = turnNode(a.id)?.querySelector<HTMLElement>('[data-part="text"] .ui-md, [data-part="text"] [data-kit~="Bubble"] > :first-child');
   if (!md || !md.classList.contains('ui-md')) { drawAgent(a.id); return; }
-  for (const d of ui.markdown.stream(md, proseText(a.paragraphs), { kit: true }).slice(0, -1)) void resolvePaths(d, roots());
+  for (const d of markdown.stream(md, proseText(a.paragraphs), {}).slice(0, -1)) void resolvePaths(d, roots());
 }
 /** the turn that holds a form, drawn again */
 function redrawOf(formId: string): void { for (const a of TURNS.values()) if (a.forms?.some((f) => f.id === formId)) drawAgent(a.id); }
@@ -400,7 +400,7 @@ async function openRewind(shipId: string | null, title: string): Promise<void> {
       void c.rewind(id, shipId, head ? { expectHead: head } : {}).then((r) => {
         sheet?.close();
         if (r.status === 'refused') { sheet = rewindSheet(r, title, { onConfirm: () => undefined }); showSheet(sheet); }
-        else { ui.announce('Files rewound'); syncFeet(); }
+        else { announce('Files rewound'); syncFeet(); }
       });
     },
     closed: () => { sheet = null; }
@@ -413,7 +413,7 @@ async function undoRewind(shipId: string): Promise<void> {
   const head = c.head(id) ?? undefined;
   const r = await c.rewind(id, shipId, { undo: true, ...(head ? { expectHead: head } : {}) });
   if (r.status === 'refused') { sheet?.close(); sheet = rewindSheet(r, 'Undo the rewind', { onConfirm: () => undefined }); showSheet(sheet); }
-  else { ui.announce('Rewind undone'); syncFeet(); }
+  else { announce('Rewind undone'); syncFeet(); }
 }
 
 /* ───────── the new session's screen (boards S17, S41 A): the canvas and its own composer until the first message ───────── */
@@ -509,7 +509,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   else if (ev.type === 'turn-finished') {
     change(ev.turnId, (a) => ({ ...a, status: ev.stopped ? 'stopped' : 'done', time: ev.time, cost: ev.cost, stepCount: ev.stepCount, paragraphs: ev.paragraphs, ...(ev.model ? { model: ev.model } : {}), ...(ev.why ? { why: ev.why } : {}) }));
     working(); syncDividers(col); rove(turnNode(ev.turnId) ?? undefined);
-    ui.announce(ev.stopped ? 'Stopped' : 'Answer ready');
+    announce(ev.stopped ? 'Stopped' : 'Answer ready');
   } else if (ev.type === 'line') { placeLine(col, ev.line); syncDividers(col); }
   else if (ev.type === 'turn-kept') change(ev.turnId, (a) => ({ ...a, kept: ev.kept }));
   else if (ev.type === 'turn-gate') change(ev.turnId, (a) => ({ ...a, gate: ev.gate ?? undefined }));
@@ -639,7 +639,7 @@ export function mountView(root: HTMLElement): void {
   VIEW.root = root;
   ASKS.clear();
   root.classList.add('ss-view');
-  VIEW.scroll = el('div', { class: 'ss-scroll ' + ui.scrollClass({ ground: true }) });
+  VIEW.scroll = el('div', { class: 'ss-scroll ' + scrollClass({ ground: true }) });
   VIEW.col = el('div', { class: 'ss-col', role: 'log', 'aria-label': 'Conversation' });
   VIEW.scroll.append(VIEW.col);
   root.replaceChildren(VIEW.scroll);
@@ -672,12 +672,12 @@ export function mountView(root: HTMLElement): void {
     }
   });
   data().details.governance.subscribe(() => { redrawCanvas(); });
-  /* the composer: the kit's one-row pill with the session's line; its zone holds the slots a mod draws into (MODS.md section 3): the
-     band above the composer and the status line under it; empty slots take no room */
+  /* the composer: the kit's one-row pill with the session's line; over it the slot the held or queued strip uses, where a mod's band
+     stands (2b, the lead's decision for conflict 32; MODS.md section 3); an empty slot takes no room. A mod's status joins the line */
   const host = el('div', { class: 'ss-composer' });
-  const slots = { band: el('div', { class: 'ss-mods ss-mods--band' }), status: el('div', { class: 'ss-mods ss-mods--status' }) };
+  const band = el('div', { class: 'ss-strip', hidden: true });
   const slot = el('div', { class: 'ss-composer__slot' });
-  host.append(slots.band, slot, slots.status);
+  host.append(band, slot);
   root.append(host);
   const c = VIEW.composer = sessionComposer(slot, {
     draft: sessions().draft(), sessionId: () => VIEW.current,
@@ -693,7 +693,7 @@ export function mountView(root: HTMLElement): void {
     lastMessage: () => [...USERS.values()].pop()?.text ?? null
   });
   renderConversation();
-  surface.slots = slots; surface.place = placeRow;
+  surface.band = band; surface.place = placeRow; surface.redrawLine = () => { c.redrawLine(); };
   surface.onConversation?.(VIEW.current);
   followZone(host, () => VIEW.scroll, () => root, '--ss-comp-h')();
   requestAnimationFrame(() => c.focus());

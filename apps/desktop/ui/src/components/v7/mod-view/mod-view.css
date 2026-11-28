@@ -1,0 +1,46 @@
+/* ModView's look: what a mod draws, in the kit's own parts (2b, derived: no board draws a mod). Tokens only; kit-v7.css imports it in the
+   kit's cascade order. The only values a mod supplies are the ones it passes as data (a colour, a width), written inline by the view. */
+
+.k7-mv { display: flex; flex-direction: column; min-width: 0; box-sizing: border-box; font-size: var(--fs-s); line-height: var(--lh-s); letter-spacing: var(--track-s); color: var(--text); }
+.k7-mv *, .k7-mv *::before, .k7-mv *::after { box-sizing: border-box; }
+.k7-mv > .k7-mv__box { flex: 1; }
+
+/* Box: a flex container; a row until it says otherwise, wrapping rather than pushing the window sideways (R-overflow-4) */
+.k7-mv__box { display: flex; flex-direction: row; flex-wrap: wrap; min-width: 0; --mv-border: var(--hair); }
+.k7-mv__box[data-border] { border-radius: var(--r-field); box-shadow: inset 0 0 0 var(--hl) var(--mv-border); padding: var(--sp-2) var(--sp-3); }
+.k7-mv__box[data-filled] { border-radius: var(--r-xs); }
+.k7-mv__box[data-border][data-filled] { border-radius: var(--r-field); }
+
+/* Text: the type scale, 13 by default; mono 12 */
+.k7-mv__text { min-width: 0; overflow-wrap: anywhere; }
+.k7-mv__text[data-mono] { font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: 0; }
+.k7-mv__text[data-tab] { font-variant-numeric: tabular-nums; }
+.k7-mv__text[data-inverse] { background: var(--selected); color: var(--text-on-light); padding: 0 var(--sp-1); border-radius: var(--r-xs); }
+.k7-mv__text[data-wrap="cut"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.k7-mv__text[data-wrap="none"] { white-space: nowrap; overflow-wrap: normal; }
+.k7-mv__text[data-quiet] { color: var(--text-quiet); font-size: var(--fs-xs); }
+
+/* Input: the kit's Field, with its Button beside it */
+.k7-mv__input { display: flex; align-items: flex-start; gap: var(--sp-2); min-width: 0; flex: 1; }
+.k7-mv__input > .k7-field__input, .k7-mv__input > .k7-field { flex: 1; min-width: 0; }
+
+/* Svg: sanitised, it fits the width; its words in mono */
+.k7-mv__svg { display: block; width: 100%; min-width: 0; color: var(--text-quiet); }
+.k7-mv__svg svg { display: block; width: 100%; height: auto; max-height: inherit; overflow: hidden; }
+
+/* Markdown: the kit's prose at the mod's size */
+.k7-mv__md { font-size: var(--fs-s); line-height: var(--lh-s); color: var(--text); }
+
+/* ModProgress: the kit's ticks (the composer line's), filled in proportion; nothing known, one tick travels along the row on the one
+   loop's token, and stands in the middle under reduced motion (F18: dots, never a bar) */
+.k7-mv__progress { position: relative; align-self: center; flex: none; display: inline-flex; gap: var(--gap-s); }
+.k7-mv__progress > i { width: var(--tick); height: var(--tick); border-radius: var(--r-pill); background: var(--mark-off); }
+.k7-mv__progress > i[data-on] { background: var(--text-dim); }
+.k7-mv__progress > .k7-mv__run {
+  position: absolute; left: 0; top: 0; background: var(--text-dim);
+  animation: k7-mv-travel var(--dur-breathe) var(--ease-io) infinite alternate; will-change: transform;
+}
+@keyframes k7-mv-travel { from { transform: translateX(0); } to { transform: translateX(calc((var(--mv-n) - 1) * (var(--tick) + var(--gap-s)))); } }
+@media (prefers-reduced-motion: reduce) {
+  .k7-mv__progress > .k7-mv__run { animation: none; transform: translateX(calc((var(--mv-n) - 1) * (var(--tick) + var(--gap-s)) / 2)); }
+}

@@ -66,7 +66,7 @@ html[data-right-tools] .hx[data-right="open"] :is(.ss-composer, .ss-new__zone) {
 .ss-pane > .k7-pane > .k7-pane__body { flex: 1 1 0; }   /* it scrolls (the kit's scroll area: details.ts) */
 .ss-pane .k7-pane__body > .k7-disc { margin: var(--sp-2) var(--pad-btn-card) 0 var(--sp-1); }   /* its values end where the card's do */
 .ss-pane .k7-disc__after > .k7-pane__note { margin: 0; }
-.ss-pane__mod { margin: 0 calc(-1 * var(--sp-4)); }
+.ss-pane__mod { min-width: 0; }
 /* the diff's files, 10 apart (board S24) */
 .ss-pane > .k7-pane[data-variant="tools"] > .k7-pane__body { gap: var(--gap-row); }
 
