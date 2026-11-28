@@ -22,8 +22,9 @@ export interface ApprovalsDeps {
   saveTier(kind: string, tier: ApprovalTier): Promise<void>;
 }
 type Change = { what: string; undo: () => Promise<unknown> };
-/** the section's head: how many rules of its own, or that it follows yours */
-const metaOf = (n: number): string => (n ? n + ' of its own' : 'follows your rules');
+/** the section's head: only what differs from every bot's, how many rules of its own (the line under it says it follows yours: the
+    owner's review of 2a, the copy rules' "do not restate") */
+const metaOf = (n: number): string => (n ? n + ' of its own' : '');
 
 /** the rules list where it exists for Settings (the rules engine, `rules-settings`); else the bot's kinds alone */
 const rulesHere = (): RulesSource | null => (data().rules && later('rules-settings') ? data().rules ?? null : null);
@@ -70,8 +71,11 @@ export function approvalsSection(start: Bot, deps: ApprovalsDeps): { el: HTMLEle
       (drafts.length ? sectionOf('Drafts', drafts.map((r) => draftBlock(r.rule as Rule, view, { forWhom: false })).join(''), { 'data-part': 'drafts' }) : '') +
       own + (adding ? newEditor() : '<div class="hx-set__acts">' + buttonHTML('Add a rule', { attrs: { 'data-rule-add': '' } }) + '</div>') + unknownKinds + change);
     if (keepKey) el.querySelector<HTMLElement>(keepKey)?.focus({ preventScroll: true });
-    const meta = el.closest('.bt-sec')?.querySelector('.k7-shead__value');
-    if (meta) meta.textContent = metaOf(rows.length);
+    /* the head's value: written, changed, or taken away when the bot has no rules of its own again */
+    const head = el.closest('.bt-sec')?.querySelector('.k7-shead__btn'), want = metaOf(rows.length);
+    let meta = head?.querySelector('.k7-shead__value');
+    if (head && want && !meta) { meta = document.createElement('span'); meta.className = 'k7-shead__value'; head.querySelector('.k7-grow')?.before(meta); }
+    if (meta) { if (want) meta.textContent = want; else meta.remove(); }
   }
 
   /** one change; a refusal is said, and the list read again */
