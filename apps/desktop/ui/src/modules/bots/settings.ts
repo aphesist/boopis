@@ -27,7 +27,7 @@ export const kitEl = (html: string): HTMLElement => kit.wire(frag(html));
 
 /** a section of the sheet: a folding SectionHead (its words at the end: "rose triangle") over its parts, open */
 export function sectionOf(name: string, label: string, meta: string | null, kids: Array<Node | null>): HTMLElement {
-  const s = el('section', { class: 'k7-section bt-sec', 'data-name': name, 'aria-label': label });
+  const s = el('div', { class: 'k7-section bt-sec', role: 'group', 'data-name': name, 'aria-label': label });
   const head = kitEl(kit.html.sectionHead({ title: label, disclosure: true, ...(meta ? { value: meta } : {}) }));
   const body = el('div', { class: 'bt-sec__body' }, kids.filter((k): k is Node => !!k));
   const btn = head.querySelector<HTMLButtonElement>('.k7-shead__btn') as HTMLButtonElement;

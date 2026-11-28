@@ -62,7 +62,7 @@ export async function liveSessions(env) {
     await page.waitForTimeout(700);
     const bots = await page.evaluate(() => ({
       note: document.querySelector('.bt-preview')?.textContent ?? '', rows: document.querySelectorAll('.bt-rows [data-kit~="ListRow"]:not(.bt-row--draft)').length,
-      form: !!document.querySelector('.bt-new:not([hidden]) .bt-name'), attention: [...document.querySelectorAll('[role="tab"][data-value="bots"] .ui-dot[data-show]')].length
+      form: !!document.querySelector('.bt-new:not([hidden]) [data-new-name]'), attention: [...document.querySelectorAll('[role="tab"][data-value="bots"] .ui-dot[data-show]')].length
     }));
     check('live', 'the Bots tab is not a preview, lists no sample bot, and opens on the form that makes the first', bots.note === '' && bots.rows === 0 && bots.form && bots.attention === 0, bots);
   });

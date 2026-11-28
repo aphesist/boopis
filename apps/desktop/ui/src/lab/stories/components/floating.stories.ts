@@ -12,13 +12,13 @@ export default [
     states: {
       typical: stage(['typical', 'open'], async ({ root, wait }) => {
         const a = ui.button({ label: 'Edit', attrs: { 'aria-haspopup': 'dialog' } }); line(root, a);
-        const body = document.createElement('div'); body.innerHTML = '<input class="ui-input" aria-label="Title" value="proration drift">' + html.button({ label: 'Save', variant: 'primary', size: 's' });
+        const body = document.createElement('div'); body.innerHTML = '<p>proration drift</p>' + html.button({ label: 'Save', variant: 'primary', size: 's' });
         ui.popover.open(a, body, { label: 'Rename' }); await wait(260);
       }, { overlay: { anchor: '.ui-btn', layer: '.ui-pop' } }),
       above: stage(['variant', 'open'], async ({ root, wait }) => {
         root.style.minHeight = 'calc(100vh - 48px)'; root.style.justifyContent = 'flex-end';
         const a = ui.button({ label: 'Edit' }); line(root, a);
-        const body = document.createElement('div'); body.innerHTML = '<input class="ui-input" aria-label="Title" value="proration drift">';
+        const body = document.createElement('div'); body.innerHTML = '<p>proration drift</p>';
         ui.popover.open(a, body, { label: 'Rename', place: 'above' }); await wait(260);
       }, { overlay: { anchor: '.ui-btn', layer: '.ui-pop' } }),
       long: stage(['long', 'open'], async ({ root, wait }) => {

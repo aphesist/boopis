@@ -50,7 +50,7 @@ export async function ownerDecisions(env) {
   const before = await dockBots();
   await page.keyboard.press('Alt+2'); await page.waitForTimeout(500);
   await ev(() => __hx.emit('hx:new-bot', { from: 'test' })); await page.waitForTimeout(400);
-  await page.fill('.bt-name', 'rex'); await page.keyboard.press('Enter'); await page.waitForTimeout(1500);
+  await page.fill('[data-new-name]', 'rex'); await page.keyboard.press('Enter'); await page.waitForTimeout(1500);
   const hiddenOnBots = (await dockBots()).shown;
   await page.keyboard.press('Alt+1'); await page.waitForTimeout(700);
   const after = await dockBots();
