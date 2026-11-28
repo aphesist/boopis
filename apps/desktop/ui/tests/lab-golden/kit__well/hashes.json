@@ -1,4 +1,14 @@
 {
+ "code-with-its-path-and-line-numbers@dark": {
+  "sha": "a1a2a7e77cdcb3248c21dcffa68785b487f32f5f",
+  "w": 504,
+  "h": 212
+ },
+ "code-with-its-path-and-line-numbers@light": {
+  "sha": "1551887666721d6e336e4ebab5edfb5b9834c1e9",
+  "w": 504,
+  "h": 212
+ },
  "long@dark": {
   "sha": "357cd1edcf9dad24c20cc77aeb573a6706c6cfd1",
   "w": 444,

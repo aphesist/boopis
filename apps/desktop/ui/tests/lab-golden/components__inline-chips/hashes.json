@@ -1,122 +1,122 @@
 {
  "every-kind-in-a-bot-message@bone": {
-  "sha": "2d13288f857562c05851f5840bb848f6f0ee4315",
+  "sha": "166bc62f3801ac0a6805bb049cb960f615692ebc",
   "w": 364,
-  "h": 193
+  "h": 161
  },
  "every-kind-in-a-bot-message@catalog": {
-  "sha": "f8d9cff25e55dedc4e4d5d6493aee201318b053b",
+  "sha": "d013f44fcadc0e12cd8a3b3b4d9878cb644a5ef7",
   "w": 364,
-  "h": 193
+  "h": 161
  },
  "every-kind-in-a-bot-message@graphite": {
-  "sha": "73dd145c2f434bdbafbbe2d41f4d547a678e7f32",
+  "sha": "d013f44fcadc0e12cd8a3b3b4d9878cb644a5ef7",
   "w": 364,
-  "h": 193
+  "h": 161
  },
  "every-kind-in-a-bot-message@typewriter": {
-  "sha": "eb9992c1c637151d654a5c24dab6ae9ff894852d",
+  "sha": "d013f44fcadc0e12cd8a3b3b4d9878cb644a5ef7",
   "w": 364,
-  "h": 193
+  "h": 161
  },
  "in-a-paragraph@bone": {
-  "sha": "cea5992116726fec447160e6e382ec0536669bc4",
+  "sha": "fe6b15c9655e9a0bf716803727ba245479068c9e",
   "w": 364,
-  "h": 324
+  "h": 183
  },
  "in-a-paragraph@catalog": {
-  "sha": "a43fee910533962ed51c1c4bc4af5fb568be85ac",
+  "sha": "c08130c7b3bbc6efc1175660202f76d78c84f65b",
   "w": 364,
-  "h": 324
+  "h": 183
  },
  "in-a-paragraph@graphite": {
-  "sha": "e0695a63f3424b85897fd085bb06355ddb361d9d",
+  "sha": "c08130c7b3bbc6efc1175660202f76d78c84f65b",
   "w": 364,
-  "h": 324
+  "h": 183
  },
  "in-a-paragraph@typewriter": {
-  "sha": "2478272d443821e16aeca0afcf175aaa78a0c726",
+  "sha": "c08130c7b3bbc6efc1175660202f76d78c84f65b",
   "w": 364,
-  "h": 324
+  "h": 183
  },
  "in-a-request-bubble@bone": {
-  "sha": "9bd6c98838d343c9025477478791325c7f172c4b",
+  "sha": "329fda94242776359181e56fd893c569d860c9a9",
   "w": 364,
-  "h": 179
+  "h": 126
  },
  "in-a-request-bubble@catalog": {
-  "sha": "ec8160dc4cbd4ab3d5b26e6bbd61324df4ff1eb3",
+  "sha": "639f79c16061b628b102d45766ca7fd7d5567381",
   "w": 364,
-  "h": 179
+  "h": 126
  },
  "in-a-request-bubble@graphite": {
-  "sha": "23ebac05d0c00698632da6c045cb585b70dbb090",
+  "sha": "639f79c16061b628b102d45766ca7fd7d5567381",
   "w": 364,
-  "h": 179
+  "h": 126
  },
  "in-a-request-bubble@typewriter": {
-  "sha": "b172725dfe1838023021852c545393430b7481a8",
+  "sha": "639f79c16061b628b102d45766ca7fd7d5567381",
   "w": 364,
-  "h": 224
+  "h": 126
  },
  "in-dense-text@bone": {
-  "sha": "632c6ec184e24fd72ed1723ce16d44f7601bde98",
+  "sha": "9f53fd27fffc2430889a0d4efee3a86258f5b150",
   "w": 364,
-  "h": 160
+  "h": 96
  },
  "in-dense-text@catalog": {
-  "sha": "01dcd0508aaa11a686df20d9779ad45311e62861",
+  "sha": "f12805b421707ca46ca322435cd9b24e6e40ca74",
   "w": 364,
-  "h": 160
+  "h": 96
  },
  "in-dense-text@graphite": {
-  "sha": "7ad87290ac4c6965fd3f7e75436b9c1e7fb6ecfe",
+  "sha": "f12805b421707ca46ca322435cd9b24e6e40ca74",
   "w": 364,
-  "h": 160
+  "h": 96
  },
  "in-dense-text@typewriter": {
-  "sha": "97512d312f0cfeea4696f4645d93abdb0ed84fe5",
+  "sha": "f12805b421707ca46ca322435cd9b24e6e40ca74",
   "w": 364,
-  "h": 178
+  "h": 96
  },
  "long@bone": {
-  "sha": "a76771a080280a094f3143b409a2527e53e8b9ce",
+  "sha": "fff4cbd92479cb355c98e2d5bd66c127328b0c72",
   "w": 364,
-  "h": 271
+  "h": 240
  },
  "long@catalog": {
-  "sha": "938afe8d2e20517fd374338b81143f995ea58bbf",
+  "sha": "f33b6874a7cfd50dbc46df70ac04fbb8f91fa048",
   "w": 364,
-  "h": 271
+  "h": 240
  },
  "long@graphite": {
-  "sha": "eb53325ac157b896cb686605ea9016738e689fec",
+  "sha": "f33b6874a7cfd50dbc46df70ac04fbb8f91fa048",
   "w": 364,
-  "h": 271
+  "h": 240
  },
  "long@typewriter": {
-  "sha": "d61c09f294eb5fd79bf09da763e93bbbc686097e",
+  "sha": "f33b6874a7cfd50dbc46df70ac04fbb8f91fa048",
   "w": 364,
-  "h": 316
+  "h": 240
  },
  "typical@bone": {
-  "sha": "91c6ee022fc1cb6de085be45ea3ef78b7d5cd32e",
+  "sha": "30c8e1de23c17dfb1e3c5069505984683910bb50",
   "w": 364,
-  "h": 69
+  "h": 82
  },
  "typical@catalog": {
-  "sha": "5107512926f13a237ab466e489b148ec5e1d74f0",
+  "sha": "62f5335151d98cd243d6b016710e5b87a7431952",
   "w": 364,
-  "h": 69
+  "h": 82
  },
  "typical@graphite": {
-  "sha": "a6174a9b9732ce74033625e165b8c2edfa68d783",
+  "sha": "62f5335151d98cd243d6b016710e5b87a7431952",
   "w": 364,
-  "h": 69
+  "h": 82
  },
  "typical@typewriter": {
-  "sha": "a40446c870e4e65d3dc9ad6131e2c04f1163cddd",
+  "sha": "62f5335151d98cd243d6b016710e5b87a7431952",
   "w": 364,
-  "h": 69
+  "h": 82
  }
 }

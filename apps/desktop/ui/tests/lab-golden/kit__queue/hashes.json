@@ -10,12 +10,12 @@
   "h": 144
  },
  "held-hovered@dark": {
-  "sha": "1534416137917d4dbabda50ef4be21463eabbccf",
+  "sha": "6ba208c36697a467a91dd70a4fa6355c418d701c",
   "w": 744,
   "h": 68
  },
  "held-hovered@light": {
-  "sha": "e6fb5576a6b7810b767a3f4928f699c6bd9ddd7c",
+  "sha": "cee555037b3bdb1b2bf091b8e79ae882028cb9e8",
   "w": 744,
   "h": 68
  },
@@ -35,7 +35,7 @@
   "h": 68
  },
  "held-its-edit-focused@light": {
-  "sha": "31025821935619c02c992c1459df1476d9315277",
+  "sha": "f3633b503f046fa944df5f72643e26a75e863459",
   "w": 744,
   "h": 68
  },

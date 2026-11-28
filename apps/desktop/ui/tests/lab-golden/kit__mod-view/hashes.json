@@ -1,0 +1,92 @@
+{
+ "a-button-hovered@dark": {
+  "sha": "d54256bf5bb3c34d2b6989223ce0f7b719a22508",
+  "w": 544,
+  "h": 474
+ },
+ "a-button-hovered@light": {
+  "sha": "1df33b4a71ff741f2c648a4ca0f9a5f63ac53aab",
+  "w": 544,
+  "h": 474
+ },
+ "a-chart-and-a-diff@dark": {
+  "sha": "74b189fdd887104d8db026cfb7058a968e75f7de",
+  "w": 544,
+  "h": 424
+ },
+ "a-chart-and-a-diff@light": {
+  "sha": "daf225979ae271fe08fcb3644ded7430423b4407",
+  "w": 544,
+  "h": 424
+ },
+ "a-field-focused@dark": {
+  "sha": "c2a177af2fdf835bb5de31bbe65886a2de988ddd",
+  "w": 544,
+  "h": 474
+ },
+ "a-field-focused@light": {
+  "sha": "30ffb6f48db3623aca622143b611084ba461aff2",
+  "w": 544,
+  "h": 474
+ },
+ "a-refused-tree-the-pane-says-so-in-one-line@dark": {
+  "sha": "3dc94ec02cb7ad7e41e1ea18b4cd70469775f78e",
+  "w": 544,
+  "h": 196
+ },
+ "a-refused-tree-the-pane-says-so-in-one-line@light": {
+  "sha": "7b153f7eda4f465f0cd05ec5c058334c48c947e7",
+  "w": 544,
+  "h": 196
+ },
+ "empty@dark": {
+  "sha": "0ab44f413feca0b7ae75dff1d13fb886fefeed87",
+  "w": 544,
+  "h": 130
+ },
+ "empty@light": {
+  "sha": "6f5444594af115f101216a14248e5dcbbd19b5a3",
+  "w": 544,
+  "h": 130
+ },
+ "in-the-thread-a-toolrow@dark": {
+  "sha": "6575b3543930d2fb122e3a4cfedce439e118d046",
+  "w": 664,
+  "h": 416
+ },
+ "in-the-thread-a-toolrow@light": {
+  "sha": "274f72e7f47fee4af132d1c866c4a131c2bb1352",
+  "w": 664,
+  "h": 416
+ },
+ "long@dark": {
+  "sha": "6d90bec934e537ce953c98b07cc073ed1fe8d71e",
+  "w": 544,
+  "h": 464
+ },
+ "long@light": {
+  "sha": "e42fe56f13a943e0b4b7a4b17bf88318a2c7dcf9",
+  "w": 544,
+  "h": 464
+ },
+ "the-band-over-the-composer@dark": {
+  "sha": "cc56ff597b807869af57369f74198524a629d4f8",
+  "w": 664,
+  "h": 68
+ },
+ "the-band-over-the-composer@light": {
+  "sha": "a67bfae9fd67199a8cee5da5b7b0cc540a14fea4",
+  "w": 664,
+  "h": 68
+ },
+ "typical@dark": {
+  "sha": "680a491ddd14c34d424e7f793f7afe4b793d03ae",
+  "w": 544,
+  "h": 474
+ },
+ "typical@light": {
+  "sha": "1ad17cd478e15a000e611bb8f590ff97a09f9009",
+  "w": 544,
+  "h": 474
+ }
+}

@@ -1,31 +1,31 @@
 {
  "long@dark": {
-  "sha": "91ec125a1802cbaed03ca7dd5f3754a25a0cdcfa",
+  "sha": "4b911aa871368f57197da47677739404ecfe462b",
   "w": 1416,
   "h": 52
  },
  "long@light": {
-  "sha": "6ef499fc14da018c92cb45e850eaf6163e450c0c",
+  "sha": "024a8424085e09310ecf62586ce2d37029d879d3",
   "w": 1416,
   "h": 52
  },
  "shown@dark": {
-  "sha": "5f7e5d6fee47f5dcf193ec9086db7495effe5ff9",
+  "sha": "81b30e5e6cd42bb37531eab8adf26dae0b0b4ab7",
   "w": 1432,
   "h": 96
  },
  "shown@light": {
-  "sha": "5f81f8af0e92abf165403aa04b6d9304a20630ed",
+  "sha": "dbabd265f63867b74fbb5dfca9e32ca620ed9b8d",
   "w": 1432,
   "h": 96
  },
  "typical@dark": {
-  "sha": "450592cd1ee65dc30705b4c129a117e07a4ee466",
+  "sha": "283a5e97cdc8cdea87e34a42b951605cd7e9cbc3",
   "w": 1416,
   "h": 52
  },
  "typical@light": {
-  "sha": "da48cfaacd06580d54bed192429854325d9f1ee6",
+  "sha": "cfa45de080a72c1c477618641369ab9f0c62af79",
   "w": 1416,
   "h": 52
  }

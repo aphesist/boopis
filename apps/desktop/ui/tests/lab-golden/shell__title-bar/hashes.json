@@ -1,6 +1,6 @@
 {
  "a-long-session-title@bone": {
-  "sha": "f0dc633568c3eaf603654854378626cd4ab3dfeb",
+  "sha": "0eb40f3615d20c1000652d7cd270f7590da56c66",
   "w": 1440,
   "h": 80
  },
@@ -10,22 +10,22 @@
   "h": 80
  },
  "a-long-session-title@graphite": {
-  "sha": "1c189cbadaac6a48befe8f5cfa287bc7387a41dd",
-  "w": 1440,
-  "h": 80
- },
- "a-long-session-title@typewriter": {
   "sha": "c2f2cdc9818a9051aef38dd54f6d6f4915f07479",
   "w": 1440,
   "h": 80
  },
+ "a-long-session-title@typewriter": {
+  "sha": "1c189cbadaac6a48befe8f5cfa287bc7387a41dd",
+  "w": 1440,
+  "h": 80
+ },
  "all-three-a-floating-desktop@bone": {
-  "sha": "732b07002ae634505818de35f06ddc8e462a4a4d",
+  "sha": "a06826a7c4d55a274b5a5e3d6ff13a85c5becec0",
   "w": 1440,
   "h": 80
  },
  "all-three-a-floating-desktop@catalog": {
-  "sha": "3483c0b0bb6f44f11276474234e26cb1dbbcf1e6",
+  "sha": "145149fdf42eb87c294dc46ff2ee27d9889e3aeb",
   "w": 1440,
   "h": 80
  },
@@ -45,12 +45,12 @@
   "h": 80
  },
  "close-minimize-zoom-macos@catalog": {
-  "sha": "de7756a0058ebd2608df95ad1354a6b5f2bbd77c",
+  "sha": "305f46c7e3415ecb14913c2bf5195664ee501288",
   "w": 1440,
   "h": 80
  },
  "close-minimize-zoom-macos@graphite": {
-  "sha": "de7756a0058ebd2608df95ad1354a6b5f2bbd77c",
+  "sha": "4c0dc7bf1cf38e824bec2827d101b2e846d855dc",
   "w": 1440,
   "h": 80
  },
@@ -65,7 +65,7 @@
   "h": 80
  },
  "close-only-a-tiling-window-manager@catalog": {
-  "sha": "1d5a8e1991af270e8105804fb1de25e5a9df4786",
+  "sha": "a143df556e2434eece5341e9f968cadbc6e86475",
   "w": 1440,
   "h": 80
  },
@@ -75,12 +75,12 @@
   "h": 80
  },
  "close-only-a-tiling-window-manager@typewriter": {
-  "sha": "a143df556e2434eece5341e9f968cadbc6e86475",
+  "sha": "1d5a8e1991af270e8105804fb1de25e5a9df4786",
   "w": 1440,
   "h": 80
  },
  "close-only-hover@bone": {
-  "sha": "5f675c6d61d68fb9cf5d044c53324cdb0d9502d2",
+  "sha": "72e483e67eeafd2c72c056b6ae752c9414d57f8e",
   "w": 1440,
   "h": 80
  },
@@ -90,7 +90,7 @@
   "h": 80
  },
  "close-only-hover@graphite": {
-  "sha": "02cb2d6e998a001d5a93cff3dc825ba665242ce9",
+  "sha": "9741b7766cbf810364d080a419f5d068c05bc1d5",
   "w": 1440,
   "h": 80
  },
@@ -105,17 +105,17 @@
   "h": 80
  },
  "command-field-focus@catalog": {
-  "sha": "3f4ded058017cd12cbe8a96e9b3af3f25881aa4f",
+  "sha": "faae902eb3316d0c4d90dc4ee8c93e8eefa4b56d",
   "w": 1440,
   "h": 80
  },
  "command-field-focus@graphite": {
-  "sha": "3f4ded058017cd12cbe8a96e9b3af3f25881aa4f",
+  "sha": "faae902eb3316d0c4d90dc4ee8c93e8eefa4b56d",
   "w": 1440,
   "h": 80
  },
  "command-field-focus@typewriter": {
-  "sha": "faae902eb3316d0c4d90dc4ee8c93e8eefa4b56d",
+  "sha": "3f4ded058017cd12cbe8a96e9b3af3f25881aa4f",
   "w": 1440,
   "h": 80
  },
@@ -125,37 +125,37 @@
   "h": 80
  },
  "command-field-hover@catalog": {
-  "sha": "2232001e7040fbb13cbae1b132d4459305a10782",
-  "w": 1440,
-  "h": 80
- },
- "command-field-hover@graphite": {
   "sha": "e277c2e5eb5e3b60f02e5d8f07c9b90be8d0fc53",
   "w": 1440,
   "h": 80
  },
+ "command-field-hover@graphite": {
+  "sha": "2232001e7040fbb13cbae1b132d4459305a10782",
+  "w": 1440,
+  "h": 80
+ },
  "command-field-hover@typewriter": {
-  "sha": "1838eb2261e980612ece0573b7b8341106b49562",
+  "sha": "e277c2e5eb5e3b60f02e5d8f07c9b90be8d0fc53",
   "w": 1440,
   "h": 80
  },
  "sidebar-button-tooltip@bone": {
-  "sha": "ad2b1c2f25a86ee962b336e8a4aae3ac420bf7ea",
+  "sha": "641b2ee90ac3a9a6b917bd268dce4c185b791beb",
   "w": 1440,
   "h": 106
  },
  "sidebar-button-tooltip@catalog": {
-  "sha": "15da9085a57e8b74a8c75ee23202bfe4eb9fbd74",
+  "sha": "ba1d88b7c309ab91116b348b18a8d5b6bf7638fc",
   "w": 1440,
   "h": 106
  },
  "sidebar-button-tooltip@graphite": {
-  "sha": "7b1b7d2dfbf161ca478190caea6683c26fc3820c",
+  "sha": "ba1d88b7c309ab91116b348b18a8d5b6bf7638fc",
   "w": 1440,
   "h": 106
  },
  "sidebar-button-tooltip@typewriter": {
-  "sha": "23719fb2f43d07ebcb56f1b79087cada6cf0c766",
+  "sha": "847098a460f88cc9533f95e36bb5faeb79143a23",
   "w": 1440,
   "h": 106
  },
@@ -170,7 +170,7 @@
   "h": 80
  },
  "typical@graphite": {
-  "sha": "3483c0b0bb6f44f11276474234e26cb1dbbcf1e6",
+  "sha": "145149fdf42eb87c294dc46ff2ee27d9889e3aeb",
   "w": 1440,
   "h": 80
  },

@@ -1,542 +1,542 @@
 {
  "chatgpt-a-failure-inside-boopis@bone": {
-  "sha": "68ab7b3ef6c93b442c6d661870fda537a722f658",
+  "sha": "0a38f856b8a934ac58f2b789de871892dfc85f71",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-a-failure-inside-boopis@catalog": {
-  "sha": "c5857c212851d58ad9fe5af75e660a88599d41cb",
+  "sha": "013fb9aebaf3d17a0b3c13e6a7ae82180c3b67ec",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-a-failure-inside-boopis@graphite": {
-  "sha": "9cdba10edbbb5f58bb2702102df84ec97944befb",
+  "sha": "013fb9aebaf3d17a0b3c13e6a7ae82180c3b67ec",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-a-failure-inside-boopis@typewriter": {
-  "sha": "63d14004679148f2518065022fabea5fc88b5398",
+  "sha": "013fb9aebaf3d17a0b3c13e6a7ae82180c3b67ec",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-a-long-address@bone": {
-  "sha": "dbcd2bac84694af75f5346580131b90b871112d3",
+  "sha": "51c7a40ff58dae11b2f5655a1009a24395152228",
   "w": 1416,
-  "h": 278
+  "h": 282
  },
  "chatgpt-a-long-address@catalog": {
-  "sha": "2eba0589c32ac957c098c3a9f372d14e6f9f44f9",
+  "sha": "d3c86821961a8d9e6acfa7e961645af2f72b734a",
   "w": 1416,
-  "h": 278
+  "h": 282
  },
  "chatgpt-a-long-address@graphite": {
-  "sha": "b1a98028560f2f3ddea8c9fbf0370dd64b6d4e2d",
+  "sha": "d3c86821961a8d9e6acfa7e961645af2f72b734a",
   "w": 1416,
-  "h": 278
+  "h": 282
  },
  "chatgpt-a-long-address@typewriter": {
-  "sha": "cf2ae2f7f62d9a72c99a8b471148f73912a00dac",
+  "sha": "d3c86821961a8d9e6acfa7e961645af2f72b734a",
   "w": 1416,
-  "h": 278
+  "h": 282
  },
  "chatgpt-at-its-button@bone": {
-  "sha": "d6061c187dc18a7bb29d57002e4dc552ca066d7d",
+  "sha": "20bd41b7b869d741456e5f39d3312bd484b248d6",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-at-its-button@catalog": {
-  "sha": "5699df8600048dc62cbdab38cd0587786d9d262c",
+  "sha": "849e8ee242d902864efd44748af8595b3999c530",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-at-its-button@graphite": {
-  "sha": "02caa9fa88cd8cacce6b8e8fe98313e0dc0dae89",
+  "sha": "849e8ee242d902864efd44748af8595b3999c530",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-at-its-button@typewriter": {
-  "sha": "1bbc55e138b9cdaa3e3af3291db7a0bb53fee019",
+  "sha": "849e8ee242d902864efd44748af8595b3999c530",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-cancel-focus@bone": {
-  "sha": "ca5a5c9fe72c8bc6c02ef4a2bda501c4fa4aabe0",
+  "sha": "babc6c253fca1c72b91eb4af40deacfd5d82284e",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-cancel-focus@catalog": {
-  "sha": "4db3caacd98b2cf84cce046a7a07ed89948243c2",
+  "sha": "3c231ffded313a9b7129d0459f94a216b4f0b568",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-cancel-focus@graphite": {
-  "sha": "25ebb3d8e7ad75f4565991f819049a409a19cda0",
+  "sha": "3c231ffded313a9b7129d0459f94a216b4f0b568",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-cancel-focus@typewriter": {
-  "sha": "2df5947ef83d97a482aed395ddcba2e57f6f722b",
+  "sha": "3c231ffded313a9b7129d0459f94a216b4f0b568",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-cancelled@bone": {
-  "sha": "a973d225d7b37084cf363989587f694a4d87cd05",
+  "sha": "725a529465d639c8350d5c80256387a2f9f20270",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-cancelled@catalog": {
-  "sha": "58ab4ba3e1f4f999753952db6545b647b6dda09d",
+  "sha": "1f4711fbf6a6d03e22096516cc51789e3190f3f5",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-cancelled@graphite": {
-  "sha": "f7b79b7e19d699aa133696aabf92e84a36482bec",
+  "sha": "1f4711fbf6a6d03e22096516cc51789e3190f3f5",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-cancelled@typewriter": {
-  "sha": "4b504200cf905558cee4723d5a278a02637c55d1",
+  "sha": "1f4711fbf6a6d03e22096516cc51789e3190f3f5",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-could-not-reach-openai@bone": {
-  "sha": "8838bb534b5e392681b59544ccfd884f21b6bbd9",
+  "sha": "193c328cafcec6b51b64b7b6f8c88a3fd5efad04",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-could-not-reach-openai@catalog": {
-  "sha": "83c113a1175cc02153b1d79734608b2cef8a29fd",
+  "sha": "ff4ec8fc5d9e0b21998e7525a4baa48d947a2a35",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-could-not-reach-openai@graphite": {
-  "sha": "bebf3e78e8bbd4613dcff489fd8727723391a5d1",
+  "sha": "ff4ec8fc5d9e0b21998e7525a4baa48d947a2a35",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-could-not-reach-openai@typewriter": {
-  "sha": "016dba86d05dffdd29b5626309b16155bca925fc",
+  "sha": "ff4ec8fc5d9e0b21998e7525a4baa48d947a2a35",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-could-not-start@bone": {
-  "sha": "8741d0a94fcf8165881938b064a9a0c22ddc0cb9",
+  "sha": "3066ef4cfa2bb2642fafce883a0e6bc06d9d8172",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-could-not-start@catalog": {
-  "sha": "aab489761a3fbbe723d51eadf4ee23a14aa16593",
+  "sha": "46e85491703cde740727ab5ae1c5d91eb1ee7c43",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-could-not-start@graphite": {
-  "sha": "96bbd088c3cdcfc85c231e6b90b322ff8e7ce344",
+  "sha": "46e85491703cde740727ab5ae1c5d91eb1ee7c43",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-could-not-start@typewriter": {
-  "sha": "4d9ef8a78040abd286d2c84973278a4db6a767c6",
+  "sha": "46e85491703cde740727ab5ae1c5d91eb1ee7c43",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-declined-plan-use@bone": {
-  "sha": "6af30a0da7bbd42914b100e9b53379d6274ca9eb",
+  "sha": "398c0a816d6200dfff8a3302cc7c0f1b203f68ca",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-declined-plan-use@catalog": {
-  "sha": "bdf87e2ddf7d38643c973af961d7925876942e0a",
+  "sha": "a1dabd84cc8c71fb9d5df687a9cf8f2d6fb1189b",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-declined-plan-use@graphite": {
-  "sha": "7bf797155058f01096b4a3d7441e97799a35d512",
+  "sha": "a1dabd84cc8c71fb9d5df687a9cf8f2d6fb1189b",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-declined-plan-use@typewriter": {
-  "sha": "6c1349538fbd808ee496a9b81974bc583ae3c8f3",
+  "sha": "a1dabd84cc8c71fb9d5df687a9cf8f2d6fb1189b",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "chatgpt-open-button-hover@bone": {
-  "sha": "d5261ea13b82fe0769386e3d5cc2cb2d598eb326",
+  "sha": "baabeb379eb928f20def7708da3abacda12c6aa0",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-open-button-hover@catalog": {
-  "sha": "a553efbf911f0defccbde55ca8686d13e492d51b",
+  "sha": "65813627bed6af2fb4853281561136c982762b06",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-open-button-hover@graphite": {
-  "sha": "2468719508eeee01dc0d0f56c7260f51810c5cc7",
+  "sha": "65813627bed6af2fb4853281561136c982762b06",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-open-button-hover@typewriter": {
-  "sha": "c75581b26730c8e42c0e3caff861aacb75ddf445",
+  "sha": "65813627bed6af2fb4853281561136c982762b06",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-opening-the-page@bone": {
-  "sha": "4f26da56d00b5e784e76e6de6c3142b7fa05d0f9",
+  "sha": "5053d7a00ab0954f368f4e7d228a79fc4aa4b16e",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-opening-the-page@catalog": {
-  "sha": "e3c37370f5c6af17a130051a91043788ba821270",
+  "sha": "3cdaeac1ebed61b09e0b260ae347966f1094d3a3",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-opening-the-page@graphite": {
-  "sha": "7c9457146e5e7fd3b9993c2b24022ee0c35ac343",
+  "sha": "3cdaeac1ebed61b09e0b260ae347966f1094d3a3",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-opening-the-page@typewriter": {
-  "sha": "771cf3542cf75c821772893b7694580c94793f6e",
+  "sha": "3cdaeac1ebed61b09e0b260ae347966f1094d3a3",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-signed-in@bone": {
-  "sha": "e65fc9716d08cc4a40f9dac6b4b933cb0a3e1a21",
+  "sha": "9e4008f0c8283dfa46d9bc300d60e75bc9081e92",
   "w": 1416,
   "h": 42
  },
  "chatgpt-signed-in@catalog": {
-  "sha": "13ca61ae08d7849e57cf2259faaf7a6cc4c8ec95",
+  "sha": "0db555ad564b6efa5a8312673977de80c61d0b48",
   "w": 1416,
   "h": 42
  },
  "chatgpt-signed-in@graphite": {
-  "sha": "b3bf4231058adb6945b070e2ff74e96515ca3db7",
+  "sha": "0db555ad564b6efa5a8312673977de80c61d0b48",
   "w": 1416,
   "h": 42
  },
  "chatgpt-signed-in@typewriter": {
-  "sha": "03ec99efa437a93b94d3b3e8ebde7c9993bd02c6",
+  "sha": "0db555ad564b6efa5a8312673977de80c61d0b48",
   "w": 1416,
   "h": 42
  },
  "chatgpt-start-pressed@bone": {
-  "sha": "fad26d0de36eb4973da3c128aa8180a8db74ac7b",
+  "sha": "4d124e2aebdf61bc7129011030691fde026deaff",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-start-pressed@catalog": {
-  "sha": "bae1503e166b4cf33b3d86d3f5f4caafc1af8e73",
+  "sha": "d1898453369ef7a2b126a57f69c2576924ba257b",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-start-pressed@graphite": {
-  "sha": "3b523fbf9f565426f100467834082c1431e86cba",
+  "sha": "d1898453369ef7a2b126a57f69c2576924ba257b",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-start-pressed@typewriter": {
-  "sha": "a4c0004fda591697e5d2ca39a04796e5259b682d",
+  "sha": "d1898453369ef7a2b126a57f69c2576924ba257b",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "chatgpt-the-computer-s-clock-is-wrong@bone": {
-  "sha": "11779a6df7dba34432416123998fe58bcb8e87c8",
+  "sha": "d8c59dcc03db5a7a1a7ff8ebf55afa250f6107b6",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-the-computer-s-clock-is-wrong@catalog": {
-  "sha": "4922897576dc3b31db3bc809a8781ae7dcec9f17",
+  "sha": "9d6cb403025499ea82876cecaa040d88282d44be",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-the-computer-s-clock-is-wrong@graphite": {
-  "sha": "218530697bf4d8cc204e93a532ff1495410e4b71",
+  "sha": "9d6cb403025499ea82876cecaa040d88282d44be",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-the-computer-s-clock-is-wrong@typewriter": {
-  "sha": "599533e10356a04cf20b7b9fe1f5aa5d1114b067",
+  "sha": "9d6cb403025499ea82876cecaa040d88282d44be",
   "w": 1416,
-  "h": 119
+  "h": 104
  },
  "chatgpt-timed-out@bone": {
-  "sha": "9a560f5fc17e651e41c749a85c4271690ca84948",
+  "sha": "4184fb3293dc4dc48f0f89ac8f22564e282f76e6",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-timed-out@catalog": {
-  "sha": "b966939242f9037f5d57ccf03068f23519792ff0",
+  "sha": "ba4e7811f03a2f98c3ef273bca1a072bb2f43de9",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-timed-out@graphite": {
-  "sha": "62dae7fb530d8997bd438f3e9c4c81e509b98205",
+  "sha": "ba4e7811f03a2f98c3ef273bca1a072bb2f43de9",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-timed-out@typewriter": {
-  "sha": "d5eee495f1d4522b6018ce6366fdf4de0c573846",
+  "sha": "ba4e7811f03a2f98c3ef273bca1a072bb2f43de9",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "chatgpt-waiting-on-openai-s-page@bone": {
-  "sha": "cdc758a1fb77f40ffa2bed0aa51ddaa345e25b42",
+  "sha": "a3dd8b6ef76fb660d7f5c62f907883e1a41fa79b",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-waiting-on-openai-s-page@catalog": {
-  "sha": "a823dc8b12427ee7e8b7b98a9f75060f9b1ccd77",
+  "sha": "b6e83efc5ad1e21296084c931093ab3978f88aa9",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-waiting-on-openai-s-page@graphite": {
-  "sha": "ffaefac973ed2ce355ff187a6a78234c481b910d",
+  "sha": "b6e83efc5ad1e21296084c931093ab3978f88aa9",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "chatgpt-waiting-on-openai-s-page@typewriter": {
-  "sha": "9539caee817776df368c5232cedc37215926d19b",
+  "sha": "b6e83efc5ad1e21296084c931093ab3978f88aa9",
   "w": 1416,
-  "h": 238
+  "h": 242
  },
  "copilot-at-its-button@bone": {
-  "sha": "1caf3feb2a13fdd7a9871647d348cc425e3b32ba",
+  "sha": "09568c11d9736ff12255f1e160421d163154945a",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-at-its-button@catalog": {
-  "sha": "2314b44cedcdb1064ab71afd7917a13fae71ca68",
+  "sha": "6080e07489e61c28e749104895408ca1d5220a32",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-at-its-button@graphite": {
-  "sha": "242b12f0de52b6c673a4e80867b502180de9844c",
+  "sha": "6080e07489e61c28e749104895408ca1d5220a32",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-at-its-button@typewriter": {
-  "sha": "d9763077da7ab052ee9a4d4ae5e591ecef61aa70",
+  "sha": "6080e07489e61c28e749104895408ca1d5220a32",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-code-copied@bone": {
-  "sha": "5cbbd76d23fdab3218686ae6081f2f394af6d344",
+  "sha": "c7d0e6f7ad31f486b6ae759f1937f405807fd402",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-code-copied@catalog": {
-  "sha": "c2e25f0136b39965a478eabc99f4b522dcebf66f",
+  "sha": "7c43b9aabc5b83805c949d864f98ec5f2ee49e2a",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-code-copied@graphite": {
-  "sha": "230ca2d342da7bccce2224bcef4df2e1eb2915d8",
+  "sha": "7c43b9aabc5b83805c949d864f98ec5f2ee49e2a",
   "w": 1416,
-  "h": 227
+  "h": 251
  },
  "copilot-code-copied@typewriter": {
-  "sha": "f905f2b056307e85b77f9e1c1facc8aad3451ca0",
+  "sha": "7c43b9aabc5b83805c949d864f98ec5f2ee49e2a",
   "w": 1416,
-  "h": 262
+  "h": 251
  },
  "copilot-code-expired@bone": {
-  "sha": "45bf60997cf185c290b8da22d9da3cc60b767923",
+  "sha": "7b7541796d40528b85eccb1c5620d3aed2176d80",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-code-expired@catalog": {
-  "sha": "555fecdfffdcc6bc6924ed1fb7ea00506a160391",
+  "sha": "af651fc69865d79010cfeb44d567dd113269396f",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-code-expired@graphite": {
-  "sha": "96a03644a209dd8a23deb1ed7d4df9c4e3d5b541",
+  "sha": "af651fc69865d79010cfeb44d567dd113269396f",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-code-expired@typewriter": {
-  "sha": "605be5a8914dde8377d53f3656f8b70ba14ccbeb",
+  "sha": "af651fc69865d79010cfeb44d567dd113269396f",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-copy-hover@bone": {
-  "sha": "6ddf82e47ca9ae220c84b4cedb582e73da60ca58",
+  "sha": "fede340a02f3dd84733e743520357b5934821883",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-copy-hover@catalog": {
-  "sha": "0e01a38ebb625df99667ce593c9023cb1998a464",
+  "sha": "b87d298a392deea5349a5fdd1f8fb0f933e01256",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-copy-hover@graphite": {
-  "sha": "f3ee2c96c00aa7fcc83963588fb7b9159267d64a",
+  "sha": "b87d298a392deea5349a5fdd1f8fb0f933e01256",
   "w": 1416,
-  "h": 227
+  "h": 251
  },
  "copilot-copy-hover@typewriter": {
-  "sha": "8ed9b7def553d685f62f09fa34e80c65f3eeb1cb",
+  "sha": "b87d298a392deea5349a5fdd1f8fb0f933e01256",
   "w": 1416,
-  "h": 262
+  "h": 251
  },
  "copilot-declined-on-github@bone": {
-  "sha": "0babc104a8286f1cc2fe8d1514b26ee25d946432",
+  "sha": "f15f43412670499ad00da9eeaf560d5af2a2a30a",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-declined-on-github@catalog": {
-  "sha": "952d99b72eb383d17bc70f6bee942417ffdf9ec9",
+  "sha": "bbb648527f078f328be0bef20f9214237268cb0b",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-declined-on-github@graphite": {
-  "sha": "f57fec55e8432430ad67b4d00dca9b2e6ed4e766",
+  "sha": "bbb648527f078f328be0bef20f9214237268cb0b",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-declined-on-github@typewriter": {
-  "sha": "712da99c822e662e844f979a4b47b0a50ad69387",
+  "sha": "bbb648527f078f328be0bef20f9214237268cb0b",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-getting-a-code@bone": {
-  "sha": "263c5ba7eb16bb08448ca711a13be7bb20b2d570",
+  "sha": "af912e9cb3d10e8408e7c0d1d17a522e34371e45",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-getting-a-code@catalog": {
-  "sha": "1b4d9ae2f11e39ff958f9e2db9212088edb01ee2",
+  "sha": "132df4b0124de6985978403fb111f50a05856504",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-getting-a-code@graphite": {
-  "sha": "c991cd9d588528394d6c75abdd0aa0b54a860216",
+  "sha": "132df4b0124de6985978403fb111f50a05856504",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-getting-a-code@typewriter": {
-  "sha": "25423b8e665a8be5df2406ccdf0505830df1428a",
+  "sha": "132df4b0124de6985978403fb111f50a05856504",
   "w": 1416,
-  "h": 62
+  "h": 60
  },
  "copilot-no-copilot-plan-a-long-reason@bone": {
-  "sha": "af373bd9d060fd91207e88f4c9ea9c9bf1ae3276",
+  "sha": "56e8e2af00206c1e839cbeb10b649b8116e77df6",
   "w": 1416,
-  "h": 119
+  "h": 121
  },
  "copilot-no-copilot-plan-a-long-reason@catalog": {
-  "sha": "e62af73ef84922914b271722b98180b2ea377d01",
+  "sha": "37bcc7823668c6227428bbec116177ad59242a57",
   "w": 1416,
-  "h": 119
+  "h": 121
  },
  "copilot-no-copilot-plan-a-long-reason@graphite": {
-  "sha": "9c75afc71e66e4ae910aea4e068e29c913b2261e",
+  "sha": "37bcc7823668c6227428bbec116177ad59242a57",
   "w": 1416,
-  "h": 119
+  "h": 121
  },
  "copilot-no-copilot-plan-a-long-reason@typewriter": {
-  "sha": "4fbe1d1bb1751524d8b6a25e913a5d7c60a02cb5",
+  "sha": "37bcc7823668c6227428bbec116177ad59242a57",
   "w": 1416,
-  "h": 119
+  "h": 121
  },
  "copilot-open-focus@bone": {
-  "sha": "022e638772d641a15b72b015aca8121e5b2e2f01",
+  "sha": "fcb84cfce4be82c2c823bfa8166c0178fd365717",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-open-focus@catalog": {
-  "sha": "c6471027df466e7b1ebe200f339670a284a8587b",
+  "sha": "1ae53fec77e160fa92927a0ba5706e69ff66c7e9",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-open-focus@graphite": {
-  "sha": "9dacaef0ce8f905cb0eb69beb0e7f1afe40823f8",
+  "sha": "1ae53fec77e160fa92927a0ba5706e69ff66c7e9",
   "w": 1416,
-  "h": 227
+  "h": 251
  },
  "copilot-open-focus@typewriter": {
-  "sha": "dae322dc3d8bbe0dd9941626c8774dfee63e72ff",
+  "sha": "1ae53fec77e160fa92927a0ba5706e69ff66c7e9",
   "w": 1416,
-  "h": 262
+  "h": 251
  },
  "copilot-rate-limited@bone": {
-  "sha": "36d8d14437fa7e52f51a661823ba12d85eb82f5b",
+  "sha": "2edcaa9b1b60592aeaa766980d4e0505b1c3c361",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-rate-limited@catalog": {
-  "sha": "33e73389b1b5962578b42a74bbaed58570d82c6e",
+  "sha": "1e66bd76d3156615d974a2d79ad50443b642c9cd",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-rate-limited@graphite": {
-  "sha": "2f825e275b3c5886bc1afaf79a20a1ff8c0f97ec",
+  "sha": "1e66bd76d3156615d974a2d79ad50443b642c9cd",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-rate-limited@typewriter": {
-  "sha": "c4ab51158c69cbebdf359830d5ac551e7a33a24c",
+  "sha": "1e66bd76d3156615d974a2d79ad50443b642c9cd",
   "w": 1416,
-  "h": 84
+  "h": 86
  },
  "copilot-signed-in@bone": {
-  "sha": "923d51c5e1f459fd619e1a8b7396e5c4fe653b8a",
+  "sha": "30311f90a09672d80ae730f478ed17a5cbaefbca",
   "w": 1416,
   "h": 42
  },
  "copilot-signed-in@catalog": {
-  "sha": "7ebee279346f74aff9c8542e6e196069df768f6c",
+  "sha": "8f3e5abb65247cab7e2d7f66f0964b861addad82",
   "w": 1416,
   "h": 42
  },
  "copilot-signed-in@graphite": {
-  "sha": "b6cdbcb5af001daa67b9180fbab690766f10398b",
+  "sha": "8f3e5abb65247cab7e2d7f66f0964b861addad82",
   "w": 1416,
   "h": 42
  },
  "copilot-signed-in@typewriter": {
-  "sha": "c2a513ac73047d9d60aedf90b472923592e80e23",
+  "sha": "8f3e5abb65247cab7e2d7f66f0964b861addad82",
   "w": 1416,
   "h": 42
  },
  "copilot-the-network-answered-instead@bone": {
-  "sha": "6b1a129910cf318c1fc0177a9944670c760355eb",
+  "sha": "556c7d8319c21a404268d722544571eb25237230",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "copilot-the-network-answered-instead@catalog": {
-  "sha": "d15fa929f3ce6986b0ac821a9ef7fc5bb8b793fe",
+  "sha": "5bad10a1bb8c7687e1f2d263ade3d2ffdf7dc687",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "copilot-the-network-answered-instead@graphite": {
-  "sha": "6870a11158e3cdb467a3040a6ef962a40a2368ac",
+  "sha": "5bad10a1bb8c7687e1f2d263ade3d2ffdf7dc687",
   "w": 1416,
-  "h": 102
+  "h": 104
  },
  "copilot-the-network-answered-instead@typewriter": {
-  "sha": "9b5b286b5b73722fc00bbecd2689a992be5c41e3",
+  "sha": "5bad10a1bb8c7687e1f2d263ade3d2ffdf7dc687",
   "w": 1416,
-  "h": 119
+  "h": 104
  },
  "copilot-waiting-with-the-code@bone": {
-  "sha": "9d077de75c7218498a54af5bf0c2a18f875e65dc",
+  "sha": "624543134d406c4de2fe8d9d817d993b95d7a929",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-waiting-with-the-code@catalog": {
-  "sha": "f743a40588d68e4777cc402688267ddbd2bab404",
+  "sha": "22e7ad2b3e7a6a74f726de1e8ea2a98d5c25d512",
   "w": 1416,
-  "h": 245
+  "h": 251
  },
  "copilot-waiting-with-the-code@graphite": {
-  "sha": "a7890202dd06f9e2ad303d7eb7ba5efc417ef338",
+  "sha": "22e7ad2b3e7a6a74f726de1e8ea2a98d5c25d512",
   "w": 1416,
-  "h": 227
+  "h": 251
  },
  "copilot-waiting-with-the-code@typewriter": {
-  "sha": "00492bade36c6b37f89903399c4f15ad031f1d99",
+  "sha": "22e7ad2b3e7a6a74f726de1e8ea2a98d5c25d512",
   "w": 1416,
-  "h": 262
+  "h": 251
  }
 }

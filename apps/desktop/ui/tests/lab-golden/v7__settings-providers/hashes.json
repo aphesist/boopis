@@ -1,11 +1,11 @@
 {
  "a-key-form-in-place@dark": {
-  "sha": "1b38a093ed5c33edc89dfac251312b82db978879",
+  "sha": "f929c3d9d9e2e52c30dc18f0bb1a532f8cd55b12",
   "w": 544,
   "h": 350
  },
  "a-key-form-in-place@light": {
-  "sha": "f6802bd71c02c1f602955b95381ef6fe83a071d9",
+  "sha": "883651a716da61a9be3d2c8ba4b2d0c522aff4e8",
   "w": 544,
   "h": 350
  },
@@ -30,14 +30,14 @@
   "h": 1600
  },
  "claude-billed-per-use@dark": {
-  "sha": "7059168b4fa43c04ef0b6305c459d24d377d65af",
+  "sha": "be82d2b2f5f5d75559d1bf7832822546847c3653",
   "w": 544,
-  "h": 1007
+  "h": 931
  },
  "claude-billed-per-use@light": {
-  "sha": "2f0ff0df2cb887f559752d978faae532d04b1b17",
+  "sha": "dd46e5afa2b2217291f26ee1252a2195ce21aedd",
   "w": 544,
-  "h": 1007
+  "h": 931
  },
  "claude-did-not-start@dark": {
   "sha": "2c6544e1945c1455fb330f04abf96b3525e644c9",
@@ -80,24 +80,24 @@
   "h": 967
  },
  "claude-signed-out-in-the-host-s-words@dark": {
-  "sha": "7a30a147b6c9cced57f1869ed53b93a2692884f6",
+  "sha": "cf7023e821b6b431aee18e80686a6aeffc0316b2",
   "w": 544,
-  "h": 1025
+  "h": 949
  },
  "claude-signed-out-in-the-host-s-words@light": {
-  "sha": "266af68301ea456402ce24af662f8e6357d20663",
+  "sha": "610417e8a506aebd4bfcd98180a1397a084f0d47",
   "w": 544,
-  "h": 1025
+  "h": 949
  },
  "claude-signing-in-claude-code-s-own-sign-in-is-open@dark": {
-  "sha": "7540e9c1a5c05d7dc0f1a538644031441f28f52a",
+  "sha": "fa20a4f4b90d62a2f417a25a783d2c0fb30feb6b",
   "w": 544,
-  "h": 1025
+  "h": 949
  },
  "claude-signing-in-claude-code-s-own-sign-in-is-open@light": {
-  "sha": "8eb1b8d89848d6214b23e752c47da6111ce7a401",
+  "sha": "cd21675ab2a6ffa262b99bc11a41dd0625a7e172",
   "w": 544,
-  "h": 1025
+  "h": 949
  },
  "claude-too-old@dark": {
   "sha": "2cbe9f8a519629733a989fe7eb062254ee9654d0",
@@ -170,32 +170,32 @@
   "h": 873
  },
  "found-on-this-computer@dark": {
-  "sha": "78639e582eedb18734c3888eeb913ffe51343272",
+  "sha": "21ebe92808781b24c936d0b737ae270f80c4272d",
   "w": 544,
   "h": 1600
  },
  "found-on-this-computer@light": {
-  "sha": "eca884129c0b80dd125f8d849c6d6e5a2b6e0416",
+  "sha": "e3d86d755c0d99f70390da4f37f071c0d573abbc",
   "w": 544,
   "h": 1600
  },
  "long-names-and-reasons@dark": {
-  "sha": "46319a28597e7bbec44e858d06364c39ba09a7dd",
+  "sha": "34fc049730f6f59302da9635a59f122eb61ffe3c",
   "w": 544,
   "h": 1600
  },
  "long-names-and-reasons@light": {
-  "sha": "b7d190ad0f0acfbc018605833db45b6d4ec8e213",
+  "sha": "d64a04e20b27150397b47d10c45f818b9b263800",
   "w": 544,
   "h": 1600
  },
  "many-endpoints@dark": {
-  "sha": "1ee0e679a3838acde9328f833dc13f31745b71a1",
+  "sha": "c525b9cbc2b0526e3644508c6d5e5be3fa12e211",
   "w": 544,
   "h": 1600
  },
  "many-endpoints@light": {
-  "sha": "00074e5465ebbbb24f63dc1d1b1f537ec0d71e1b",
+  "sha": "de4af7b6e5903bfb9e0f2a98414e0905b2c1ae95",
   "w": 544,
   "h": 1600
  },
@@ -220,22 +220,22 @@
   "h": 1600
  },
  "nothing-set-up@dark": {
-  "sha": "1ee0e679a3838acde9328f833dc13f31745b71a1",
+  "sha": "c525b9cbc2b0526e3644508c6d5e5be3fa12e211",
   "w": 544,
   "h": 1600
  },
  "nothing-set-up@light": {
-  "sha": "00074e5465ebbbb24f63dc1d1b1f537ec0d71e1b",
+  "sha": "de4af7b6e5903bfb9e0f2a98414e0905b2c1ae95",
   "w": 544,
   "h": 1600
  },
  "remove-asks-first@dark": {
-  "sha": "6d120ac15e546af669fc93a65d5d015403640de3",
+  "sha": "aeed8351e2857f5508191c00bc24f4cd1cfe63c3",
   "w": 544,
   "h": 260
  },
  "remove-asks-first@light": {
-  "sha": "844bb6c14b4f5d5528af4b01cf6b680c379bf050",
+  "sha": "b507a45bc028efc6a2b21fa3ae773e5c2e9ac86f",
   "w": 544,
   "h": 260
  },
@@ -260,22 +260,22 @@
   "h": 226
  },
  "the-endpoint-form-first-step@dark": {
-  "sha": "58653f1c79ca4d47f8b4b6a953465a8bd6c1e3e8",
+  "sha": "a42602c1b6299b000adfe8429b836ac3dd663691",
   "w": 544,
   "h": 770
  },
  "the-endpoint-form-first-step@light": {
-  "sha": "d8b2238cea6d7fc8c9657eff7523265848fb9a2b",
+  "sha": "9963223595db21a236108408d52471f38beae0ce",
   "w": 544,
   "h": 770
  },
  "the-endpoint-form-models-found@dark": {
-  "sha": "8f5e398a13c62602a99df7268dbb81a506ae6f36",
+  "sha": "e2773f56530be2a0cdc75d9428df43d8013d9831",
   "w": 544,
   "h": 920
  },
  "the-endpoint-form-models-found@light": {
-  "sha": "08d746f832f7dc27209c29c80b9505867c77ae9c",
+  "sha": "f990d6aab1952d96b6ef6585f89e7920d48583b2",
   "w": 544,
   "h": 920
  },
