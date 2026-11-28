@@ -143,7 +143,7 @@
     ['settings', '#hx-settings, .hx-first-run, .hxt, [class^="hxt-"]'],
     ['bots', '#hx-view-bots, #hx-list-bots'],
     ['composer', '[data-hx-composer], #hx-view-session, #hx-right-shell'],
-    ['shell', '.hx-bar, #hx-side, .hx-palette, #hx-keys-sheet, .ui-menu, .ui-pop, .ui-tip, .ui-toast, .ui-listbox']
+    ['shell', '.hx-bar, #hx-side, .hx-palette, #hx-keys-sheet, .k7-pop, .k7-tip']
   ];
   const regionOf = (el) => { for (const [area, sel] of REGIONS) if (el.closest && el.closest(sel)) return area; return null; };
 
@@ -419,7 +419,7 @@
       for (const e of els) {
         const s = cs.get(e);
         if (!/auto|scroll/.test(s.overflowX) || e.scrollWidth <= e.clientWidth + 1) continue;
-        if (e.matches('pre, code, .ui-code, [class*="__pre"], [class*="term"], .mod-tabs, .ui-tabs--scroll, [data-lab-hscroll], [data-kit~="DiffView"] .ui-scroll') || e.closest('pre')) continue;
+        if (e.matches('pre, code, .k7-code, [class*="__pre"], [class*="term"], [data-lab-hscroll], [data-kit~="DiffView"] .ui-scroll') || e.closest('pre')) continue;
         add('geometry.hscroll', e, 'scrolls sideways (' + e.scrollWidth + 'px content in ' + e.clientWidth + 'px)');
       }
     }
@@ -489,14 +489,14 @@
         /* an anchor that is not on screen (a drawer that is closed at this width: off the screen, or clipped by it) cannot hold an overlay open: the app closed it with the drawer, there is nothing to place */
         if (a && !l && !onScreen(a)) { /* nothing to check */ } else if (!a || !l) add('overlay', a || scope, 'the overlay did not open (' + ov.layer + ' against ' + ov.anchor + ')'); else layers.push([a, l]); }
       else {
-        const tip = [...document.querySelectorAll('.ui-tip.is-in')].find(shown);
+        const tip = [...document.querySelectorAll('.k7-tip.is-in')].find(shown);
         const ta = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-tip]');
         if (tip && ta) layers.push([ta, tip]);
-        for (const l of document.querySelectorAll('.ui-menu:not([data-static]), .ui-pop, .ui-listbox')) { const a = document.querySelector('[aria-expanded="true"][aria-haspopup]'); if (a && shown(l)) layers.push([a, l]); }
+        for (const l of document.querySelectorAll('.k7-pop')) { const a = document.querySelector('[aria-expanded="true"][aria-haspopup]'); if (a && shown(l)) layers.push([a, l]); }
       }
       for (const [a, l] of layers) {
         const ar = a.getBoundingClientRect(), lr = l.getBoundingClientRect();
-        const isTip = l.matches('.ui-tip');
+        const isTip = l.matches('.k7-tip');
         const inter = !(lr.right <= ar.left || lr.left >= ar.right || lr.bottom <= ar.top || lr.top >= ar.bottom);
         if (inter) add('overlay', l, 'covers its anchor ' + describe(a));
         const W = innerWidth, H = innerHeight, rootCs = getComputedStyle(document.documentElement);
@@ -537,8 +537,7 @@
           const nearBottom = ar.top > H - 160;
           if ((ideal === 'top') !== nearBottom && !a.getAttribute('data-tip-pos')) add('overlay', l, 'opens ' + (ideal === 'top' ? 'above' : 'below') + ' its anchor; the system opens tooltips below, above only within 160px of the window bottom');
         }
-        const host = a.closest('[data-hx-composer], .ui-field, hx-card, .ui-pop, dialog, .hx-palette__box, form') || a.parentElement;
-        if (l.matches('.ui-listbox') && a.matches('.ui-select, [role="combobox"]')) { /* a select's list opens under its own field */ }
+        const host = a.closest('[data-hx-composer], [data-kit~="Field"], hx-card, .k7-pop, dialog, .hx-palette__box, form') || a.parentElement;
         for (const f of host ? host.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"], [role="textbox"], [role="combobox"]') : []) {
           if (f === a || !shown(f)) continue;
           const fr = f.getBoundingClientRect();
@@ -611,7 +610,7 @@
       const ATTRS = ['aria-label', 'aria-description', 'title', 'placeholder', 'data-placeholder', 'data-tip', 'alt', 'aria-roledescription', 'aria-valuetext'];
       const seen = new Set();
       const hit = (e, where, text) => { const k = where + describe(e); if (seen.has(k)) return; seen.add(k); add('brand', e, where + ' says "' + text.trim().replace(/\s+/g, ' ').slice(0, 90) + '"; the app never names its engine (ADR-0031, R-copy-8)'); };
-      const roots = [scope, ...document.querySelectorAll('.ui-tip.is-in, .ui-menu, .ui-pop, .ui-toast')].filter((r, i, a) => r && a.indexOf(r) === i && (i === 0 || !scope.contains(r)));
+      const roots = [scope, ...document.querySelectorAll('.k7-tip.is-in, .k7-pop')].filter((r, i, a) => r && a.indexOf(r) === i && (i === 0 || !scope.contains(r)));
       for (const r of roots) {
         const tw = document.createTreeWalker(r, NodeFilter.SHOW_TEXT);
         for (let n = tw.nextNode(); n; n = tw.nextNode()) {
@@ -635,7 +634,7 @@
       const seen = new Set();
       for (let n = tw.nextNode(); n; n = tw.nextNode()) {
         const e = n.parentElement;
-        if (!e || e.closest('script, style, code, pre, .ui-code, [class*="__pre"], [class*="term"], [data-lab-literal]') || !shown(e)) continue;
+        if (!e || e.closest('script, style, code, pre, .k7-code, [class*="__pre"], [class*="term"], [data-lab-literal]') || !shown(e)) continue;
         const m = BAD.exec(n.textContent);
         if (m && !seen.has(e)) { seen.add(e); add('copy', e, 'shows "' + m[0].trim().slice(0, 40) + '": an engine value or error reached the interface'); }
       }
@@ -730,7 +729,7 @@
     let overlapMs = 0;
     if (want.has('geometry.overlap')) {
       const t0 = performance.now();
-      const OVERLAY = '.ui-tip, .ui-menu, .ui-pop, .ui-toast, .ui-listbox, .ui-dialog, .hx-palette, [role="tooltip"], [role="menu"], [role="listbox"], [role="dialog"]';
+      const OVERLAY = '.k7-tip, .k7-pop, .hx-palette, [role="tooltip"], [role="menu"], [role="listbox"], [role="dialog"]';
       const ov = o.overlay || (window.__lab && window.__lab.overlay);
       const declared = ov && ov.layer ? [...document.querySelectorAll(ov.layer)] : [];
       const inOverlay = (e) => !!e.closest(OVERLAY) || declared.some((l) => l.contains(e));
@@ -868,7 +867,7 @@
      chip's own text does the same for the chip. No pixels are read, so a fallback font (CI's) moves both probes alike.
      (b)'s tolerance is one device pixel because a box's top and bottom each round to the device pixel grid when painted, so a box
      centred exactly in layout can paint up to one device pixel off; anything past that is a slip the eye sees. */
-  const INLINE_CHIP = '.ui-mention, .ui-path, .ui-code, .ui-md .ui-file, .ui-badge, [data-kit~="InlineChip"], [data-kit~="Badge"], [data-kit~="Mark"], [data-kit-part~="Countdown"]';   /* v7: InlineChip and Badge in running text (R-inline-1, LAB-v7 4) */
+  const INLINE_CHIP = '[data-kit~="InlineChip"], [data-kit~="Badge"], [data-kit~="Mark"], [data-kit-part~="Countdown"]';   /* v7: InlineChip and Badge in running text (R-inline-1, LAB-v7 4) */
   const RUNNING = /^(block|inline|list-item|flow-root|table-cell|inline-block|run-in)$/;
   function inlineBaseline(els, cs) {
     const res = [];
@@ -971,7 +970,7 @@
                 for (const q0 of r.getClientRects()) { const q = clip ? { left: Math.max(q0.left, clip.left), right: Math.min(q0.right, clip.right), top: q0.top, bottom: q0.bottom, width: q0.width } : q0; if (q.width > 0 && q.right > q.left && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: false }); }
                 continue; }
               if (k.nodeType !== 1 || k.matches(SR) || !shown(k)) continue;
-              if (k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot, .ui-icon, .ui-mention__stack, .ui-stack, .ui-stamp') || ![...k.childNodes].some((n) => n !== ownProbe)) { const q = k.getBoundingClientRect(); if (q.width > 0 && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: k.matches('.ui-orb, orb-avatar, .ui-mention__stack') }); continue; }
+              if (k.matches('svg, orb-avatar, canvas, .ui-orb, .ui-dot, .ui-icon, .ui-stack') || ![...k.childNodes].some((n) => n !== ownProbe)) { const q = k.getBoundingClientRect(); if (q.width > 0 && q.top < b.bottom && q.bottom > b.top) parts.push({ q, mark: k.matches('.ui-orb, orb-avatar, .ui-mention__stack') }); continue; }
               walk(k);
             }
           };
@@ -1058,7 +1057,7 @@
     const lines = [];
     const walk = (n, depth) => {
       for (const c of n.children) {
-        if (c.matches('script, style, #__lab_probe, .ui-tip')) continue;
+        if (c.matches('script, style, #__lab_probe, .k7-tip')) continue;
         if (c.matches('orb-avatar')) { lines.push(' '.repeat(depth) + 'orb-avatar [label=' + (c.getAttribute('label') || '') + ']'); continue; }
         const attrs = [...c.attributes].filter((a) => !VOLATILE.test(a.name) && a.name !== 'class').map((a) => a.name + '=' + a.value.replace(/\d{2,}/g, '#').slice(0, 40)).sort().join(' ');
         const cls = [...c.classList].filter((x) => !/^is-(in|out|moving|on|hover)/.test(x)).sort().join('.');
@@ -1087,11 +1086,11 @@
     const orbOut = new Map(), orbIn = [];
     const mo = new MutationObserver((list) => {
       for (const m of list) {
-        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.ui-tip, #__lab_probe')) {
+        for (const r of m.removedNodes) if (r.nodeType === 1 && !r.matches('.k7-tip, #__lab_probe')) {
           if (r.isConnected === false) removed.push({ key: keyOf(r), t: performance.now() });
           for (const o of orbsOf(r)) orbOut.set(o, { label: o.getAttribute('label') || '', t: performance.now() });
         }
-        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.ui-tip, #__lab_probe')) {
+        for (const a of m.addedNodes) if (a.nodeType === 1 && !a.matches('.k7-tip, #__lab_probe')) {
           added.push({ key: keyOf(a), t: performance.now() }); track(a);
           for (const o of orbsOf(a)) orbIn.push({ el: o, label: o.getAttribute('label') || '', t: performance.now() });
         }

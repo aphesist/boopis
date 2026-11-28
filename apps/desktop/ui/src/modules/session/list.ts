@@ -8,7 +8,7 @@
    Rename, Fork and Settle. */
 import { emit } from '../../core/bus';
 import { esc, frag } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { announce, kit } from '@boopis/ui';
 import { data } from '../../data';
 import type { SessionSummary } from '../../data';
 import { isDraft, selectSession, toConversation, VIEW } from './conversation';
@@ -97,7 +97,7 @@ export function mountList(root: HTMLElement): void {
   function fork(id: string): void {
     const s = sessions().list.get().find((x) => x.id === id);
     const n = sessions().fork(id);
-    if (n) { selectSession(n.id); ui.announce('Forked ' + (s ? s.title : '')); }
+    if (n) { selectSession(n.id); announce('Forked ' + (s ? s.title : '')); }
   }
   function startRename(id: string): void {
     renaming = id;

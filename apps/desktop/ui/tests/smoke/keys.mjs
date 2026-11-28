@@ -108,7 +108,7 @@ export async function keyWalk(env) {
     /* the blank is the kit's question (AskCard): B goes to its answers */
     await press('b', 500); check('5', 'b goes to the blank\'s answers', await ev(() => !!document.activeElement?.closest('[data-blank]')));
     await press('1', 300); const picked = await where(); await press('Enter', 600);
-    check('6', '1 picks a blank option, Enter confirms', /alias/i.test(picked.label) && await ev(() => !!document.querySelector('#hx-view-session [data-answered]') && !__hx.ui.popover.current), picked.label);
+    check('6', '1 picks a blank option, Enter confirms', /alias/i.test(picked.label) && await ev(() => !!document.querySelector('#hx-view-session [data-answered]') && !__hx.popover.current), picked.label);
     await ev(() => document.querySelector('#hx-view-session [data-hx-turn]').focus()); await press('e', 500); const ed = await where();
     check('5', 'e edits your message', ed.region === 'composer' && (await ev(() => document.activeElement.textContent.length)) > 10, ed);
     await press('Escape', 300); await press('d', 600);

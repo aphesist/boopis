@@ -1,8 +1,8 @@
-/* The markdown renderer (`ui.markdown`): what bots and agents write, drawn with the library's own parts. The same renderer draws
+/* The markdown renderer (`markdown`): what bots and agents write, drawn with the library's own parts. The same renderer draws
    the group room, a bot's own chat, Sessions and mods, so the states here are the ones every surface shares: blocks, inline
-   styles, mentions (the bot's still orb in a capsule), links, a path the host found, fenced code (Copy, Wrap, folded past 14
-   lines) and a table that scrolls sideways. `ui.copyText` is the Copy button's clipboard write. */
-import { ui } from '@boopis/ui';
+   styles, mentions (the kit's InlineChip mention), links, a path the host found, fenced code (Copy, Wrap, folded past 14
+   lines) and a table that scrolls sideways. The mentions, code, paths and links are the kit's InlineChips. */
+import { markdown } from '@boopis/ui';
 import type { MarkdownCtx, MdBot } from '@boopis/ui';
 import { line, put, stage } from '../../story';
 import type { Story } from '../../types';
@@ -29,24 +29,24 @@ const FIRST = [
 const CODE = ['```ts', ...Array.from({ length: 18 }, (_, i) => 'const beat' + (i + 1) + ' = prorateCents(invoice, ' + (i + 1) + '); // ' + LONG_TITLE), '```'].join('\n');
 const SHORT_CODE = '```json\n{ "n": 5, "en": "A pot hangs over the fire all day." }\n```';
 const TABLE = '| beat | en | pt | es |\n| --- | --- | --- | --- |\n| 5 | A pot hangs over the fire all day, and the cook adds whatever there is. | Um caldeirão fica sobre o fogo o dia todo. | Un caldero cuelga sobre el fuego todo el día. |';
-const body = (text: string, ctx: MarkdownCtx = CTX) => ({ root }: { root: HTMLElement }): void => { const m = ui.markdown(text, ctx); m.style.maxWidth = '560px'; put(root, m); };
+const body = (text: string, ctx: MarkdownCtx = CTX) => ({ root }: { root: HTMLElement }): void => { const m = markdown(text, ctx); m.style.maxWidth = '560px'; put(root, m); };
 
 const typical = stage(['typical', 'variant'], body(FIRST), { width: 600, ground: 'frame' });
 
 const story: Story = {
-  id: 'components/markdown', title: 'Markdown', area: 'components', kind: 'component', covers: ['ui.markdown', 'ui.copyText'],
+  id: 'components/markdown', title: 'Markdown', area: 'components', kind: 'component', covers: ['engine:markdown'],
   states: {
     typical,
     'a path the host found': stage(['variant'], ({ root }) => {
-      const m = ui.markdown('Saved in `episodes/cooking-pot/episode.json`, not in `nowhere/at/all.ts`.', CTX);
-      ui.markdown.upgradePaths(m, new Map([['episodes/cooking-pot/episode.json', { path: 'episodes/cooking-pot/episode.json', abs: '/work/boopis/episodes/cooking-pot/episode.json', kind: 'file' as const }]]));
+      const m = markdown('Saved in `episodes/cooking-pot/episode.json`, not in `nowhere/at/all.ts`.', CTX);
+      markdown.upgradePaths(m, new Map([['episodes/cooking-pot/episode.json', { path: 'episodes/cooking-pot/episode.json', abs: '/work/boopis/episodes/cooking-pot/episode.json', kind: 'file' as const }]]));
       put(root, m);
     }, { width: 600, ground: 'frame' }),
     'fenced code, folded': stage(['variant', 'scroll'], body(CODE), { width: 600, ground: 'frame', allow: { 'geometry.hscroll': 'fenced code scrolls sideways by default (R-scroll-7); Wrap turns it off' } }),
     'fenced code, short': stage(['variant'], body(SHORT_CODE), { width: 600, ground: 'frame' }),
     'a table': stage(['variant', 'scroll'], body(TABLE), { width: 420, ground: 'frame', allow: { 'geometry.hscroll': 'a wide table scrolls sideways inside its own area (R-scroll-7)' } }),
     'a mention of nobody': stage(['variant'], body('@nobody is not here, and `@nina` in code is code.'), { width: 600, ground: 'frame' }),
-    empty: stage(['empty'], ({ root }) => { line(root, ui.markdown('', CTX)); }, { width: 600, ground: 'frame' }),
+    empty: stage(['empty'], ({ root }) => { line(root, markdown('', CTX)); }, { width: 600, ground: 'frame' }),
     long: stage(['long'], body('**' + LONG_TITLE + '** ' + UNBROKEN + ' https://billing-api.internal.example.com/v2/invoices/inv_01HZX9Q2Y7K3M8N4P6R5S0T1V2W3/reconcile?dry_run=true @kai'), { width: 320, ground: 'frame' })
   }
 };

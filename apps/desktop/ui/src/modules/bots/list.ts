@@ -12,7 +12,7 @@ import { railSizeNow } from '../../core/settings';
 import { emit, on } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { kit, ui } from '@boopis/ui';
+import { botLabel, botState, icon, kit } from '@boopis/ui';
 import { BOOPIS_ID, data } from '../../data';
 import { lookOf, oc, paintLook, restReact } from '@boopis/ui';
 import { DRAFT_COLOR, paintOrb } from './paint';
@@ -83,7 +83,7 @@ function wireList(list: HTMLElement, choose: (value: string) => void): void {
 const oneLine = (t: string): string => t.replace(/\s+/g, ' ').trim();
 /** the row's one line: what it waits on you for (in its own words, else the ask's), what it is doing, its last words, or what it is for */
 function lineOf(b: Bot): { sub: string; needs: string | null } {
-  const s = ui.botState(b);
+  const s = botState(b);
   if (s.attention) {
     const ask = [...thread(b.id)].reverse().find((m) => m.kind === 'approval' && !m.resolved);
     const title = ask && ask.kind === 'approval' ? ask.data.title : '';
@@ -96,7 +96,7 @@ function lineOf(b: Bot): { sub: string; needs: string | null } {
   return { sub: oneLine(said && said.kind === 'text' ? said.text : b.last?.text ?? '') || b.role, needs: null };
 }
 function rowHTML(b: Bot): string {
-  const s = ui.botState(b), outside = !!b.madeOutside, line = lineOf(b);
+  const s = botState(b), outside = !!b.madeOutside, line = lineOf(b);
   return kit.html.listRow({
     variant: b.id === BOOPIS_ID ? 'head' : 'bot', ink: b.id === BOOPIS_ID, title: b.name, sub: line.sub, bot: b, needs: line.needs ?? false, working: s.busy, current: S.view === 'bot' && b.id === S.sel,
     ...(outside ? { endHTML: outsideRowMark() } : {}),
@@ -105,7 +105,7 @@ function rowHTML(b: Bot): string {
 }
 /** the row's name holds its visible words in order (WCAG 2.5.3): the name, its line, "outside"; then the state when the line does not say it */
 function rowLabel(b: Bot, line: { sub: string; needs: string | null }, outside: boolean): string {
-  const s = ui.botState(b), words = line.needs ?? line.sub;
+  const s = botState(b), words = line.needs ?? line.sub;
   const state = s.key !== 'idle' && !words.toLowerCase().includes(s.word.toLowerCase()) ? s.word : '';
   return [b.name, words, outside ? OUTSIDE_SHORT : '', state].filter(Boolean).join(', ');
 }
@@ -142,7 +142,7 @@ export function updateRow(id: string): void {
   const next = frag(rowHTML(b));
   patchRow(r.btn, next);
   const orb = r.btn.querySelector<HTMLElement>('orb-avatar');
-  if (orb) { paintLook(orb, lookOf(b)); restReact(orb, ui.botState(b).reaction); }
+  if (orb) { paintLook(orb, lookOf(b)); restReact(orb, botState(b).reaction); }
   patchTile(id);
   checkClips();
 }
@@ -237,7 +237,7 @@ export function drawRail(): void {
   const sig = size + '|' + state.tab + '|' + S.bots.map((b) => b.id + b.color + b.shape).join() + '|' + S.groups.map((g) => g.id + ':' + g.members.map((m) => m.profile).join('.')).join();
   if (sig === RAIL.sig && host.firstElementChild) { for (const b of S.bots) patchTile(b.id); return; }
   RAIL.sig = sig;
-  const tiles = S.bots.map((b) => { const s = ui.botState(b); const current = S.view === 'bot' && b.id === S.sel; return { ...b, current, ink: b.id === BOOPIS_ID, needs: !!s.attention && !current   /* the open bot's tile carries no flag (board 11): its ask is in front of you */, working: s.busy, attrs: { 'data-bot': b.id, 'aria-label': ui.botLabel(b) } }; });
+  const tiles = S.bots.map((b) => { const s = botState(b); const current = S.view === 'bot' && b.id === S.sel; return { ...b, current, ink: b.id === BOOPIS_ID, needs: !!s.attention && !current   /* the open bot's tile carries no flag (board 11): its ask is in front of you */, working: s.busy, attrs: { 'data-bot': b.id, 'aria-label': botLabel(b) } }; });
   /* a room's cluster: its members that are bots, the rest in "+N"; its tooltip its name and who is in it (owner decision, 23 November) */
   const groups = S.groups.map((g) => {
     const members = g.members.map((m) => bot(m.profile)).filter((x): x is Bot => !!x);
@@ -253,8 +253,8 @@ export function drawRail(): void {
 function patchTile(id: string): void {
   const b = bot(id), t = RAIL.host?.querySelector<HTMLElement>('.k7-tile[data-bot="' + CSS.escape(id) + '"]');
   if (!b || !t) return;
-  const s = ui.botState(b);
-  t.setAttribute('aria-label', ui.botLabel(b));
+  const s = botState(b);
+  t.setAttribute('aria-label', botLabel(b));
   const needs = !!s.attention && !(S.view === 'bot' && b.id === S.sel);
   t.toggleAttribute('data-needs', needs);
   const flag = t.querySelector('.k7-flag');
@@ -385,5 +385,5 @@ function mountGroups(host: HTMLElement): void {
   S.offGroupsArchived = data().groups.archived.subscribe(drawArchived);
 }
 function archivedGroupRow(a: ArchivedGroup): string {
-  return kit.html.listRow({ variant: 'item', title: a.name, sub: 'Group of ' + namesOf(a.members), markHTML: ui.icon('bots'), action: 'Restore', actionAttrs: { 'data-act': 'restore-group', 'data-id': a.id, 'aria-label': 'Restore ' + a.name }, attrs: { 'data-id': a.id, 'data-archived-group': '', 'aria-label': a.name + ', archived group' } });
+  return kit.html.listRow({ variant: 'item', title: a.name, sub: 'Group of ' + namesOf(a.members), markHTML: icon('bots'), action: 'Restore', actionAttrs: { 'data-act': 'restore-group', 'data-id': a.id, 'aria-label': 'Restore ' + a.name }, attrs: { 'data-id': a.id, 'data-archived-group': '', 'aria-label': a.name + ', archived group' } });
 }

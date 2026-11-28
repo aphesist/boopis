@@ -10,7 +10,7 @@
      then "+N"), and under the reply a Disclosure, "Answers (N)", opens each member's answer.
    - Where no member was reported, the Block stays with a red StatusWord and "Ask again".
    Everything drawn is the kit's; this file composes and wires it. */
-import { kit, layer, ui } from '@boopis/ui';
+import { announce, esc, inlineCodeHTML, kit, layer, markHTML, modelMark } from '@boopis/ui';
 import type { ToolRowOpts } from '@boopis/ui';
 import { data } from '../../data';
 import { MIN_COUNCIL } from '../../data/types';
@@ -29,7 +29,7 @@ export const FAILED_TIP = 'It did not answer. The council went on without it.';
 export const NONE_SAID = 'No member\'s answer was reported, so only the combined answer is shown.';
 
 type MenuEntry = Parameters<typeof kit.html.menu>[0]['entries'][number];
-const nameOf = (s: CouncilSlot): string => ui.modelMark.called(s.model) || s.model;
+const nameOf = (s: CouncilSlot): string => modelMark.called(s.model) || s.model;
 const plural = (n: number, one: string, many: string): string => n + ' ' + (n === 1 ? one : many);
 
 /* ───────── the turn ───────── */
@@ -59,10 +59,10 @@ export function councilBlock(c: CouncilTurn, o: { again?: (() => void) | undefin
   const w = councilWord(c), n = sitting(c);
   const word = kit.html.statusWord({ text: w.text, tone: w.tone }).replace(/>([^<]*)<\/span>$/, w.live ? '><span class="k7-shimmer" data-live>$1</span></span>' : '>$1</span>');
   const none = w.tone === 'red';
-  const head = '<div class="k7-tool__head k7-text" data-council-head><b class="k7-tool__name" data-face="text">' + ui.esc('Council · ' + plural(n, 'model', 'models')) + '</b><span class="k7-grow"></span>' + word +
+  const head = '<div class="k7-tool__head k7-text" data-council-head><b class="k7-tool__name" data-face="text">' + esc('Council · ' + plural(n, 'model', 'models')) + '</b><span class="k7-grow"></span>' + word +
     (none && o.again ? kit.html.button({ label: 'Ask again', variant: 'ghost', size: 28, attrs: { 'data-again': '' } }) : '') + '</div>';
   const rows = c.members.map((m) => kit.html.toolRow(memberRow(m, c.phase))).join('');
-  const block = kit.block({ body: head + rows + (none ? '<p class="k7-tool__note k7-text">' + ui.esc(NONE_SAID) + '</p>' : ''), attrs: { role: 'group', 'aria-label': 'Council of ' + n, 'data-council': c.phase, 'aria-busy': w.live ? 'true' : null } });
+  const block = kit.block({ body: head + rows + (none ? '<p class="k7-tool__note k7-text">' + esc(NONE_SAID) + '</p>' : ''), attrs: { role: 'group', 'aria-label': 'Council of ' + n, 'data-council': c.phase, 'aria-busy': w.live ? 'true' : null } });
   block.querySelector('[data-again]')?.addEventListener('click', () => { o.again?.(); });
   return block;
 }
@@ -71,10 +71,10 @@ export function councilBlock(c: CouncilTurn, o: { again?: (() => void) | undefin
 export function councilAnswers(c: CouncilTurn, open = false): HTMLElement | null {
   if (c.phase !== 'done' || !c.members.length) return null;
   const html = c.members.map((m) => {
-    const head = '<p data-role="user">' + ui.html.modelMark(m.slot.model, { size: 12, label: false }) + ' ' + ui.esc(nameOf(m.slot)) + '</p>';
-    if (m.state === 'failed') return head + '<p>' + ui.esc(m.reason ? 'It did not answer: ' + m.reason : FAILED_TIP) + '</p>';
+    const head = '<p data-role="user">' + markHTML(m.slot.model, { size: 12, label: false }) + ' ' + esc(nameOf(m.slot)) + '</p>';
+    if (m.state === 'failed') return head + '<p>' + esc(m.reason ? 'It did not answer: ' + m.reason : FAILED_TIP) + '</p>';
     if (m.state !== 'answered' || !m.text) return head + '<p>It did not answer.</p>';
-    return head + m.text.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean).map((p) => '<p>' + ui.html.inline(p) + '</p>').join('') + (m.cut ? '<p>' + ui.esc(CUT_NOTE) + '</p>' : '');
+    return head + m.text.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean).map((p) => '<p>' + inlineCodeHTML(p) + '</p>').join('') + (m.cut ? '<p>' + esc(CUT_NOTE) + '</p>' : '');
   }).join('');
   return kit.disclosure({ summary: 'Answers (' + c.members.length + ')', open, after: kit.html.well({ kind: 'thread', text: '', html, label: 'The members\' answers' }), attrs: { 'data-council-answers': '' } });
 }
@@ -91,19 +91,19 @@ export interface CouncilFormNode { el: HTMLElement; choice(): CouncilChoice | nu
 export function councilFormNode(form: CouncilForm, submit: (c: CouncilChoice) => Promise<void>): CouncilFormNode {
   const { options } = form;
   const slotOf = (v: string): CouncilSlot => { const c = options.find((x) => x.value === v) as ModelChoice; return { provider: c.provider, model: c.model }; };
-  const valueOf = (s: CouncilSlot): string => options.find((c) => c.provider === s.provider && ui.modelMark.same(c.model, s.model))?.value ?? '';
+  const valueOf = (s: CouncilSlot): string => options.find((c) => c.provider === s.provider && modelMark.same(c.model, s.model))?.value ?? '';
   const members = new Set(form.choice.members.map(valueOf).filter(Boolean));
   let combiner = valueOf(form.choice.combiner) || (options[0]?.value ?? '');
   let page: 'members' | 'combiner' = 'members';
   let host: HTMLElement | null = null;
-  const mark = (m: string): string => ui.html.modelMark(m, { size: 14, label: false });
-  const nameOfValue = (v: string): string => { const c = options.find((x) => x.value === v); return c ? ui.modelMark.called(c.model) || c.model : 'Choose a model'; };
+  const mark = (m: string): string => markHTML(m, { size: 14, label: false });
+  const nameOfValue = (v: string): string => { const c = options.find((x) => x.value === v); return c ? modelMark.called(c.model) || c.model : 'Choose a model'; };
   const draw = (): void => {
     const n = members.size, can = n >= MIN_COUNCIL && !!combiner;
     const entries: MenuEntry[] = page === 'members'
-      ? [{ heading: 'Members, choose any' }, ...options.map((c) => ({ label: ui.modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: members.has(c.value), check: true, attrs: { role: 'menuitemcheckbox' } })),
+      ? [{ heading: 'Members, choose any' }, ...options.map((c) => ({ label: modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: members.has(c.value), check: true, attrs: { role: 'menuitemcheckbox' } })),
         { heading: (n < MIN_COUNCIL ? 'Choose at least ' + MIN_COUNCIL + ' members. ' : plural(n, 'member answers', 'members answer') + ', then ' + nameOfValue(combiner) + ' combines them. ') + COST_NOTE }]
-      : [{ heading: 'Combiner: writes the answer and keeps the tools' }, ...options.map((c) => ({ label: ui.modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: c.value === combiner }))];
+      : [{ heading: 'Combiner: writes the answer and keeps the tools' }, ...options.map((c) => ({ label: modelMark.called(c.model) || c.model, meaning: c.providerName, leadHTML: mark(c.model), value: c.value, chosen: c.value === combiner }))];
     const foot = page === 'members'
       ? '<span class="k7-menu__head" aria-hidden="true">Combiner</span>' + kit.html.selectorItem({ variant: 'line', label: 'Combiner', value: nameOfValue(combiner), leadHTML: combiner ? mark(slotOf(combiner).model) : undefined, attrs: { 'data-combiner': '' } }) + '<span class="k7-grow"></span>' +
         kit.html.button({ label: 'Ask the council', variant: 'primary', size: 28, disabled: !can, attrs: { 'data-ask': '' } })
@@ -143,7 +143,7 @@ export async function openCouncilForm(anchor: HTMLElement, uiId: string, done: (
   let form: CouncilForm;
   try { form = await src.prepare(uiId); } catch (e) { say(e instanceof Error ? e.message : 'The council could not be read.'); return; }
   if (form.options.length < MIN_COUNCIL) { say('A council needs at least ' + MIN_COUNCIL + ' models you can use. Sign in to another provider in Settings, Models.'); return; }
-  const f = councilFormNode(form, async (choice) => { await src.arm(uiId, choice); layer.close(true); done(); ui.announce('The next message goes to a council of ' + choice.members.length); });
+  const f = councilFormNode(form, async (choice) => { await src.arm(uiId, choice); layer.close(true); done(); announce('The next message goes to a council of ' + choice.members.length); });
   /* the Menu floats as the kit's menus do (one layer open at a time; Esc or a press outside closes it and focus returns) */
   f.el.setAttribute('data-floating', '');
   asV7(f.el);

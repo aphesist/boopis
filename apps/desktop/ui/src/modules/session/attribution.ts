@@ -4,15 +4,15 @@
    line nor hides one (nothing is guessed). The engine's own "[Model switched to ...]" rows are not shown; this line replaces them.
    The line is the kit's SystemLine, as the thread's other lines about itself (board S33). A turn sent to one model outside governed
    mode carries the "ungoverned" Badge in its foot (turn.ts `footOf`). */
-import { kit, ui } from '@boopis/ui';
+import { kit, modelMark } from '@boopis/ui';
 import { el } from '../../core/dom';
 
 export const UNKNOWN_MODEL = 'Model unknown';
 export const UNGOVERNED_TIP = 'You sent this message to one model with @. It ran without governance: no cascade, no gate. The next message is governed again.';
 
 /** the model that answered a turn: the last of its route ('a → b' answered with b); empty when unknown */
-export const answeredModel = (model: string): string => ui.modelMark.last(model);
-const said = (m: string): string => ui.modelMark.called(m) || m;
+export const answeredModel = (model: string): string => modelMark.last(model);
+const said = (m: string): string => modelMark.called(m) || m;
 
 /** the line between two answers by different models: "Claude Haiku → GPT-6 Luna" */
 export function dividerRow(from: string, to: string): HTMLElement {
@@ -36,7 +36,7 @@ export function syncDividers(col: HTMLElement): void {
   for (const t of col.querySelectorAll<HTMLElement>('[data-hx-turn][data-answered]')) {
     const now = t.dataset['answered'] ?? '';
     if (!now) continue;
-    if (last && !ui.modelMark.same(last, now) && !saidAlready(t)) t.before(dividerRow(last, now));
+    if (last && !modelMark.same(last, now) && !saidAlready(t)) t.before(dividerRow(last, now));
     last = now;
   }
 }

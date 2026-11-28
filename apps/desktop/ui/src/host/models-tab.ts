@@ -3,7 +3,7 @@
    endpoint of your own, drawn from the catalogue by `providers-view.ts`), and "Change models", which asks setup's models question again through the same first-run view and
    forms. Everything shown is read now, from the host; what could not be read is said so, never filled in. The rows are the kit's
    settings Cards (board 14), each tier of the ladder a row. */
-import { kit, ui } from '@boopis/ui';
+import { kit, modelMark } from '@boopis/ui';
 import type { RowOpts } from '@boopis/ui';
 import { changeModels } from './change-models';
 import { currentPlan } from './free-tier';
@@ -99,7 +99,7 @@ export function ladderRows(view: ModelsView | { error: string }): RowOpts[] {
   if (view.state === 'set') {
     return [
       { label: 'Tiers', sub: `Cheapest first. ${SCOPE}` },
-      ...view.tiers.map((t, i): RowOpts => ({ label: ui.modelMark.called(t.model) || t.model, value: tierRule(view, t), attrs: { 'data-tier': String(i), ...(i === 0 ? { 'aria-current': 'step' } : {}) } }))
+      ...view.tiers.map((t, i): RowOpts => ({ label: modelMark.called(t.model) || t.model, value: tierRule(view, t), attrs: { 'data-tier': String(i), ...(i === 0 ? { 'aria-current': 'step' } : {}) } }))
     ];
   }
   if (view.state === 'default') return [{ label: 'Tiers', sub: 'The built-in ladder: Opus.' }];

@@ -5,7 +5,7 @@
    exposes `window.__lab` for the checker. */
 import '../styles';
 import '../../vendor/boopis-logo.js';
-import { kit, setupOrbs, startGlance, ui } from '@boopis/ui';
+import { card, kit, popover, scrollEdges, setupOrbs, squircle, startGlance, tooltip } from '@boopis/ui';
 import { emit, on } from '../core/bus';
 import { getDockApi } from '../core/registry';
 import { getLayout, setState, state } from '../core/state';
@@ -36,7 +36,7 @@ function fail(msg: string): void {
   (window as unknown as Record<string, unknown>)['__labError'] = msg;
 }
 
-const hx = (): LabHx => ({ state: state as unknown as Record<string, unknown>, setState: setState as unknown as LabHx['setState'], emit: emit as unknown as LabHx['emit'], ui, theme: themeApi, data: () => (window as unknown as { __labProvider: ReturnType<LabHx['data']> }).__labProvider, dock: getDockApi });
+const hx = (): LabHx => ({ state: state as unknown as Record<string, unknown>, setState: setState as unknown as LabHx['setState'], emit: emit as unknown as LabHx['emit'], card, squircle, popover, tooltip, theme: themeApi, data: () => (window as unknown as { __labProvider: ReturnType<LabHx['data']> }).__labProvider, dock: getDockApi });
 
 /** the physical key a character comes from on a US layout: the shell's keymap reads `code` */
 const CODES: Record<string, string> = { ',': 'Comma', '.': 'Period', '/': 'Slash', ';': 'Semicolon', '[': 'BracketLeft', ']': 'BracketRight', '-': 'Minus', '=': 'Equal', ' ': 'Space', '`': 'Backquote', "'": 'Quote', '\\': 'Backslash' };
@@ -62,7 +62,7 @@ async function drawApp(st: State): Promise<void> {
   setProvider(provider);
   await provider.ready;
   startGlance();
-  ui.tooltip.enable();
+  tooltip.enable();
   boot();
   const app = document.getElementById('hx-app') as HTMLElement;
   for (let i = 0; i < 100 && app.classList.contains('is-booting'); i++) await wait(20);
@@ -76,7 +76,7 @@ async function drawStage(st: State): Promise<void> {
   setProvider(provider);
   await provider.ready;
   startGlance();
-  ui.tooltip.enable();
+  tooltip.enable();
   const stage = document.createElement('div');
   stage.id = 'hx-app';
   stage.className = 'ui-root lab-stage';
@@ -90,7 +90,7 @@ async function renderCell(st: State, stage: HTMLElement): Promise<void> {
   cell.className = 'lab-cell';
   if (st.width) cell.style.width = st.width + 'px';
   stage.appendChild(cell);
-  await st.render?.({ root: cell, ui, wait });
+  await st.render?.({ root: cell, card, squircle, popover, tooltip, wait });
 }
 
 function applyForces(st: State): void {
@@ -132,8 +132,8 @@ export async function startFrame(): Promise<void> {
   const zoom = Number(q.get('zoom') || '1');
   if (zoom !== 1) (document.documentElement.style as unknown as Record<string, string>)['zoom'] = String(zoom);
   await setupOrbs();
-  ui.squircle.start();
-  ui.scrollEdges.start();
+  squircle.start();
+  scrollEdges.start();
   try {
     if (st.app) await drawApp(st); else await drawStage(st);
   } catch (e) { fail('The state failed to draw: ' + String((e as Error).stack ?? e)); return; }
@@ -156,7 +156,7 @@ export async function startFrame(): Promise<void> {
       corners: (c: 'b' | 'c') => kit.applyTheme(document.body, { radii: c }),
       shadow: (x: 'a' | 'b' | 'c') => kit.applyTheme(document.body, { shadow: x })
     } : {}),
-    hx: { state, setState, on, emit, ui, theme: themeApi, dock: getDockApi, layout: getLayout }
+    hx: { state, setState, on, emit, card, squircle, popover, tooltip, theme: themeApi, dock: getDockApi, layout: getLayout }
   };
   document.documentElement.dataset['labReady'] = '1';
 }

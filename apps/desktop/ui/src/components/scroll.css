@@ -1,0 +1,79 @@
+/* The scroll area (scroll.ts, scroll-edges.ts): every scroller in the app, one scrollbar (R-scroll-1 to 9). Kept when the v6 component
+   library went at the repass's step 2b: a behaviour every scroller uses, not a look of v6's. */
+/* ───────────── scroll area: every scroller in the app, one scrollbar (DESIGN-SYSTEM.md §7.1, R-scroll-1 to 9) ─────────────
+   WebKitGTK, Tauri's Linux engine, ignores scrollbar-width and scrollbar-color and draws GTK's wide default bar; Chromium 121 and
+   later ignore every ::-webkit-scrollbar rule on an element that sets either. So the bar is drawn with ::-webkit-scrollbar alone and
+   nothing sets the standard pair, except scrollbar-width: none on a hidden bar (R-scroll-1). The sizes and colours are the design
+   system's scrollbar tokens (--scroll-*, tokens.css): R-scroll-2 and R-scroll-3 are Proposed, and a ruling changes a token, nothing
+   here. */
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-thumb, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-thumb {
+  min-width: var(--scroll-thumb-min); min-height: var(--scroll-thumb-min); border-radius: var(--r-pill);
+  border: calc((var(--scroll-size) - var(--scroll-thumb)) / 2) solid transparent;
+  background: var(--scroll-thumb-color) padding-box;
+}
+@media (hover: hover) and (pointer: fine) { :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active), :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active) {
+  border-width: calc((var(--scroll-size) - var(--scroll-thumb-active)) / 2); background-color: var(--scroll-thumb-color-active);
+} }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner), :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner) { background: transparent; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-button, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+/* the scroller itself (R-scroll-6 to 8): vertical by default (rows ellipsise, so it never scrolls sideways); --x a strip, code or a
+   diff; --both a wide code block; --bare hides the bar (a tab strip, which fades its cut edge instead, R-scroll-7 and 9). It contains
+   its scroll, so a wheel at its end never moves what is behind a dialog or a panel (R-scroll-8).
+   --inset-end, --inset-both: the scroller ends at a curved corner of its container (a dialog's body, the palette's list, a listbox),
+   so the track stops short of the curve by the container's radius (R-scroll-5, Proposed: this rule and those two lines).
+   --stable: a scroller whose content changes length while it is on screen (a dialog's body, the right panel, the sidebar lists, the
+   palette's list) keeps its gutter, so nothing reflows when the thumb appears; the idle track is clear (R-scroll-4, Proposed: this
+   one rule). It publishes the gutter as --scroll-gutter, and what pads the scroller's end takes it off (the side padding less the
+   bar), so the content stays centred in its surface. */
+.ui-scroll { overflow: hidden auto; overscroll-behavior: contain; }
+.ui-scroll--x { overflow: auto hidden; }
+.ui-scroll--both { overflow: auto; }
+.ui-scroll--bare { scrollbar-width: none; }
+.ui-scroll--bare::-webkit-scrollbar { display: none; }
+.ui-scroll--inset-end::-webkit-scrollbar-track { margin-block-end: var(--r-outer, 0px); }
+.ui-scroll--inset-both::-webkit-scrollbar-track { margin-block: var(--r-outer, 0px); }
+.ui-scroll--stable { overflow-y: scroll; --scroll-gutter: var(--scroll-size); }
+/* the edge fade (R-scroll-9): a scroller never cuts its content with a straight edge. Where more lies beyond an edge the content
+   fades out over --scroll-fade (16px) at that edge; at its start and at its end nothing lies beyond, so nothing fades. The flags
+   are scroll-edges.ts's (data-more-top, -bottom, -left, -right). It is a mask, so it works on every ground with no colour to
+   match; the bar's own column stays out of it (the second layer), so the thumb never fades. The conversations are the one
+   exception: their foot lies under the composer and the dock, so they fade with a strip of their ground instead
+   (.ui-scroll--ground, session.css and bots.css), which also hides what scrolls behind the composer. */
+.ui-scroll { --fade-t: 0px; --fade-b: 0px; --fade-l: 0px; --fade-r: 0px; }
+.ui-scroll[data-more-top] { --fade-t: var(--scroll-fade); }
+.ui-scroll[data-more-bottom] { --fade-b: var(--scroll-fade); }
+.ui-scroll[data-more-left] { --fade-l: var(--scroll-fade); }
+.ui-scroll[data-more-right] { --fade-r: var(--scroll-fade); }
+.ui-scroll:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom]) {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
+  mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
+  -webkit-mask-size: 100% 100%, var(--scroll-size) 100%; mask-size: 100% 100%, var(--scroll-size) 100%;
+  -webkit-mask-position: 0 0, 100% 0; mask-position: 0 0, 100% 0;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+.ui-scroll:not(.ui-scroll--ground):is([data-more-left], [data-more-right]) {
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
+  mask-image: linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent), linear-gradient(var(--mask-solid), var(--mask-solid));
+  -webkit-mask-size: 100% 100%, 100% var(--scroll-size); mask-size: 100% 100%, 100% var(--scroll-size);
+  -webkit-mask-position: 0 0, 0 100%; mask-position: 0 0, 0 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+/* a block that scrolls both ways and has more on both axes: both fades, intersected (the bars keep their columns) */
+.ui-scroll--both:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom]):is([data-more-left], [data-more-right]) {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent);
+  mask-image: linear-gradient(to bottom, transparent, var(--mask-solid) var(--fade-t), var(--mask-solid) calc(100% - var(--fade-b)), transparent), linear-gradient(to right, transparent, var(--mask-solid) var(--fade-l), var(--mask-solid) calc(100% - var(--fade-r)), transparent);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-position: 0 0; mask-position: 0 0;
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.ui-scroll--bare:not(.ui-scroll--ground):is([data-more-top], [data-more-bottom], [data-more-left], [data-more-right]) { -webkit-mask-size: 100% 100%, 0 0; mask-size: 100% 100%, 0 0; }   /* no bar: no column to keep */
+.ui-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ui-mono { font-family: var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; }
+.ui-case { text-transform: var(--ui-case); }
+
+/* icons: any grid, one rendered stroke (1.5px), round caps, currentColor */
+.ui-icon { display: block; flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.ui-icon * { vector-effect: non-scaling-stroke; stroke-width: 1.5; }
+.ui-icon .is-fill { fill: currentColor; stroke: none; }
+.ui-icon--s { width: 14px; height: 14px; }
+.ui-icon--m { width: 16px; height: 16px; }

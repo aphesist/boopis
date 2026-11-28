@@ -3,7 +3,7 @@
 import { $, $$ } from '../../core/dom';
 import { state, toggle } from '../../core/state';
 import { logger } from '../../core/log';
-import { kit, ui } from '@boopis/ui';
+import { kit, layer, popover, tooltip } from '@boopis/ui';
 import { data } from '../../data';
 import { els, sh } from './ctx';
 import { FOCUSABLE, visible } from './regions';
@@ -13,7 +13,7 @@ import { openSettings as openSettingsDialog } from '../settings';
 
 const log = logger('dialogs');
 
-export const closeMenu = (returnFocus?: boolean): void => ui.layer.close(returnFocus);
+export const closeMenu = (returnFocus?: boolean): void => layer.close(returnFocus);
 
 /* ───────── the shortcut sheet (mod+/): the kit's wide Dialog, its filter at the head's end, the keymap's groups as Cards of rows ───────── */
 const KEYS_NOTE = 'Every action is also in the palette.';
@@ -72,7 +72,7 @@ export function openStore(screen: 'browse' | 'installed' | 'sources' = 'browse',
 
 /* ───────── the account menu ───────── */
 export function openMenu(): void {
-  ui.tooltip.hide();
+  tooltip.hide();
   const U = data().user.get();
   /* the kit's Menu (its key chips sit in their row's corner, which the v6 menu's did not): the person's name heads it */
   kit.openMenu(els().btnAccount, {
@@ -119,7 +119,7 @@ export function wireDialogs(): void {
     return visible(n) && n.tabIndex >= 0 && !(r.type === 'radio' && !r.checked && $$<HTMLInputElement>('input[type="radio"][name="' + r.name + '"]', d).some((x) => x.checked));
   });
   for (const d of [ks, el.settings, sd]) d.addEventListener('keydown', (e) => {
-    if (e.key !== 'Tab' || !d.open || ui.popover.current) return;
+    if (e.key !== 'Tab' || !d.open || popover.current) return;
     const f = tabStops(d); if (!f.length) return;
     const first = f[0] as HTMLElement, last = f[f.length - 1] as HTMLElement, a = document.activeElement;
     if (e.shiftKey && (a === first || (!f.includes(a as HTMLElement) && !d.contains(a)))) { e.preventDefault(); last.focus(); }

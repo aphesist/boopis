@@ -3,13 +3,12 @@
    story, and every story has its minimum states. A new component ships with stories; an exception goes in
    coverage.ts with its reason. */
 import { describe, expect, it } from 'vitest';
-import { kit, ui, variants } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 import { STORIES } from './registry';
 import { AREAS } from './types';
-import { EMPTY_APPLIES, ERROR_APPLIES, HTML_ONLY_EXCUSED, MIN_COMPONENT, MIN_SURFACE_STATES, MOD_SURFACES, NOT_COMPONENTS, PAGES, STATE_EXCUSED, SURFACES } from './coverage';
+import { EMPTY_APPLIES, ENGINES, ERROR_APPLIES, MIN_COMPONENT, MIN_SURFACE_STATES, MOD_SURFACES, PAGES, STATE_EXCUSED, SURFACES } from './coverage';
 import { KINDS } from '../modules/cards/kinds';
 import { FORM_KINDS } from '../modules/cards/form-model';
-import { DRAWERS, VARIANTS_ELSEWHERE } from './variant-drawers';
 
 const covered = new Set(STORIES.flatMap((s) => s.covers));
 const missing = (want: readonly string[]): string[] => want.filter((w) => !covered.has(w));
@@ -27,22 +26,12 @@ describe('the lab covers', () => {
       expect(s.covers.every((c) => c.startsWith('kit.') || c.startsWith('pattern:')), s.id + ' covers only kit components').toBe(true);
     }
   });
-  it('every library component (an export of `ui`)', () => {
-    const want = Object.keys(ui).filter((k) => !(k in NOT_COMPONENTS)).map((k) => 'ui.' + k);
-    expect(missing(want), 'components with no story; add one under src/lab/stories, or excuse it in coverage.ts').toEqual([]);
-  });
-  it('every html template that has no factory', () => {
-    const want = Object.keys(ui.html).filter((k) => !(k in ui) && !(k in HTML_ONLY_EXCUSED)).map((k) => 'html.' + k);
-    expect(missing(want)).toEqual([]);
+  it('every engine the kit draws with (the orbs, the stack, the model marks, the markdown, the card host)', () => {
+    expect(missing(ENGINES.map((e) => 'engine:' + e)), 'engines with no story; add one under src/lab/stories').toEqual([]);
   });
   it('the card host: it draws the form alone (the v6 kinds are the kit\'s since step 6f), and the form has its stories', () => {
     expect(Object.keys(KINDS)).toEqual(['form']);
     expect(covered.has('card:form')).toBe(true);
-  });
-  it('every component that exports variants: a variants story draws each axis, or its own story does', () => {
-    const open = Object.keys(variants).filter((k) => !(k in DRAWERS) && !(k in VARIANTS_ELSEWHERE));
-    expect(open, 'add base props to DRAWERS in stories/components/variants.stories.ts').toEqual([]);
-    for (const k of Object.keys(DRAWERS)) expect(STORIES.some((s) => s.id === 'components/variants-' + k), k).toBe(true);
   });
   it('every form kind', () => {
     expect(missing(Object.keys(FORM_KINDS).map((k) => 'form:' + k))).toEqual([]);

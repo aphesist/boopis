@@ -6,7 +6,7 @@
    open), and a running clock ticks between frames. Nothing here talks to the engine: it reads `ChildTask`s and calls the provider's
    `stopChild` and `childTranscript`, which are absent where there is nothing to stop or read (the page build). */
 import { el } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { announce, esc, inlineCodeHTML, kit, modelMark } from '@boopis/ui';
 import type { ToolRowOpts } from '@boopis/ui';
 import type { ChildTask, Turn } from '../../data';
 import { childTime, isLive } from '../../host/live/children';
@@ -36,7 +36,7 @@ export function childWord(c: Pick<ChildTask, 'status' | 'startedAt' | 'seconds'>
   if (c.status === 'failed') return { text: 'error', tone: 'red' };
   return { text: c.status, tone: 'neutral' };   /* queued, stopped */
 }
-const shortModel = (m: string): string => (m ? ui.modelMark.short(m) || ui.modelMark.called(m) || m : 'a model');
+const shortModel = (m: string): string => (m ? modelMark.short(m) || modelMark.called(m) || m : 'a model');
 
 /** what a task's row shows, as the kit's ToolRow */
 export function childRow(c: ChildTask, h: Pick<ChildHost, 'now' | 'stop' | 'transcript'>): ToolRowOpts {
@@ -50,7 +50,7 @@ export function childRow(c: ChildTask, h: Pick<ChildHost, 'now' | 'stop' | 'tran
     ...(c.status === 'failed' ? { wordTip: summary || 'It stopped with an error, and said nothing of why.' } : c.status === 'running' && c.now ? { wordTip: 'Now: ' + c.now } : {}),
     ...(c.status === 'done' && summary ? { note: summary } : {}),
     ...(canStop ? { end: kit.html.button({ label: 'Stop', variant: 'ghost', size: 28, attrs: { 'data-action': 'stop', 'aria-label': 'Stop: ' + (c.goal || 'this task') } }) } : {}),
-    ...(canOpen ? { after: kit.html.disclosure({ summary: 'Transcript', open, after: kit.html.well({ kind: 'thread', text: '', html: READ.get(c.id) ?? '<p>' + ui.esc(LOADING) + '</p>', label: 'What this task did, read only' }), attrs: { 'data-action': 'open' } }) } : {}),
+    ...(canOpen ? { after: kit.html.disclosure({ summary: 'Transcript', open, after: kit.html.well({ kind: 'thread', text: '', html: READ.get(c.id) ?? '<p>' + esc(LOADING) + '</p>', label: 'What this task did, read only' }), attrs: { 'data-action': 'open' } }) } : {}),
     attrs: { 'data-child-id': c.id, 'data-status': c.status }
   };
 }
@@ -87,7 +87,7 @@ export function upsertChild(turnId: string, c: ChildTask, h: ChildHost): void {
     at.replaceWith(fresh);
     if (had) (fresh.querySelector<HTMLElement>('[data-action="' + had + '"] button, [data-action="' + had + '"]') ?? fresh.querySelector<HTMLElement>('.k7-disc__sum'))?.focus({ preventScroll: true });
   }
-  if (was && was.status !== c.status && !isLive(c)) ui.announce((c.goal || 'A task') + ': ' + (c.status === 'failed' ? 'error' : c.status));
+  if (was && was.status !== c.status && !isLive(c)) announce((c.goal || 'A task') + ': ' + (c.status === 'failed' ? 'error' : c.status));
   tick(h);
 }
 
@@ -107,16 +107,16 @@ export const resetChildren = (): void => { SEEN.clear(); OPEN.clear(); READ.clea
 
 /** what a task did, as a compact thread: what it was asked, the steps it took, what it said */
 export function transcriptHTML(turns: readonly Turn[]): string {
-  if (!turns.length) return '<p>' + ui.esc('It has not written anything yet.') + '</p>';
+  if (!turns.length) return '<p>' + esc('It has not written anything yet.') + '</p>';
   return turns.map((t) => {
-    if (t.role === 'user') return '<p data-role="user">' + ui.esc(t.text) + '</p>';
+    if (t.role === 'user') return '<p data-role="user">' + esc(t.text) + '</p>';
     return (t.steps.length ? kit.html.steps(t.steps.map((s) => ({ text: s.title + (s.meta?.length ? '  ' + s.meta.join('  ') : ''), state: s.kind === 'fail' ? 'failed' as const : 'done' as const, ...(s.time ? { time: s.time } : {}) }))) : '') +
-      t.paragraphs.map((p) => '<p>' + ui.html.inline(p) + '</p>').join('');
+      t.paragraphs.map((p) => '<p>' + inlineCodeHTML(p) + '</p>').join('');
   }).join('');
 }
 function fill(row: HTMLElement, c: ChildTask, h: ChildHost): void {
   const read = h.transcript?.(c.id) ?? Promise.reject(new Error('This build cannot read it.'));
-  void read.then((turns) => transcriptHTML(turns), (e: unknown) => '<p>' + ui.esc('Could not read it: ' + (e instanceof Error ? e.message : String(e))) + '</p>').then((html) => {
+  void read.then((turns) => transcriptHTML(turns), (e: unknown) => '<p>' + esc('Could not read it: ' + (e instanceof Error ? e.message : String(e))) + '</p>').then((html) => {
     READ.set(c.id, html);
     const at = h.col()?.querySelector('[data-child-id="' + CSS.escape(c.id) + '"] .k7-well__thread') ?? row.querySelector('.k7-well__thread');
     if (at) at.innerHTML = html;
@@ -138,6 +138,6 @@ function wire(box: HTMLElement, h: ChildHost): void {
     if (!b || !id || b.getAttribute('aria-disabled') === 'true') return;
     h.stop?.(id);
     b.setAttribute('aria-disabled', 'true');
-    ui.announce('Stopping');
+    announce('Stopping');
   });
 }

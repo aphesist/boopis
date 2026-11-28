@@ -11,7 +11,7 @@
    (`formsHost().submit`), then it is dropped; it is never in an event, a receipt, the markup of a finished card or a log. Accessible
    errors: every error is the kit Field's error line under its field, the control is `aria-invalid` and described by it, the first one
    is announced and focused. */
-import { kit, ui } from '@boopis/ui';
+import { esc, icon, kit, markHTML, modelMark } from '@boopis/ui';
 import type { OptionRowOpts, AskAnswer, AskCardOpts } from '@boopis/ui';
 
 type MenuEntry = Parameters<typeof kit.openMenu>[1]['entries'][number];
@@ -52,8 +52,8 @@ function askerLead(o: KnownOrigin | null): Pick<AskCardOpts, 'bot' | 'model' | '
     return { lead: '<span class="k7-ask__askers">' + H.avatar({ variant: 'stack', members: shown, size: 16, max: 3, surface: '--bg-3', label: o.ids.map((id) => teammateName(id) ?? id).join(', ') }) + (more ? '<span class="k7-ask__more" aria-hidden="true" data-more="+' + more + '"></span>' : '') + '</span>' };
   }
   if (o.kind === 'agent') return { model: o.model };
-  if (o.kind === 'mcp') return { lead: '<span class="k7-ask__tile" aria-hidden="true">' + ui.esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>' };
-  if (o.kind === 'mod') return { lead: ui.icon('mod', { size: 'm', class: 'k7-ic' }) };
+  if (o.kind === 'mcp') return { lead: '<span class="k7-ask__tile" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>' };
+  if (o.kind === 'mod') return { lead: icon('mod', { size: 'm', class: 'k7-ic' }) };
   return { lead: H.avatar({ variant: 'logomark', label: 'boopis' }) };
 }
 /** who asks, as one word for the block (`data-origin`): teammate, joint (several), relay, agent, mcp, mod, or the app's own */
@@ -89,8 +89,8 @@ const PICK_ICON: Readonly<Record<string, string>> = { folder: 'folder', file: 'f
 function pickLead(kind: PickerKind, v: unknown): string {
   const b = kind === 'teammate' && v ? bot(String(v)) : undefined;
   if (b) return H.avatar({ bot: b, size: 16, still: true });
-  if (kind === 'model' && v) return ui.html.modelMark(String(v), { size: 16, label: false });
-  return ui.icon(PICK_ICON[kind] ?? 'more', { size: 'm', class: 'k7-ic' });
+  if (kind === 'model' && v) return markHTML(String(v), { size: 16, label: false });
+  return icon(PICK_ICON[kind] ?? 'more', { size: 'm', class: 'k7-ic' });
 }
 const pickShown = (kind: PickerKind, v: unknown): string => (kind === 'teammate' && v ? teammateName(String(v)) ?? String(v) : v ? String(v) : 'Choose…');
 
@@ -98,7 +98,7 @@ const pickShown = (kind: PickerKind, v: unknown): string => (kind === 'teammate'
 function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string {
   const d = spec(c.d), id = c.id + '-f-' + name, req = isReq(d, name), label = p.title || cap(name);
   const base = { id, label, optional: !req, ...(p.description ? { hint: p.description } : {}) };
-  const wrap = (inner: string): string => '<div data-field="' + ui.esc(name) + '">' + inner + '</div>';
+  const wrap = (inner: string): string => '<div data-field="' + esc(name) + '">' + inner + '</div>';
   const can = formsHost().can;
   if (p['x-secret']) return wrap(H.field({ ...base, secret: true, placeholder: p.placeholder, attrs: { 'data-secret': name, 'aria-required': req ? 'true' : null } }));
   if (p['x-signin']) {
@@ -108,7 +108,7 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
     const known: { known: boolean; line?: string } = s.command !== undefined || s.args !== undefined ? { known: false } : s.server ? { known: true } : formsHost().login ? formsHost().login?.(s) ?? { known: false } : { known: true };
     const note = !can.signin ? 'Signing in from here is not available in this build yet.' : !known.known ? 'This sign-in is not one boopis knows.' : known.line ? 'Runs ' + known.line + ' on this computer, then shows what it said.' : s.flow === 'device' ? 'Shows a code to enter on ' + (s.host || 'the provider’s site') + '.' : 'Opens ' + (s.host || s.provider || 'the provider') + ' in your browser.';
     const who = s.provider || 'the provider';
-    return wrap('<div class="k7-ask__item" data-signin-row data-known="' + String(can.signin && known.known) + '" data-note="' + ui.esc(note) + '"><span class="k7-ask__tile" aria-hidden="true">' + ui.esc(who.slice(0, 2)) + '</span><span class="k7-ask__item-text"><span class="k7-ask__item-name">' + ui.esc(cap(who)) + '</span><span class="k7-ask__item-line" id="' + id + '-note">' + ui.esc(note) + '</span></span></div>');
+    return wrap('<div class="k7-ask__item" data-signin-row data-known="' + String(can.signin && known.known) + '" data-note="' + esc(note) + '"><span class="k7-ask__tile" aria-hidden="true">' + esc(who.slice(0, 2)) + '</span><span class="k7-ask__item-text"><span class="k7-ask__item-name">' + esc(cap(who)) + '</span><span class="k7-ask__item-line" id="' + id + '-note">' + esc(note) + '</span></span></div>');
   }
   if (p['x-picker'] || isModelChoice(p)) {
     const kind: PickerKind = p['x-picker'] ?? 'model', v = st.vals[name] ?? p.default;
@@ -118,7 +118,7 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
     const files = (st.vals[name] as Array<{ name: string }> | undefined) ?? [];
     const chips = files.map((f, i) => H.inlineChip({ kind: 'reference', text: f.name, action: true, label: 'Remove ' + f.name, attrs: { 'data-remove-file': String(i) } })).join('');
     const add = H.button({ label: 'Add files', variant: 'ghost', size: 28, icon: 'plus', disabled: !can.upload, attrs: { 'data-add-file': '', ...(can.upload ? {} : { 'data-tip': 'Adding files is not available in this build yet' }) } });
-    return wrap(H.field({ ...base, control: '<div class="k7-ask__files" role="group" data-drop="' + ui.esc(name) + '" aria-labelledby="' + id + '-label">' + chips + add + '<input type="file" multiple hidden tabindex="-1" aria-hidden="true"></div>' }));
+    return wrap(H.field({ ...base, control: '<div class="k7-ask__files" role="group" data-drop="' + esc(name) + '" aria-labelledby="' + id + '-label">' + chips + add + '<input type="file" multiple hidden tabindex="-1" aria-hidden="true"></div>' }));
   }
   if (p.enum && p.enum.length && p.enum.every((v) => typeof v === 'string' && HEX.test(v)) && !p['x-multi']) {
     return wrap(H.field({ ...base, control: H.swatches({ label, choose: true, items: p.enum.map((v) => ({ label: optLabel(p, v), hex: String(v), value: String(v) })), value: String(st.vals[name] ?? p.default ?? ''), attrs: { 'data-group': name, 'aria-labelledby': id + '-label' } }) }));
@@ -134,11 +134,11 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
     const other = !!p['x-other'] && !multi, otherOn = other && (st.other[name] || (typeof cur === 'string' && cur !== '' && !p.enum.includes(cur)));
     const rows = p.enum.map((v, i) => H.optionRow({ label: optLabel(p, v), meaning: '', chosen: on(v) && !otherOn, check: multi, value: String(v), ...(i < 9 ? { keys: String(i + 1) } : {}), attrs: { role: multi ? 'checkbox' : 'radio', tabindex: multi || on(v) || (cur == null && i === 0) ? '0' : '-1', 'data-i': String(i) } })).join('') +
       (other ? H.optionRow({ label: 'Something else', meaning: '', chosen: otherOn, icon: 'pen', value: '', attrs: { role: 'radio', tabindex: otherOn ? '0' : '-1', 'data-other': '' } }) : '');
-    const group = '<div class="k7-orows" role="' + (multi ? 'group' : 'radiogroup') + '" data-group="' + ui.esc(name) + '" aria-labelledby="' + id + '-label">' + rows + '</div>';
+    const group = '<div class="k7-orows" role="' + (multi ? 'group' : 'radiogroup') + '" data-group="' + esc(name) + '" aria-labelledby="' + id + '-label">' + rows + '</div>';
     const own = otherOn ? H.field({ id: id + '-own', placeholder: 'Your answer', ariaLabel: label + ': your own answer', value: typeof cur === 'string' && !p.enum.includes(cur) ? cur : '', attrs: { 'data-own': name } }) : '';
     /* the chosen answer's preview (code in K04's Well, or words) under the rows */
     const pv = prev ? previewHTML(p, multi ? null : cur) : '';
-    return wrap(H.field({ ...base, label: label + (multi ? ', choose any' : ''), control: group + own + (prev ? '<div aria-live="polite" data-preview-for="' + ui.esc(name) + '">' + pv + '</div>' : '') }));
+    return wrap(H.field({ ...base, label: label + (multi ? ', choose any' : ''), control: group + own + (prev ? '<div aria-live="polite" data-preview-for="' + esc(name) + '">' + pv + '</div>' : '') }));
   }
   if (p.type === 'boolean') {
     const v = st.vals[name] != null ? !!st.vals[name] : !!p.default;
@@ -152,7 +152,7 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
 function previewHTML(p: FieldSchema, v: unknown): string {
   const i = (p.enum ?? []).indexOf(v), x = i >= 0 ? p['x-preview']?.[i] : null;
   if (!x) return '<p class="k7-field__hint">' + (v ? 'No preview for this answer.' : 'Pick an answer to preview it.') + '</p>';
-  return (x.code != null ? H.well({ text: x.code, label: 'Preview' }) : '<p class="k7-field__hint">' + ui.esc(x.text ?? '') + '</p>') + (x.note ? '<p class="k7-field__hint">' + ui.esc(x.note) + '</p>' : '');
+  return (x.code != null ? H.well({ text: x.code, label: 'Preview' }) : '<p class="k7-field__hint">' + esc(x.text ?? '') + '</p>') + (x.note ? '<p class="k7-field__hint">' + esc(x.note) + '</p>' : '');
 }
 
 /** what the form shows before its fields: a setup's config change (the kit's DiffView in a Well), a plan (board 17's card of steps,
@@ -170,8 +170,8 @@ function extrasHTML(d: FormSpec): string {
   } else if (d.kind === 'connector') {
     const reach = plain((d.contents ?? []).map((x) => (x[1] ? x[0] + ': ' + x[1] : x[0])).join('. '));
     const name = d.name || cap(d.title);
-    h += '<div class="k7-ask__item"><span class="k7-ask__tile" aria-hidden="true">' + ui.esc(name.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '?') + '</span><span class="k7-ask__item-text"><span class="k7-ask__item-name">' + ui.esc(name) + '</span>' +
-      (reach ? '<span class="k7-ask__item-line">' + ui.esc(reach) + '</span>' : '') + (d.pinned ? '<span class="k7-ask__item-line k7-mono">Pinned ' + ui.esc(d.pinned) + '</span>' : '') + '</span></div>';
+    h += '<div class="k7-ask__item"><span class="k7-ask__tile" aria-hidden="true">' + esc(name.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '?') + '</span><span class="k7-ask__item-text"><span class="k7-ask__item-name">' + esc(name) + '</span>' +
+      (reach ? '<span class="k7-ask__item-line">' + esc(reach) + '</span>' : '') + (d.pinned ? '<span class="k7-ask__item-line k7-mono">Pinned ' + esc(d.pinned) + '</span>' : '') + '</span></div>';
   }
   if (d.swatches?.length) h += H.swatches({ label: 'Colours', items: d.swatches.map((x) => ({ label: x[0], hex: x[1] })) });
   return h;
@@ -606,9 +606,9 @@ function wirePicker(pk: HTMLElement, st: FormState, props0: Readonly<Record<stri
 function pickerEntries(kind: PickerKind, p: FieldSchema | undefined, cur: string): readonly MenuEntry[] {
   const d = provider();
   const row = (o: OptionRowOpts): OptionRowOpts => ({ ...o, chosen: o.value === cur });
-  if (p?.enum && !p['x-picker']) return p.enum.map((x) => row({ label: optLabel(p, x), meaning: '', value: String(x), leadHTML: ui.html.modelMark(String(x), { size: 16, label: false }) }));
+  if (p?.enum && !p['x-picker']) return p.enum.map((x) => row({ label: optLabel(p, x), meaning: '', value: String(x), leadHTML: markHTML(String(x), { size: 16, label: false }) }));
   if (kind === 'teammate') return d.bots.snapshot().bots.map((b) => row({ label: b.name, meaning: b.role ?? '', value: b.id, leadHTML: H.avatar({ bot: b, size: 16, still: true }) }));
-  if (kind === 'model') return d.details.models.get().map((m) => row({ label: ui.modelMark.short(m) || m, meaning: m, value: m, leadHTML: ui.html.modelMark(m, { size: 16, label: false }) }));
+  if (kind === 'model') return d.details.models.get().map((m) => row({ label: modelMark.short(m) || m, meaning: m, value: m, leadHTML: markHTML(m, { size: 16, label: false }) }));
   const items = d.forms.pickerItems(kind), icon = PICK_ICON[kind];
   return items.length ? items.map((x) => row({ label: x.label, meaning: x.desc ?? '', value: x.value, ...(icon ? { icon } : {}) })) : [{ label: 'Nothing to choose from yet', meaning: 'The source has nothing of this kind', value: '', disabled: true }];
 }

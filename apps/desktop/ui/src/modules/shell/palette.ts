@@ -4,7 +4,7 @@ import { emit } from '../../core/bus';
 import { callProvided, getDockApi, hasProvider } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
-import { kit, ui } from '@boopis/ui';
+import { kit, tooltip } from '@boopis/ui';
 import type { CommandPaletteRow } from '@boopis/ui';
 import { data } from '../../data';
 import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
@@ -147,7 +147,7 @@ export function runPal(i: number): void {
 }
 export function openPalette(opts: { scope?: string; query?: string } = {}): void {
   const el = els();
-  closeMenu(false); ui.tooltip.hide();
+  closeMenu(false); tooltip.hide();
   const ks = document.getElementById('hx-keys-sheet') as HTMLDialogElement | null; if (ks && ks.open) ks.close();
   if (el.settings.open) return;
   pal.scope = opts.scope ?? null;

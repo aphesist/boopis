@@ -1,7 +1,7 @@
 /* The models plan as a Settings section: the kit's settings Card of rows (board 14's `.sr`), filled only with what
    Hermes reported (free-tier.ts). It has no tab of its own here: Settings > Models mounts it (`mountPlan`), and Diagnostics
    carries the same facts as text (`planLines`, in the report). Refreshing asks Hermes again; nothing is cached or guessed. */
-import { kit, ui } from '@boopis/ui';
+import { kit, modelMark } from '@boopis/ui';
 import type { RowOpts } from '@boopis/ui';
 import { frag } from '../core/dom';
 import { currentPlan, inWords, resetText } from './free-tier';
@@ -14,7 +14,7 @@ export function planRows(view: PlanView, now = Date.now()): RowOpts[] {
   const rows: RowOpts[] = [
     { label: 'Plan', ...(view.detail ? { sub: view.detail } : {}), value: view.label ? `${PLAN_WORD[view.kind]} (${view.label})` : PLAN_WORD[view.kind] }
   ];
-  if (view.model) rows.push({ label: 'Model', value: ui.modelMark.called(view.model) || view.model });
+  if (view.model) rows.push({ label: 'Model', value: modelMark.called(view.model) || view.model });
   if (view.limit) {
     const when = resetText(view.limit.resetsAtMs, now);
     const sub = [view.limit.message, when].filter(Boolean).join(' ');

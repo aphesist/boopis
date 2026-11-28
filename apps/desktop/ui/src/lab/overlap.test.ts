@@ -64,7 +64,7 @@ describe('geometry.overlap', () => {
     expect(await overlaps(room(LOG.replace('height:200px', 'height:120px').replace('overflow:auto', 'overflow:visible') + strip))).toHaveLength(1);
   });
   it('leaves a tooltip over text alone, and the overlay the lab declares', async () => {
-    const tip = '<div class="ui-tip" style="position:absolute;left:20px;top:52px;background:transparent">a tooltip over the first entry</div>';
+    const tip = '<div class="k7-tip" style="position:absolute;left:20px;top:52px;background:transparent">a tooltip over the first entry</div>';
     expect(await overlaps(room(LOG + tip))).toEqual([]);
     const layer = '<div id="layer" style="position:absolute;left:20px;top:52px">a layer the story declares</div>';
     expect(await overlaps(room(LOG + layer))).toHaveLength(1);

@@ -8,7 +8,7 @@
         provider: "moa"}`, so that admission alone runs the preset and the session's own model is never written (model-switch.ts);
      3. reads the turn's `moa.reference`, `moa.progress`, `moa.phase` and `moa.aggregating` events into a `CouncilTurn`.
    The pure parts (who sits by default, the preset's writes, the labels, the event reducer) are tested alone; the rest is thin. */
-import { ui } from '@boopis/ui';
+import { modelMark } from '@boopis/ui';
 import { logger } from '../../core/log';
 import { isHeavy } from '../../data/frontier';
 import { MIN_COUNCIL } from '../../data/types';
@@ -77,8 +77,8 @@ export function defaultMembers(choices: readonly ModelChoice[]): CouncilSlot[] {
 }
 
 /** whether a slot is one of the models on offer (the same model under its alias or its pinned id is the same) */
-export const isOffered = (choices: readonly ModelChoice[], s: CouncilSlot): boolean => choices.some((c) => c.provider === s.provider && ui.modelMark.same(c.model, s.model));
-const sameSlot = (a: CouncilSlot, b: CouncilSlot): boolean => a.provider === b.provider && ui.modelMark.same(a.model, b.model);
+export const isOffered = (choices: readonly ModelChoice[], s: CouncilSlot): boolean => choices.some((c) => c.provider === s.provider && modelMark.same(c.model, s.model));
+const sameSlot = (a: CouncilSlot, b: CouncilSlot): boolean => a.provider === b.provider && modelMark.same(a.model, b.model);
 
 /** a slot as 'provider/model', the value the rest of the UI names a model by */
 export const valueOfSlot = (s: CouncilSlot): string => valueOf(s.provider, s.model);
@@ -87,7 +87,7 @@ export const valueOfSlot = (s: CouncilSlot): string => valueOf(s.provider, s.mod
 export function defaultChoice(choices: readonly ModelChoice[], current: string): CouncilChoice {
   const members = defaultMembers(choices);
   const s = splitValue(current);
-  const known = choices.find((c) => c.value === current) ?? choices.find((c) => ui.modelMark.same(c.value, current));
+  const known = choices.find((c) => c.value === current) ?? choices.find((c) => modelMark.same(c.value, current));
   const combiner: CouncilSlot | null = known ? { provider: known.provider, model: known.model } : current && s.provider ? { provider: s.provider, model: s.model } : null;
   return { members, combiner: combiner ?? members[0] ?? { provider: '', model: '' } };
 }

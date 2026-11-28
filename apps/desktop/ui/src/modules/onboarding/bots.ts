@@ -6,7 +6,7 @@
 
    The owner's decisions win over the boards (27 November): only the owner's Approvals list asks (bots have no asks of their own), paying
    with a saved card is a built-in protection, and there is no spending cap by default. */
-import { itemTile, kit, ui } from '@boopis/ui';
+import { icon, itemTile, kit } from '@boopis/ui';
 import type { Tile } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, OnboardingSource, TeamPlan } from '../../data';
@@ -95,7 +95,7 @@ async function exchange(src: OnboardingSource): Promise<string> {
       const on = S.rules.filter((r) => r.enabled).length;
       const rows = S.rules.map((r) => ruleRow({ key: r.id, text: r.text, enabled: r.enabled }));
       return time + you(S.you) + say('Before they start: these are the things every bot asks you about first. Keep, edit or remove any of them.') +
-        kit.html.askCard({ variant: 'form', state: 'asked', who: 'Your approval rules, for every bot', lead: '<span class="hx-ob__glyph" aria-hidden="true">' + ui.html.icon('shield', { size: 's' }) + '</span>', word: { text: String(on) + ' on' }, ask: 'Your bots ask you before',
+        kit.html.askCard({ variant: 'form', state: 'asked', who: 'Your approval rules, for every bot', lead: '<span class="hx-ob__glyph" aria-hidden="true">' + icon('shield', { size: 's' }) + '</span>', word: { text: String(on) + ' on' }, ask: 'Your bots ask you before',
           fields: S.rules.length ? kit.html.card({ variant: 'settings', rows, attrs: { 'data-mark-reveal': 'hover' } }) : kit.html.emptyState({ text: 'No rules yet.' }), effect: BUILT_IN.replace(/^Built in: /, 'Built in, whatever the list says: '),
           answers: [{ label: 'Keep these rules', primary: true, value: 'keep' }, { label: 'Add a rule', value: 'add' }, { label: 'Open in Settings', value: 'settings' }], attrs: { 'data-ob': 'rules' } });
     }

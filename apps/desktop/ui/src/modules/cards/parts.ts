@@ -1,7 +1,7 @@
 /* What the form card and its neighbours read from a card's data: text helpers, the asker (its origin), the countdown, and the
    config diff a bot's settings show. Pure functions over the data; nothing here draws a card (the kit's AskCard does, form.ts). */
 import { esc } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { modelMark } from '@boopis/ui';
 import { data } from '../../data';
 import type { Origin } from '../../data';
 import type { Data } from './types';
@@ -13,7 +13,7 @@ export const parts = (s: unknown): string[] => (Array.isArray(s) ? s.map(String)
 const botList = () => data().bots.snapshot().bots;
 export const bot = (id: string | undefined): ReturnType<typeof botList>[number] | undefined => (id ? botList().find((b) => b.id === id || b.name === id) : undefined);
 /** a route ('qwen3-coder → sonnet 5.5') asks as the model it ended on: one mark, one name (the route itself is the session's call number) */
-const asker = (m: string | undefined): string => ui.modelMark.last(m) || String(m || '');
+const asker = (m: string | undefined): string => modelMark.last(m) || String(m || '');
 
 /* ───────── origin: who is asking ─────────
    {kind: 'teammate', ids, via} | {kind: 'agent', model} | {kind: 'plugin' | 'hermes' | 'host'} | {kind: 'mcp', server, trust} | {kind: 'mod', plugin}.

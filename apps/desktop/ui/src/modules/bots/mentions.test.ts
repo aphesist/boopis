@@ -3,7 +3,7 @@
    a menu like the composer's lists, and the pick a real capsule in the text): the v7 kit's one composer, which a bot's chat, a
    room, the dock's card and a session use, typed the way a person types: each character at the caret, then its input. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { kit, MENTION_SOURCE, ui } from '@boopis/ui';
+import { kit, MENTION_SOURCE, modelMark } from '@boopis/ui';
 import type { MarkdownCtx, MdBot } from '@boopis/ui';
 import { mentionChips } from '../chat/compose';
 import { findMentions, mentionName } from '../../data/mentions';
@@ -148,7 +148,7 @@ describe('the kit\'s composer: mentions as chips in the text', () => {
   });
   it('a session names a model the same way: "@cl" and Tab write its name, drawn as one chip of its words', async () => {
     const HAIKU = { value: 'anthropic/claude-haiku-4-5', model: 'claude-haiku-4-5' } as unknown as ModelChoice;
-    const called = (m: string): string => ui.modelMark.called(m), name = mentionName(HAIKU, called);
+    const called = (m: string): string => modelMark.called(m), name = mentionName(HAIKU, called);
     document.body.replaceChildren();
     k = kit.composer({ kind: 'session' });
     document.body.append(k);

@@ -2,15 +2,15 @@
    mark and its name, the chevron), and it opens a list Menu of the models, one heading per provider where there are several, the one
    chosen checked, each row led by its provider's mark in its brand colour (design system 10.1: a list of models is the picker). The
    Menu has the kit's keys: the arrows, Home and End, a letter, Enter and Space; Esc closes it and the focus goes back to the field. */
-import { kit, ui } from '@boopis/ui';
+import { kit, markHTML, modelMark } from '@boopis/ui';
 
 type MenuEntry = Parameters<typeof kit.openMenu>[1]['entries'][number];
 
-const lead = (m: string, size: number): string => ui.html.modelMark(m, { size, color: 'brand', label: false });
+const lead = (m: string, size: number): string => markHTML(m, { size, color: 'brand', label: false });
 
 /** the field: the model's mark and its name, or the placeholder; `name` is the handle the module finds it by */
 export function modelFieldHTML(name: string, label: string, value: string, o: { disabled?: boolean } = {}): string {
-  return kit.html.selectorItem({ variant: 'field', label, value: value ? ui.modelMark.called(value) || value : 'Choose a model', ...(value ? { leadHTML: lead(value, 14) } : {}),
+  return kit.html.selectorItem({ variant: 'field', label, value: value ? modelMark.called(value) || value : 'Choose a model', ...(value ? { leadHTML: lead(value, 14) } : {}),
     attrs: { 'data-model-pick': name, 'data-label': label, 'data-value': value, ...(o.disabled ? { disabled: '', 'aria-disabled': 'true' } : {}) } });
 }
 
@@ -18,11 +18,11 @@ export function modelFieldHTML(name: string, label: string, value: string, o: { 
 export function modelMenuEntries(models: readonly string[], value: string): MenuEntry[] {
   const groups = new Map<string, { name: string; list: string[] }>();
   for (const m of new Set(models)) {
-    const f = ui.modelMark.family(m);
+    const f = modelMark.family(m);
     const g = groups.get(f.id) ?? { name: f.name, list: [] };
     g.list.push(m); groups.set(f.id, g);
   }
-  const row = (m: string): MenuEntry => ({ label: ui.modelMark.called(m) || m, value: m, role: 'menuitemradio', checked: m === value, leadHTML: lead(m, 16) });
+  const row = (m: string): MenuEntry => ({ label: modelMark.called(m) || m, value: m, role: 'menuitemradio', checked: m === value, leadHTML: lead(m, 16) });
   return groups.size < 2 ? [...groups.values()].flatMap((g) => g.list.map(row)) : [...groups.values()].flatMap((g) => [{ heading: g.name } as MenuEntry, ...g.list.map(row)]);
 }
 

@@ -1,0 +1,120 @@
+/* The corner engine's CSS (squircle.ts, corners.ts; DESIGN-SYSTEM.md §8.1 and §8.2) and the app root's behaviour: kept when the v6
+   component library (components.css) went at the repass's step 2b, because the kit draws on it. Tokens only. */
+
+/* ───────────── corners (owner decisions, 18 November 2026): Apple continuous corners in every engine; nested corners fit ─────────────
+   The scale (--r-xs to --r-l, --r-floor, --corner-smoothing, --composer-pad) lives in tokens.css (MIGRATION.md §0.8).
+   The corner is a path (HX.ui.squircle, below), so WebKit and Chromium draw the same curve.
+   The nesting contract (DESIGN-SYSTEM.md §8.2: R-corner-3, R-corner-4, R-corner-5, R-corner-9), declared ONCE, here; corners.ts is the same arithmetic, tested.
+   A container declares --r-outer and --pad from the tokens (--pad-menu, --composer-pad, ...: its --r-in then
+   equals tokens.css's --r-in-* for it), and --corner-size when what sits in its corners is not a --ctl-s square;
+   the rule below derives, on the container itself:
+     --r-in          = min(outer, max(floor, outer − pad))   what a nested surface takes (.ui-fit)
+     --r-corner      = min(--r-in, size / 2)                 what a corner control takes (a 28px square is at most a circle)
+     --corner-inset  = outer − --r-corner                    where a corner control sits from both edges, so the two curves
+                                                             share a centre: the pad while the formula holds, less where
+                                                             the padding gives way to the floor, more where the control
+                                                             cannot be as round as --r-in
+     --corner-ring   = clamp(−2px, inset − 3px, 2px)         the focus ring's offset: ring and the container's line stay inside
+   A pill container declares its real radius (half its height), so a round piece inside stays a pill at the pad.
+   Containers: .ui-nest (any module surface) and the library's own, listed here. What sits in a corner: .ui-corner
+   (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
+   radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
+   declared none (squircle.ts), so its children nest the same way. */
+:where(.ui-nest, .ui-codeblock) {
+  --corner-size: var(--ctl-s);
+  --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
+  --r-corner: min(var(--r-in), calc(var(--corner-size) / 2));
+  --corner-inset: max(0px, calc(var(--r-outer) - var(--r-corner)));
+  --corner-ring: clamp(-2px, calc(var(--corner-inset) - 3px), 2px);
+}
+.ui-nest { --r-outer: var(--r-m); --pad: 0px; border-radius: var(--r-outer); }
+.ui-fit { border-radius: var(--r-in, var(--r-s)); }
+/* a row along a container's edge whose ends are its corners (a composer's bar, a toast's actions): inset from both sides
+   and the edge it sits on (bottom by default; data-edge="top", or "both" for a one-row container) */
+.ui-corners { padding-inline: var(--corner-inset, 0px); padding-block: 0 var(--corner-inset, 0px); }
+.ui-corners[data-edge="top"] { padding-block: var(--corner-inset, 0px) 0; }
+.ui-corners[data-edge="both"] { padding-block: var(--corner-inset, 0px); }
+/* one control set into a corner on its own (the container is position: relative): data-corner="tl|tr|br|bl" */
+.ui-corner[data-corner] { position: absolute; }
+.ui-corner[data-corner^="t"] { top: var(--corner-inset, 0px); }
+.ui-corner[data-corner^="b"] { bottom: var(--corner-inset, 0px); }
+.ui-corner[data-corner$="l"] { left: var(--corner-inset, 0px); }
+.ui-corner[data-corner$="r"] { right: var(--corner-inset, 0px); }
+
+
+/* ───────────── grounds: a scope that re-derives the roles for the surface it sits on ─────────────
+   [data-ground="dock"]: everything inside the pitch-black dock (and a card set into it). The roles keep their
+   names, so a component never needs a dock variant: it reads --text, --line, --hover as usual. */
+[data-ground="dock"] {
+  --text: var(--ink-on-dock);
+  --text-strong: var(--ink-on-dock-strong);
+  --text-dim: color-mix(in srgb, var(--ink-on-dock) 68%, var(--dock-bg));
+  --text-quiet: color-mix(in srgb, var(--ink-on-dock) 60%, var(--dock-bg));
+  --text-faint: color-mix(in srgb, var(--ink-on-dock) 42%, var(--dock-bg));   /* non-text marks (page dots, ladder rings): 3.3–3.6:1 on #000 */
+  --mark-off: var(--text-faint);
+  --icon: color-mix(in srgb, var(--ink-on-dock) 75%, var(--dock-bg));
+  --icon-off: color-mix(in srgb, var(--ink-on-dock) 30%, var(--dock-bg));
+  --bg-0: var(--dock-bg);
+  --bg-1: var(--dock-bg);
+  --bg-2: var(--dock-bg);
+  --bg-3: color-mix(in srgb, var(--ink-on-dock) 13%, var(--dock-bg));
+  --bg-4: color-mix(in srgb, var(--ink-on-dock) 19%, var(--dock-bg));
+  --chip: color-mix(in srgb, var(--ink-on-dock) 12%, var(--dock-bg));
+  --surface: color-mix(in srgb, var(--ink-on-dock) 7%, var(--dock-bg));
+  --selected: var(--ink-on-dock);
+  --text-on-light: var(--dock-bg);
+  --hair: color-mix(in srgb, var(--ink-on-dock) 8%, transparent);
+  --line: color-mix(in srgb, var(--ink-on-dock) 17%, transparent);
+  --line-strong: color-mix(in srgb, var(--ink-on-dock) 30%, transparent);
+  --line-field: color-mix(in srgb, var(--ink-on-dock) 40%, transparent);
+  --hover: color-mix(in srgb, var(--ink-on-dock) 6%, transparent);
+  --current: color-mix(in srgb, var(--ink-on-dock) 10%, transparent);
+  --red-text: color-mix(in srgb, var(--red) 80%, var(--ink-on-dock));
+  --brass: color-mix(in srgb, var(--brass-base) 78%, var(--ink-on-dock));
+  --brass-soft: color-mix(in srgb, var(--brass-base) 14%, transparent);
+  --focus: color-mix(in srgb, var(--brass-base) 78%, var(--ink-on-dock));
+  color: var(--text);
+}
+:root[data-hx-theme="light"] [data-ground="dock"] { --brass: color-mix(in srgb, var(--brass-base) 55%, var(--ink-on-dock)); --focus: color-mix(in srgb, var(--brass-base) 55%, var(--ink-on-dock)); }
+
+/* ───────────── root behaviour: put .ui-root on the app root (the shell's .hx) ───────────── */
+:where(.ui-root, [data-layer-host]) { caret-color: var(--brass); }
+:where(.ui-root) ::selection { background: var(--brass-soft); color: var(--text-strong); }
+:where(.ui-root, .ui-scope) :focus { outline: none; }
+:where(.ui-root, .ui-scope) :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+
+/* ───────────── squircle: the drawn corner (HX.ui.squircle binds these; DESIGN-SYSTEM.md §8.1) ─────────────
+   Bound elements carry data-sq-mode and, once their path is written, data-sq-on. The --sq-* properties are plain
+   (inheriting) custom properties: the pseudo-elements that draw the line, the ring and a surface's background read
+   them from their element. (Registered as non-inheriting with `inherit` on the pseudo-element, WebKitGTK 2.52 hands
+   the pseudo-element the grandparent's value.) Every bound element starts with no line and no surface of its own, so
+   it never shows its container's. The reset has no specificity, so a component's own --sq-bg or --sq-line (declared
+   anywhere) wins; a bound element inside it that declares nothing gets transparent, never its container's.
+
+   Owner rule: never clip-path a container whose content may overflow. Only leaf controls clip (buttons, icon
+   buttons, send, the segmented thumb, file chips: nothing inside reaches past their edge). Every other bound element
+   is a frame: its content is left alone and the corner is drawn by two layers, ::before (the fill, --sq-bg) and
+   ::after (the line, --sq-line, and the focus ring). A frame's component therefore writes its fill once, as
+   `--sq-bg: X; background: var(--sq-bg)`, so the same colour paints the element itself whenever it is not bound
+   (before the library runs, or when its corner is a capsule the browser draws). Floating surfaces (menus, popovers,
+   tips, toasts) are frames that keep their elevation shadow. */
+:where([data-sq-mode]) { --sq-line: transparent; --sq-bg: transparent; position: relative; }   /* position: set when it binds, before its first size, so writing the path never moves layout */
+/* clip (leaf controls): the element is clipped to the path; its inset line and its focus ring are drawn by ::after on a band of it */
+[data-sq-on][data-sq-mode="clip"]:not(#sq) { clip-path: var(--sq-clip); box-shadow: none; }
+[data-sq-on]:not([data-sq-mode="slab"]):not([data-sq-mode="concave"])::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: 0;
+  background: var(--sq-line, transparent); clip-path: var(--sq-edge);
+}
+[data-sq-on]:not(#sq):focus-visible { outline: none; }
+[data-sq-on]:is([data-sq-mode="clip"], [data-sq-mode="frame"]):focus-visible::after { background: var(--focus); clip-path: var(--sq-ring, var(--sq-edge)); }
+/* frame and surface: nothing is clipped (orbs, flags, popovers and shadows reach past the edge); the fill is a clipped
+   ::before that keeps the element's own transition. A frame drops box-shadow (its line is the ::after); a surface keeps
+   its elevation shadow. */
+[data-sq-on]:is([data-sq-mode="frame"], [data-sq-mode="surface"]):not(#sq) { background: none; isolation: isolate; }
+[data-sq-on][data-sq-mode="frame"]:not(#sq) { box-shadow: none; }
+[data-sq-on]:is([data-sq-mode="frame"], [data-sq-mode="surface"])::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--sq-bg); clip-path: var(--sq-clip); transition: inherit; }
+/* slab and concave: the path carves the flares and the concave corner out of plain squares */
+[data-sq-on][data-sq-mode="slab"]:not(#sq) { clip-path: var(--sq-clip); }
+
+/* what each bound component draws as its line (--sq-line) or paints as its surface (--sq-bg) */

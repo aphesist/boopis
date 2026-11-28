@@ -17,20 +17,20 @@ function onClick(e: MouseEvent): void {
   const t = e.target as Element | null;
   const b = t?.closest<HTMLButtonElement>('.ui-codeblock button'); if (!b) return;
   const well = b.closest('.ui-codeblock'); if (!well) return;
-  if (b.classList.contains('ui-codeblock__copy')) { void copyText(codeOf(well), 'Copied the code'); return; }
-  if (b.classList.contains('ui-codeblock__wrap')) {
+  if (b.dataset['code'] === 'copy') { void copyText(codeOf(well), 'Copied the code'); return; }
+  if (b.dataset['code'] === 'wrap') {
     const on = b.getAttribute('aria-pressed') !== 'true';
     b.setAttribute('aria-pressed', String(on));
     well.toggleAttribute('data-wrap', on);
     return;
   }
-  if (b.classList.contains('ui-codeblock__fold')) {
+  if (b.dataset['code'] === 'fold') {
     const rest = well.querySelector<HTMLElement>('.ui-codeblock__rest'); if (!rest) return;
     const open = rest.hidden;
     rest.hidden = !open;
     well.toggleAttribute('data-folded', !open);
     b.setAttribute('aria-expanded', String(open));
-    const label = b.querySelector('span');
+    const label = b.querySelector('.k7-btn__label');
     if (label) label.textContent = open ? 'Show fewer lines' : 'Show ' + (b.dataset['more'] ?? '') + ' more lines';
   }
 }

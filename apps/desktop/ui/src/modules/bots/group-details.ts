@@ -4,7 +4,7 @@
    a different set is a new room), the most rounds a run may take, its kanban board in the thread's place, and Archive. */
 import { emit } from '../../core/bus';
 import { esc } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { kit, orbHtml } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import { data } from '../../data';
 import type { Group } from '../../data';
@@ -27,7 +27,7 @@ export function roomPaneHTML(g: Group, repaint: () => void): string {
   const members = g.members.map((m): BotLike => memberBot(m));
   const rows = g.members.map((m) => {
     const b = bot(m.profile);
-    return { label: m.name, labelHTML: ui.html.orb({ ...memberBot(m), state: 'idle', attention: null }, { size: 16, still: true }) + ' ' + esc(m.name), ...(b?.role ? { value: b.role } : {}), ...(b ? { action: 'opens its chat', attrs: { 'data-member': b.id } } : {}) };
+    return { label: m.name, labelHTML: orbHtml({ ...memberBot(m), state: 'idle', attention: null }, { size: 16, still: true }) + ' ' + esc(m.name), ...(b?.role ? { value: b.role } : {}), ...(b ? { action: 'opens its chat', attrs: { 'data-member': b.id } } : {}) };
   });
   const limit = LIMIT.get(g.id);
   const room = [

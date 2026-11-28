@@ -1,6 +1,6 @@
 /* Menu (21.2 row 5; LAB-v7: menu, quick menu, palette /, @, $, snooze, split-button menu, option menu; open, a row hover, a row
    focus, long names (truncate), flipped near the bottom). */
-import { kit, ui } from '@boopis/ui';
+import { kit, markHTML } from '@boopis/ui';
 import { line, stage } from '../../../lab/story';
 import type { Story } from '../../../lab/types';
 import { KAI, NINA } from '../../../lab/stories/kit/_bots';
@@ -39,8 +39,8 @@ export default {
       line(root, kit.menu({ label: 'Who answers next', variant: 'options', entries: [
         { label: 'Automatic (Smart)', meaning: 'Picks a tier for each message: the cheapest by default, a stronger one for design, debugging, code or a run that keeps failing', icon: 'spark', chosen: false },
         { label: 'Ask a council', meaning: 'Several models answer your next message, one combines them', icon: 'bots', keys: 'alt+C' },
-        { heading: 'Anthropic' }, { label: 'Claude Haiku 5.5', meaning: 'Tier 1 of 3, the cheapest', leadHTML: ui.html.modelMark('claude-haiku-5-5', { size: 16, label: false }) }, { label: 'Claude Sonnet 5.5', meaning: 'Tier 2 of 3', chosen: true, leadHTML: ui.html.modelMark('claude-sonnet-5-5', { size: 16, label: false }) },
-        { heading: 'OpenAI' }, { label: 'GPT 5.5', meaning: 'Not on the ladder', disabled: true, leadHTML: ui.html.modelMark('gpt-5.5', { size: 16, label: false }) },
+        { heading: 'Anthropic' }, { label: 'Claude Haiku 5.5', meaning: 'Tier 1 of 3, the cheapest', leadHTML: markHTML('claude-haiku-5-5', { size: 16, label: false }) }, { label: 'Claude Sonnet 5.5', meaning: 'Tier 2 of 3', chosen: true, leadHTML: markHTML('claude-sonnet-5-5', { size: 16, label: false }) },
+        { heading: 'OpenAI' }, { label: 'GPT 5.5', meaning: 'Not on the ladder', disabled: true, leadHTML: markHTML('gpt-5.5', { size: 16, label: false }) },
         '-', { heading: 'Effort' }, { label: 'Low', checked: false, role: 'menuitemradio' }, { label: 'Medium', checked: true, role: 'menuitemradio' }, { label: 'High', checked: false, role: 'menuitemradio' },
         '-', { heading: 'Governed: your pick is where the ladder starts. The gate still moves it up when a run fails.' }
       ] }));

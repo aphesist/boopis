@@ -1,23 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { ui } from './index';
+import { icon, iconNames, inlineCodeHTML, kit } from './index';
 import { ariaKeys, keyLabel } from '../core/keys';
 import { botState, botLabel } from './bot-state';
 import { frag } from '../core/dom';
 
 describe('the markup the CSS depends on', () => {
   it('escapes what it is given', () => {
-    expect(ui.html.badge({ label: '<b>x</b>' })).not.toContain('<b>x</b>');
-    expect(ui.html.inline('`a<b>`')).toBe('<code class="ui-code">a&lt;b&gt;</code>');
-  });
-  it('a measure names its fill for assistive tech', () => {
-    expect(ui.html.measure({ used: 76000, total: 200000 })).toContain('aria-label="Context 38% used"');
+    expect(kit.html.badge({ text: '<b>x</b>' })).not.toContain('<b>x</b>');
+    expect(inlineCodeHTML('`a<b>`')).toBe('<code class="k7-chip-in k7-code">a&lt;b&gt;</code>');
   });
 });
 
 describe('the icon library', () => {
   it('has the dice, drawn on the 16 grid with its three pips filled', () => {
-    expect(ui.icons).toContain('dice');
-    const svg = frag(ui.icon('dice'));
+    expect(iconNames).toContain('dice');
+    const svg = frag(icon('dice'));
     expect(svg.getAttribute('viewBox')).toBe('0 0 16 16');
     expect(svg.querySelectorAll('rect')).toHaveLength(1);
     expect(svg.querySelectorAll('circle.is-fill')).toHaveLength(3);

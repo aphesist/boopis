@@ -18,7 +18,7 @@ import type { ModelOverride } from './model-switch';
 import { routeMentions } from '../../data/mentions';
 import { prepareOnce } from './attribution';
 import type { LadderTier } from './models';
-import { ui } from '@boopis/ui';
+import { modelMark } from '@boopis/ui';
 import { applyEvent, infoReport, newModel, usageReport } from './session-model';
 import type { Part, SessionModel } from './session-model';
 import { isUnknownMethod } from './wire';
@@ -309,9 +309,9 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       if (patch.smart !== undefined) m.smart = patch.smart;
       if (patch.model !== undefined) {
         /* a person's pick answers the next messages of this session; it is applied when the message goes out (`prepareSend`) */
-        if (governedOf(m) && !ladderOf(m).some((t) => ui.modelMark.same(valueOf(t.provider, t.id), patch.model))) return 'In governed mode the ladder runs the work. Choose one of its tiers to say where it starts.';
+        if (governedOf(m) && !ladderOf(m).some((t) => modelMark.same(valueOf(t.provider, t.id), patch.model))) return 'In governed mode the ladder runs the work. Choose one of its tiers to say where it starts.';
         /* the engine asked to confirm this very model and the person chose it again: that is their yes, sent with the next message */
-        if (m.pick?.asked && ui.modelMark.same(m.pick.value, patch.model)) m.pick.confirmed = m.pick.asked;
+        if (m.pick?.asked && modelMark.same(m.pick.value, patch.model)) m.pick.confirmed = m.pick.asked;
         m.wantModel = patch.model;
         m.smart = false;
         endOnce(m);
@@ -372,9 +372,9 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     async prepareMention(uiId, text, o) {
       const m = model(uiId), gw = deps.gwId(uiId);
       endOnce(m);
-      const route = routeMentions(text, choices.get(), (x) => ui.modelMark.called(x));
+      const route = routeMentions(text, choices.get(), (x) => modelMark.called(x));
       if (route.kind !== 'one' || !gw) return null;
-      const c = route.choice, say = ui.modelMark.called(c.model) || c.model, was = engineModel(m);
+      const c = route.choice, say = modelMark.called(c.model) || c.model, was = engineModel(m);
       m.once = { default: was };   /* the turn's reports name the mentioned model: they must not become the chip */
       let run;
       try { run = await prepareOnce({ client, gw, governed: governedOf(m), pluginOk, idle: o.idle, target: { provider: c.provider, model: c.model }, say }); }
@@ -399,19 +399,19 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
         why = 'Smart: ' + pick.reason;
       } else if (m.wantModel) {
         const s = splitValue(m.wantModel);
-        const t = tiers.find((x) => ui.modelMark.same(valueOf(x.provider, x.id), m.wantModel));
+        const t = tiers.find((x) => modelMark.same(valueOf(x.provider, x.id), m.wantModel));
         target = { provider: s.provider, model: s.model, ...(t ? { tier: t.name } : {}) };
       }
       if (!target) return { model: '', why: null };
       const value = valueOf(target.provider, target.model);
-      const say = ui.modelMark.called(target.model) || target.model;
+      const say = modelMark.called(target.model) || target.model;
       if (governedOf(m)) {
         if (!target.tier) throw new Error('In governed mode the ladder runs the work, and ' + say + ' is not one of its tiers, so the message was not sent.');
         if (gw && pluginOk && m.appliedTier !== target.tier) {
           try { await client.requestRaw(PLUGIN + 'cascade.start_tier', { session_id: gw, start_tier: target.tier }); m.appliedTier = target.tier; }
           catch (e) { throw new Error('The ladder could not be told to start on ' + say + ' (' + (e instanceof Error ? e.message : String(e)) + '), so the message was not sent.'); }
         }
-      } else if (gw && m.appliedModel !== value && !ui.modelMark.same(engineModel(m), value)) {
+      } else if (gw && m.appliedModel !== value && !modelMark.same(engineModel(m), value)) {
         /* the engine's own model pick (`session.mutate` operation `model`, see model-switch.ts): one request id per pick, kept across its retries */
         const pick = pickFor(m.pick, value);
         m.pick = pick;

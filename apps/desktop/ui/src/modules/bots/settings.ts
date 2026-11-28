@@ -7,7 +7,7 @@
    open); mod+I or the close button closes it. */
 import { emit } from '../../core/bus';
 import { cap1, el, frag, reduced } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { kit, modelMark } from '@boopis/ui';
 import type { RowOpts } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, BotConfig } from '../../data';
@@ -196,7 +196,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   const modelBox = el('div', { class: 'bt-model' });
   const paintModel = (): void => {
     const rows: RowOpts[] = c.gov === 'governed'
-      ? data().details.governance.get().ladder.map(([m, rule]) => ({ label: ui.modelMark.called(m) || m, sub: rule, leadHTML: kit.html.avatar({ variant: 'brand', model: m }) }))
+      ? data().details.governance.get().ladder.map(([m, rule]) => ({ label: modelMark.called(m) || m, sub: rule, leadHTML: kit.html.avatar({ variant: 'brand', model: m }) }))
       : [{ label: 'Model', control: modelFieldHTML('model', 'Model', c.model) }];
     /* the cap per run holds governed or not (ADR-0050) */
     rows.push({ label: 'Cap per run', sub: CAP_HINT, control: kit.html.field({ id: k('cap'), ariaLabel: 'Cap per run', value: c.cap, mono: true, placeholder: CAP_PLACEHOLDER }) });

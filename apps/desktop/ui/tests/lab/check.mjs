@@ -224,7 +224,7 @@ async function shot(page, row) {
          that holds the cell (the default, the stage) changes nothing; one inside the cell's box changes nothing either */
       const cell = document.querySelector('.lab-cell');
       const apart = !app && scope && cell && scope !== document.body && !scope.contains(cell) ? scope : null;
-      const els = [app ? scope : cell, apart, ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
+      const els = [app ? scope : cell, apart, ...document.querySelectorAll('.k7-tip.is-in, .k7-pop.is-in')].filter(Boolean);
       let x0 = Infinity, y0 = Infinity, x1 = 0, y1 = 0;
       for (const e of els) { const r = e.getBoundingClientRect(); if (!r.width) continue; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
       const pad = 12;

@@ -86,7 +86,7 @@ const PAPER_PAST: Group = { id: 'g-paper-past-', name: 'paper past', members: TE
 const tick = async (): Promise<void> => { for (let i = 0; i < 10; i++) await Promise.resolve(); };
 const flush = async (ms = 20): Promise<void> => { await vi.advanceTimersByTimeAsync(ms); await tick(); };
 
-/** every orb of `id` on the page: its wrapper is `ui.orb`'s, marked with the bot's id */
+/** every orb of `id` on the page: its wrapper is ``orb``'s, marked with the bot's id */
 const orbsOf = (id: string, root: ParentNode = document): Element[] => [...root.querySelectorAll('.ui-orb[data-bot="' + id + '"] > orb-avatar')];
 const lookOn = (o: Element): string => o.getAttribute('shape') + ' ' + o.getAttribute('color');
 /* the colour an orb carries: Bone and Ink as their theme draws them (`lookAttrs`), every other swatch as it is */

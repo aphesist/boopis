@@ -1,6 +1,6 @@
 /* The "who answers next" menu: Automatic (Smart) first, then every model the user can use right now, grouped by provider with the
    provider's logo and each model's readable name. Pure: it builds the entries, the composer opens them in the kit's listbox. */
-import { ui } from '@boopis/ui';
+import { modelMark } from '@boopis/ui';
 import type { MenuEntry, SelectEntry, SelectOption } from '@boopis/ui';
 import type { CouncilSay, FrontierView, ModelChoice } from '../../data';
 import { COUNCIL_DESC, COUNCIL_KEYS, COUNCIL_VALUE } from './council';
@@ -14,14 +14,14 @@ export const FOOT_GOVERNED = 'Governed: your pick is where the ladder starts. Th
 
 /** the choice the session answers with now, matched through aliases ('haiku' is 'claude-haiku-5-5[1m]'); undefined when it is not on the list */
 export const currentChoice = (choices: readonly ModelChoice[], current: string): ModelChoice | undefined =>
-  choices.find((c) => c.value === current) ?? choices.find((c) => ui.modelMark.same(c.value, current));
+  choices.find((c) => c.value === current) ?? choices.find((c) => modelMark.same(c.value, current));
 
 export function modelEntries(choices: readonly ModelChoice[], o: { current: string; governed: boolean; council?: CouncilSay }): SelectEntry[] {
   const list = [...choices];
   /* the model answering now is always on the list, even when the engine did not offer it */
   if (o.current && !currentChoice(list, o.current)) {
-    const s = ui.modelMark.split(o.current);
-    list.push({ value: o.current, provider: s.host, model: s.model, providerName: ui.modelMark.provider(s.host) });
+    const s = modelMark.split(o.current);
+    list.push({ value: o.current, provider: s.host, model: s.model, providerName: modelMark.provider(s.host) });
   }
   const tiers = list.filter((c) => c.tier !== undefined).length;
   const groups = new Map<string, { name: string; first: string; options: SelectOption[] }>();
@@ -31,7 +31,7 @@ export function modelEntries(choices: readonly ModelChoice[], o: { current: stri
     if (!g) { g = { name: c.providerName || 'Models', first: c.value, options: [] }; groups.set(key, g); }
     const onLadder = c.tier !== undefined;
     g.options.push({
-      value: c.value, label: ui.modelMark.called(c.model) || c.model, model: c.value,
+      value: c.value, label: modelMark.called(c.model) || c.model, model: c.value,
       ...(onLadder ? { desc: 'Tier ' + ((c.tier as number) + 1) + ' of ' + tiers + (c.tier === 0 ? ', the cheapest' : '') } : o.governed ? { desc: 'Not on the ladder' } : {}),
       ...(o.governed && !onLadder ? { disabled: true } : {})
     });

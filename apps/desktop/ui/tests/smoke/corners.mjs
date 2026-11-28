@@ -25,7 +25,7 @@ export async function corners(env) {
       for (let i = 0; i < 200; i++) { const b = document.createElement('button'); b.className = 'ui-btn'; b.textContent = 'b' + i; box.append(b); }
       document.body.append(box);
       await new Promise((r) => setTimeout(r, 400));
-      const q = __hx.ui.squircle; const a = q.stats();
+      const q = __hx.squircle; const a = q.stats();
       await new Promise((res) => { let n = 0; const tick = () => { for (const b of box.children) b.style.height = (24 + (n % 12)) + 'px'; if (++n < 120) requestAnimationFrame(tick); else res(); }; requestAnimationFrame(tick); });
       await new Promise((r) => setTimeout(r, 100));
       const z = q.stats(); box.remove();
@@ -35,10 +35,10 @@ export async function corners(env) {
 
     /* the dock's morphs and a card's height animation */
     const morph = await page.evaluate(async () => {
-      const q = __hx.ui.squircle, a = q.stats(), d = __hx.dock();
+      const q = __hx.squircle, a = q.stats(), d = __hx.dock();
       /* v7: the dock's morphs are the row to its one open size and back (a bot's card, the asks) */
       for (const m of [() => d.openSession(d.botAt(1)), () => d.closeSession(), () => d.openAsks(), () => d.setMode('normal'), () => d.openSession(d.botAt(2)), () => d.closeSession()]) { m(); await new Promise((r) => setTimeout(r, 650)); }
-      const card = __hx.ui.card('form', { id: 'perf', kind: 'question', title: 'q', origin: { kind: 'host' }, schema: { properties: { a: { type: 'string', title: 'A' } }, required: ['a'] } }, { size: 'inline' });
+      const card = __hx.card('form', { id: 'perf', kind: 'question', title: 'q', origin: { kind: 'host' }, schema: { properties: { a: { type: 'string', title: 'A' } }, required: ['a'] } }, { size: 'inline' });
       const h = document.createElement('div'); h.style.cssText = 'position:fixed;left:20px;top:20px;width:520px;z-index:9999'; h.append(card); document.body.append(h);
       await new Promise((r) => setTimeout(r, 300));
       card.querySelector('[data-action="submit"]').click(); await new Promise((r) => setTimeout(r, 700)); h.remove();

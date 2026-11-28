@@ -21,11 +21,11 @@ const RULES: readonly Rule[] = [
   { id: 'range', what: 'a range slider', instead: 'a segmented control, or a text field', re: TYPE('range'), kinds: ['.ts', '.html'] },
   { id: 'number', what: 'a number field (spin buttons)', instead: 'a text field with inputmode="decimal" or "numeric" (modules/cards/form.ts)', re: TYPE('number'), kinds: ['.ts', '.html'] },
   { id: 'file', what: 'a file input (the platform\'s chooser)', instead: 'keep the input hidden behind a button of the library', re: TYPE('file'), kinds: ['.ts', '.html'] },
-  { id: 'checkbox-radio', what: 'a stock checkbox or radio', instead: 'ui.switch, ui.segmented, ui.chipGroup or the form card\'s option rows', re: TYPE('checkbox|radio'), kinds: ['.ts', '.html'] },
+  { id: 'checkbox-radio', what: 'a stock checkbox or radio', instead: 'the kit\'s Switch, Segmented or OptionRow', re: TYPE('checkbox|radio'), kinds: ['.ts', '.html'] },
   { id: 'title-tooltip', what: 'a title="" tooltip (the platform\'s, unthemed, slow and unreadable by keyboard)', instead: 'data-tip (components/tooltip.ts) and an accessible name', re: /\stitle=(?:"|\\")|setAttribute\(\s*['"]title['"]/ },
   { id: 'native-dialog-call', what: 'alert(), confirm() or prompt()', instead: 'a form card or kit.notify', re: /(?<![\w.$])(?:window\.)?(?:alert|confirm|prompt)\(/ },
   { id: 'dialog', what: 'a <dialog> that is not the app\'s themed .hx-dialog', instead: 'the .hx-dialog pattern (modules/shell/shell.css)', re: /<dialog\b(?![^>]*class="hx-dialog)/ },
-  { id: 'disclosure-widget', what: 'a native <details>, <summary>, <progress> or <meter>', instead: 'ui.disclosure, ui.section, ui.measure, the progress dots', re: /<(?:details|summary|progress|meter)\b/ }
+  { id: 'disclosure-widget', what: 'a native <details>, <summary>, <progress> or <meter>', instead: 'the kit\'s Disclosure, SectionHead and ticks', re: /<(?:details|summary|progress|meter)\b/ }
 ];
 
 /** where a rule is allowed, and why. `file` is relative to `apps/desktop/ui`. */
@@ -95,8 +95,7 @@ describe('no native controls in src', () => {
     expect(probe(by('select-css'), '.ui-select { }')).toBe(false);
   });
   it('the stylesheet keeps the rules that stand in for the platform\'s own', () => {
-    const css = readFileSync(join(SRC, 'components/components.css'), 'utf8');
-    expect(css).toMatch(/:-webkit-autofill/);                      /* autofill keeps the theme's colours */
-    expect(css).toMatch(/\[data-layer-host\], \.ui-scroll\) ::-webkit-scrollbar/);   /* every scroller the app draws has the thin bar, in WebKitGTK too */
+    expect(readFileSync(join(SRC, 'components/v7/field/field.css'), 'utf8')).toMatch(/:-webkit-autofill/);   /* autofill keeps the theme's colours */
+    expect(readFileSync(join(SRC, 'components/scroll.css'), 'utf8')).toMatch(/\[data-layer-host\], \.ui-scroll\) ::-webkit-scrollbar/);   /* every scroller the app draws has the thin bar, in WebKitGTK too */
   });
 });

@@ -16,7 +16,7 @@ export const CHECKS = {
   'tokens.static':     { title: 'No hard-coded values in the source', ds: '3 ("tokens, never literals")', rule: 'R-colour-1', severity: 'fail', how: 'literal colours, font sizes and radii in CSS and TS outside the token files' },
   'inline-baseline':   { title: 'Inline chips sit on the text\'s line', ds: '7, 14.4', rule: null, severity: 'fail', how: 'a chip in running text (mention, "you", model mention, feedforward mark, inline code, path, blank, attachment): its text baseline on the line\'s within 0.5 device px, its box centred on the line\'s cap band within 1 device px, no taller line, even room left/right and above the cap height/below the baseline within 0.5 device px (zero-width 1cap probes, no pixel reading)' },
   'native':            { title: 'No unthemed native controls', ds: '14.25, 14.21', rule: 'R-native-1', severity: 'fail', how: 'select, date, colour, range, file and number inputs, engine-drawn checkboxes and radios, progress, meter' },
-  'scrollbar':         { title: 'Scrollers use the system\'s scrollbar', ds: '4.1 (--bg-4 is the thumb), components.css', rule: 'R-scroll-1', severity: 'fail', how: 'a ::-webkit-scrollbar rule no wider than 8px and a --bg-4 thumb on every scroller (WebKitGTK ignores scrollbar-width), and a fade on every edge it is scrolled off' },
+  'scrollbar':         { title: 'Scrollers use the system\'s scrollbar', ds: '4.1 (--bg-4 is the thumb), scroll.css', rule: 'R-scroll-1', severity: 'fail', how: 'a ::-webkit-scrollbar rule no wider than 8px and a --bg-4 thumb on every scroller (WebKitGTK ignores scrollbar-width), and a fade on every edge it is scrolled off' },
   'brand':             { title: 'The app never names its engine', ds: 'owner rule (19 November 2026), ADR-0031', rule: 'R-copy-8', severity: 'fail', how: 'rendered text, aria-label, aria-description, title, placeholder and tooltips name the engine (any case), outside a plugin store item (BRAND_ALLOW)' },
   'copy':              { title: 'No engine values in the interface', ds: '2', rule: 'R-copy-9', severity: 'fail', how: 'rendered text with undefined, NaN, [object Object], a stack trace, an hx.* code or JSON (code and output wells excluded)' },
   'roles':             { title: 'Colour roles', ds: '4.3, 9.1', rule: 'R-colour-3', severity: 'fail', how: 'no text in --brass; no --bg-0 on --bg-0 and no --bg-3 on --bg-3' },
@@ -52,7 +52,7 @@ export const checkIds = Object.keys(CHECKS);
 
 /** the fix agents' areas and the words that select them */
 export const AREAS = ['components', 'composer', 'shell', 'settings', 'bots', 'cards', 'dock', 'store'];
-export const AREA_TITLES = { components: 'Components (the HX.ui primitives)', composer: 'Conversation and composer', shell: 'Shell (sidebar, palette, menus, toasts)', settings: 'Settings and first run', bots: 'Bots', cards: 'Cards, forms and mods', dock: 'Dock', store: 'Store', static: 'Source (static scan)' };
+export const AREA_TITLES = { components: 'Components (the engines the kit draws with)', composer: 'Conversation and composer', shell: 'Shell (sidebar, palette, menus, toasts)', settings: 'Settings and first run', bots: 'Bots', cards: 'Cards, forms and mods', dock: 'Dock', store: 'Store', static: 'Source (static scan)' };
 const ALIAS = { conversation: 'composer', session: 'composer', sidebar: 'shell', palette: 'shell', menus: 'shell', toasts: 'shell', 'first-run': 'settings', firstrun: 'settings', forms: 'cards', mods: 'cards', primitives: 'components', ui: 'components' };
 export const areaOf = (word) => ALIAS[word] ?? word;
 

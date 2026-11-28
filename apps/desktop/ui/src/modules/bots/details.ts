@@ -6,7 +6,7 @@
 import { on } from '../../core/bus';
 import { el, esc } from '../../core/dom';
 import { state } from '../../core/state';
-import { kit, ui } from '@boopis/ui';
+import { kit, markHTML, modelMark } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, Schedule } from '../../data';
 import { bot, group, S } from './model';
@@ -48,7 +48,7 @@ function bodyHTML(b: Bot): string {
   const where = data().bots.workspace?.(b.id);
   /* each row opens the bot's settings where its value is set: the pane is the pointer's way to them (board 11 draws no other) */
   const work = [
-    ...(model ? [{ label: 'Model', valueHTML: ui.html.modelMark(model, { size: 14, label: false }) + esc(ui.modelMark.short(model) || model), value: ui.modelMark.short(model) || model, action: 'opens its settings', attrs: { 'data-settings': 'model' } }] : []),
+    ...(model ? [{ label: 'Model', valueHTML: markHTML(model, { size: 14, label: false }) + esc(modelMark.short(model) || model), value: modelMark.short(model) || model, action: 'opens its settings', attrs: { 'data-settings': 'model' } }] : []),
     ...(spent ? [{ label: 'Spend', value: cap ? spent + ' of ' + cap : spent, mono: true, action: 'opens its settings', attrs: { 'data-settings': 'model' } }] : []),
     { label: 'Workspace', value: b.cfg.workspace + (where ? ' ' + base(where) : ''), mono: true, action: 'opens its settings', attrs: { 'data-settings': 'workspace' } }
   ];

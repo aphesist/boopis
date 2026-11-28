@@ -2,7 +2,13 @@
    Every live example is a component's own lab story drawn by the real kit (its functions, its CSS, its behaviour); every "Show code"
    is the folder's own files; every fact under a component is its contract. Nothing here is a copy that can drift: change a folder and
    run `pnpm kit:docs` again. The page itself is a v7 root and draws with the kit's tokens and fonts. */
-import '../src/components/kit.css';
+import '../src/styles/tokens.css';
+import '../src/components/corners.css';
+import '../src/components/scroll.css';
+import '../src/components/orb.css';
+import '../src/components/markdown.css';
+import '../src/components/model-mark.css';
+import '../src/components/signin-marks.css';
 import '../src/components/v7/kit-v7.css';
 import '../src/lab/lab.css';
 import '@fontsource/geist/latin-400.css';
@@ -11,7 +17,7 @@ import '@fontsource/geist/latin-600.css';
 import '@fontsource/geist-mono/latin-400.css';
 import '@fontsource/geist-mono/latin-500.css';
 import './docs.css';
-import { kit, setupOrbs, startGlance, ui } from '@boopis/ui';
+import { card, kit, popover, scrollEdges, setupOrbs, squircle, startGlance, tooltip } from '@boopis/ui';
 import type { Contract, Layer } from '../src/components/v7/contract';
 import { UI_EVENTS } from '../src/components/v7/events';
 import { color, font, motion as motionTokens, radius, space as spaceTokens } from '../src/styles/tokens.v7.json';
@@ -69,7 +75,7 @@ async function drawState(st: State | undefined, into: HTMLElement): Promise<void
   if (st?.width) cell.style.width = st.width + 'px';
   into.append(cell);
   if (st?.ground) into.dataset['ground'] = st.ground;
-  try { await st?.render?.({ root: cell, ui, wait } as Parameters<NonNullable<State['render']>>[0]); } catch (e) { cell.textContent = 'This example failed to draw: ' + String((e as Error).message ?? e); }
+  try { await st?.render?.({ root: cell, card, squircle, popover, tooltip, wait } as Parameters<NonNullable<State['render']>>[0]); } catch (e) { cell.textContent = 'This example failed to draw: ' + String((e as Error).message ?? e); }
 }
 const typicalOf = (folder: string): State | undefined => { const s = storyOf(folder); return s ? s.states['typical'] ?? Object.values(s.states)[0] : undefined; };
 function stage(): HTMLElement { const s = div('kd-stage ui-root'); return s; }
@@ -322,10 +328,10 @@ async function start(): Promise<void> {
   /* one file, no worker: the orbs draw on the page's thread */
   try { Object.defineProperty(window, 'OffscreenCanvas', { value: undefined, configurable: true }); } catch { /* the engine refuses: the worker path still falls back */ }
   await setupOrbs();
-  ui.squircle.start();
-  ui.scrollEdges.start();
+  squircle.start();
+  scrollEdges.start();
   startGlance();
-  ui.tooltip.enable();
+  tooltip.enable();
   main.append(nav, body);
   await build(t);
   main.removeAttribute('aria-busy');

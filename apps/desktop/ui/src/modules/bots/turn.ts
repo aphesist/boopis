@@ -4,7 +4,7 @@
    its 20 px orb in the 30 px gutter at that bubble's foot. A turn is one stop for the keyboard (`data-hx-turn`, KEYMAP 5), and
    its hover actions are what exists (copy, reply, open the chat; 19: boopis has no reactions or threads). */
 import { el, frag } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { copyText as copyToClipboard, kit } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 
 export interface TurnOpts { kind: 'user' | 'bot'; label: string }
@@ -42,7 +42,7 @@ export function turnActs(t: HTMLElement, o: ActsOpts): void {
   ] });
   bar.addEventListener('ui:act', (e) => {
     const d = (e as CustomEvent<{ value: string; el: HTMLElement }>).detail;
-    if (d.value === 'copy') void ui.copyText(o.copy()); else if (d.value === 'reply') o.reply?.(); else if (d.value === 'open') o.open?.(); else if (d.value === 'more') o.more?.(d.el);
+    if (d.value === 'copy') void copyToClipboard(o.copy()); else if (d.value === 'reply') o.reply?.(); else if (d.value === 'open') o.open?.(); else if (d.value === 'more') o.more?.(d.el);
   });
   t.append(bar);
 }

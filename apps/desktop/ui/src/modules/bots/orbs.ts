@@ -1,9 +1,9 @@
-/* Orbs in the bots tab. Drawn by the library (ui.orb: one wrapper, the state map, eyes cut to the surface, whatever the colour).
-   Owner decision: reduced motion reduces and never freezes; ui.liven / glance keep orbs over 16px live, lower the
+/* Orbs in the bots tab. Drawn by the library (`orb`: one wrapper, the state map, eyes cut to the surface, whatever the colour).
+   Owner decision: reduced motion reduces and never freezes; `liven` / glance keep orbs over 16px live, lower the
    jelly and give small glances under reduced motion. Every live orb answers: click pokes (orb2 escalates on repeats),
    hover looks at the pointer and listens, double-click plays an emote. */
 import { el, reduced } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { glance, liven as livenOrb, orb, orbHtml } from '@boopis/ui';
 import type { OrbOpts } from '@boopis/ui';
 import { oc } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
@@ -12,18 +12,18 @@ import { S } from './model';
 type Live = HTMLElement & { _hover?: boolean; _held?: boolean; _faceOn?: boolean };
 export function liven(o: Live | null, size: number): Live | null {
   if (!o) return o;
-  ui.liven(o, { size });   /* the library's rule: live above 16px, lowered jelly and small glances under reduced motion */
+  livenOrb(o, { size });   /* the library's rule: live above 16px, lowered jelly and small glances under reduced motion */
   o.dataset['base'] = o.getAttribute('reaction') ?? 'idle';
   play(o);
   return o;
 }
 /** an orb wrapper from the library, alive */
 export function orbEl(b: BotLike, size: number, opts?: OrbOpts): HTMLElement {
-  const w = ui.orb(b, { size, ...(opts ?? {}) });
+  const w = orb(b, { size, ...(opts ?? {}) });
   liven(w.querySelector('orb-avatar'), size);
   return w;
 }
-export const orbHTML = (b: BotLike, size: number, opts?: OrbOpts): string => ui.html.orb(b, { size, ...(opts ?? {}) });
+export const orbHTML = (b: BotLike, size: number, opts?: OrbOpts): string => orbHtml(b, { size, ...(opts ?? {}) });
 export const livenIn = <E extends HTMLElement>(root: E): E => { for (const o of root.querySelectorAll<Live>('orb-avatar:not(.is-live)')) liven(o, +(o.getAttribute('size') ?? 20) || 20); return root; };
 /** a hovered orb keeps listening and takes the new state when the pointer leaves */
 export function setReact(o: Live | null | undefined, r: string): void {
@@ -70,7 +70,7 @@ let leadDone = false;
 export function leadOrb(): void {
   if (leadDone) return;
   leadDone = true;
-  ui.glance.lead(() => (S.view === 'new' ? S.newPane?.querySelector('.bt-stage orb-avatar') : S.presence), { skip: (o) => !!(o as Live)._hover || !!(o as Live)._held });
+  glance.lead(() => (S.view === 'new' ? S.newPane?.querySelector('.bt-stage orb-avatar') : S.presence), { skip: (o) => !!(o as Live)._hover || !!(o as Live)._held });
 }
 /** orb2 resolves var() colours once per attribute change: re-read them when the theme changes */
 export function repaintOrbs(): void {

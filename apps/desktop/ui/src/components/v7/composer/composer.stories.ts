@@ -11,11 +11,11 @@ const S20 = [{ label: 'How careful', value: 'Supervised', icon: 'shield', plain:
 const TYPED = 'proration drifts by a cent on long invoices';
 const typedState = stage(['variant', 'owner'], ({ root }) => { fill(root, kit.composer({ kind: 'session', line: S20, text: TYPED })); }, { width: 720 });
 /** a button's tooltip, shown (the runtime's, as a focus shows it) */
-const tip = (sel: string): State => stage(['tooltip', 'owner'], async ({ root, wait, ui }) => {
+const tip = (sel: string): State => stage(['tooltip', 'owner'], async ({ root, wait, tooltip }) => {
   fill(root, kit.composer({ kind: 'session', line: S20, text: TYPED }));
-  const b = root.querySelector<HTMLElement>(sel); if (b) { b.focus(); ui.tooltip.show(b); }
+  const b = root.querySelector<HTMLElement>(sel); if (b) { b.focus(); tooltip.show(b); }
   await wait(300);
-}, { width: 720, overlay: { anchor: sel, layer: '.ui-tip' }, force: [{ sel, state: 'focus' }] });
+}, { width: 720, overlay: { anchor: sel, layer: '.k7-tip' }, force: [{ sel, state: 'focus' }] });
 /** a draft of more than one line: the one row keeps its buttons on the last line (composer.css `.k7-composer__box`: align-items flex-end) */
 const LINES = { 'geometry.center': { reason: 'a draft of more than one line: the kit composer keeps its buttons on the last line (composer.css `.k7-composer__box`: align-items flex-end), as its multi-line state draws', el: 'k7-composer__box' } } as const;
 const empty = stage(['typical', 'empty'], ({ root }) => { fill(root, kit.composer({ line: LINE })); }, { width: 720 });

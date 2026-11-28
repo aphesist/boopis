@@ -34,51 +34,51 @@ export function retiredPattern(name) {
 
 const kit = (n) => `[data-kit~="${n}"]`;
 const part = (n) => `[data-kit-part~="${n}"]`;
-/** component -> the elements that are it. v6 selectors after the kit's own; each v6 selector goes when kit-v7 retires its class */
+/** component -> the elements that are it: the kit's own, then the app's slots and the kept engines' classes (the v6 aliases went at 2b) */
 export const ROLES = {
   WindowChrome: [kit('WindowChrome'), '.hx-bar'],
   Page: [kit('Page')],
   Pane: [kit('Pane'), '.hx-right'],
   Dialog: [kit('Dialog'), '[role="dialog"]'],
-  Menu: [kit('Menu'), '.ui-menu', '.ui-listbox'],
-  Card: [kit('Card'), '.ui-set'],
+  Menu: [kit('Menu')],
+  Card: [kit('Card')],
   Block: [kit('Block')],
   ToolRow: [kit('ToolRow')],
-  AskCard: [kit('AskCard'), '.ui-request'],
+  AskCard: [kit('AskCard')],
   FilesCard: [kit('FilesCard')],
   Queue: [kit('Queue')],
   Notice: [kit('Notice')],
   SystemLine: [kit('SystemLine')],
-  Bubble: [kit('Bubble'), '.ui-entry__body'],
+  Bubble: [kit('Bubble')],
   /* the agent side of a thread (what shares the 30 px gutter's edge): your bubbles sit at the other edge */
-  AgentBubble: [kit('Bubble') + ':not([data-kind="user"])', '.ui-entry__body'],
+  AgentBubble: [kit('Bubble') + ':not([data-kind="user"])'],
   DiffView: [kit('DiffView')],
   Well: [kit('Well'), '.ui-codeblock'],
-  ListRow: [kit('ListRow'), '.ui-row'],
-  SectionHead: [kit('SectionHead'), '.ui-group__head', '.ui-sec__head'],
-  MenuRow: [kit('MenuRow'), '.ui-menu__item'],
-  OptionRow: [kit('OptionRow'), '.ui-option'],
-  Row: [part('Row'), '.ui-set__row'],
-  Button: [kit('Button'), '.ui-btn'],
-  IconButton: [kit('IconButton'), '.ui-ib'],
-  Segmented: [kit('Segmented'), '.ui-seg'],
-  SegmentedItem: [part('SegmentedItem'), '.ui-seg__opt'],
-  SegmentedThumb: [part('SegmentedThumb'), '.ui-seg__thumb'],
-  SelectorItem: [kit('SelectorItem'), '.ui-select'],
-  Switch: [kit('Switch'), '.ui-switch'],
-  Field: [kit('Field'), '.ui-input'],
-  Kbd: [kit('Kbd'), '.ui-kbd'],
-  Chip: [kit('Chip'), '.ui-chip'],
-  Tooltip: [kit('Tooltip'), '.ui-tip'],
+  ListRow: [kit('ListRow')],
+  SectionHead: [kit('SectionHead')],
+  MenuRow: [kit('MenuRow')],
+  OptionRow: [kit('OptionRow')],
+  Row: [part('Row')],
+  Button: [kit('Button')],
+  IconButton: [kit('IconButton')],
+  Segmented: [kit('Segmented')],
+  SegmentedItem: [part('SegmentedItem')],
+  SegmentedThumb: [part('SegmentedThumb')],
+  SelectorItem: [kit('SelectorItem')],
+  Switch: [kit('Switch')],
+  Field: [kit('Field')],
+  Kbd: [kit('Kbd')],
+  Chip: [kit('Chip')],
+  Tooltip: [kit('Tooltip'), '.k7-tip'],
   TitlePill: [part('TitlePill')],
-  InlineChip: [kit('InlineChip'), '.ui-mention', '.ui-path', '.ui-md .ui-code', '.ui-md .ui-file'],
+  InlineChip: [kit('InlineChip')],
   Countdown: [part('Countdown')],
   Mark: [kit('Mark')],
   StatusWord: [kit('StatusWord')],
-  Badge: [kit('Badge'), '.ui-badge'],
+  Badge: [kit('Badge')],
   StatusLine: [kit('StatusLine')],
   Avatar: [kit('Avatar'), '.ui-orb'],
-  Disclosure: [kit('Disclosure'), '.ui-disclosure'],
+  Disclosure: [kit('Disclosure')],
   TurnFoot: [kit('TurnFoot')],
   Composer: [kit('Composer')],
   Rail: [kit('Rail'), '.hx-rail'],
@@ -92,11 +92,11 @@ export const ROLES = {
   Sidebar: [part('Sidebar'), '.hx-list'],
   Thread: [part('Thread')],
   /* where a mark may show at rest (section 17): feedforward (the composer's text, a reply's guess), an AskCard, a blank */
-  MarkContext: ['[data-mark-context]', kit('Composer'), kit('AskCard'), '.ui-request'],
+  MarkContext: ['[data-mark-context]', kit('Composer'), kit('AskCard')],
   /* a mark that shows only on hover or focus (an info label) */
   InfoMark: ['[data-kit~="Mark"][data-mark-kind="info"]'],
   /* live things a still must show at rest (section 9.2, P4): a status phrase's shimmer, a breath; [data-motion] strips are exempt */
-  Live: ['[data-live]', '.ui-dot--run'],
+  Live: ['[data-live]'],
   /* the shells a corner control is never concentric with: they are the window's own regions */
   Region: [kit('Page'), kit('Pane'), kit('Dialog'), '.hx-ground', '.hx-side', '.hx-right', '.lab-stage', '.lab-cell', '#hx-app', '[role="dialog"]']
 };
@@ -130,7 +130,7 @@ export const V7_TARGETS = {
   /* same-component: one geometry per component and state class across every render */
   same: { dock: sel('Dock'), composer: sel('Composer'), titlePill: sel('TitlePill'), askCard: sel('AskCard') },
   /* the dock's slab may reach past the cell (its flares): the escape check leaves it to same-component */
-  escapeOk: sel('Dock') + ', .ui-dot--flag, .ui-orb .ui-dot, .ui-concave, .ui-slab'
+  escapeOk: sel('Dock') + ', .ui-dot--flag, .ui-orb .ui-dot'
 };
 
 /** the accents the contrast check walks (LAB-v7 section 3): Iris now; kit-v7 adds the light and the dark accent the owner names */

@@ -9,7 +9,7 @@
    The builders are pure kit markup with callbacks (tested and drawn in the lab as they are); `mountHeld` keeps a thread's asks in step
    with the provider's sources, which only the desktop app has. */
 import { openDraft } from './rule-route';
-import { kit, ui } from '@boopis/ui';
+import { announce, kit } from '@boopis/ui';
 import type { AskAnswer, PlanAction } from '@boopis/ui';
 import { data } from '../../data';
 import { BOOPIS_ID } from '../../data/types';
@@ -130,7 +130,7 @@ export function mountHeld(box: HTMLElement, b: Bot, bots: () => readonly Bot[], 
       const run = (job: Promise<TeamPlan> | undefined, ok: string): void => {
         if (!job) return;
         set({ busy: true, error: '' });
-        job.then((now) => { PLANS = PLANS.map((x) => (x.hash === now.hash ? now : x)); PLAN_VIEW.set(p.hash, {}); ui.announce(ok); void refresh(); }, (e: unknown) => { set({ busy: false, error: e instanceof Error ? e.message : String(e) }); });
+        job.then((now) => { PLANS = PLANS.map((x) => (x.hash === now.hash ? now : x)); PLAN_VIEW.set(p.hash, {}); announce(ok); void refresh(); }, (e: unknown) => { set({ busy: false, error: e instanceof Error ? e.message : String(e) }); });
       };
       nodes.push(wirePlan(planCard(p, b, bots(), view), {
         apply: () => { run(plans?.apply(p.hash), 'Applied'); },
@@ -146,7 +146,7 @@ export function mountHeld(box: HTMLElement, b: Bot, bots: () => readonly Bot[], 
       const done = PARKED_DONE.get(s.id);
       nodes.push(done ? parkedCard(s, b, { answered: done.answered }) : wireParked(parkedCard(s, b), (choice) => {
         if (!parked) return;
-        parked.answer(s.id, choice).then((r) => { PARKED_DONE.set(s.id, { step: s, answered: { choice, drafted: !!r.draftId } }); ui.announce(choice === 'deny' ? 'Denied' : 'Allowed'); draw(); }, (e: unknown) => { say(e instanceof Error ? e.message : String(e)); });
+        parked.answer(s.id, choice).then((r) => { PARKED_DONE.set(s.id, { step: s, answered: { choice, drafted: !!r.draftId } }); announce(choice === 'deny' ? 'Denied' : 'Allowed'); draw(); }, (e: unknown) => { say(e instanceof Error ? e.message : String(e)); });
       }));
     }
     box.replaceChildren(...nodes);

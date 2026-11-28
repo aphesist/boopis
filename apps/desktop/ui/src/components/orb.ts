@@ -74,7 +74,7 @@ export function paintLook(o: Element | null | undefined, look: Look): void {
     if (v === null) { if (o.hasAttribute(k)) o.removeAttribute(k); } else if (o.getAttribute(k) !== v) o.setAttribute(k, v);
   }
 }
-/** every orb of one bot drawn under `root` (`ui.orb` marks its wrapper with `data-bot`), in its look now: a look that
+/** every orb of one bot drawn under `root` (``orb`` marks its wrapper with `data-bot`), in its look now: a look that
     changed after something drew the bot (the plugin's record read late, a look saved in the editor) reaches every
     place at once. Returns how many orbs were painted. */
 export function repaintLook(root: ParentNode | null | undefined, id: string, look: Look): number {

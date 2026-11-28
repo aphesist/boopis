@@ -30,7 +30,7 @@ const SHOTS = {
       const turn = [...document.querySelectorAll('.ss-col .ss-turn')].at(-1);
       const box = document.createElement('div');
       box.className = 'ss-forms'; box.style.marginTop = '14px';
-      box.append(__hx.ui.card('form', spec, { size: 'inline' }));
+      box.append(__hx.card('form', spec, { size: 'inline' }));
       turn.append(box);
     }, QUESTION);
     await page.waitForTimeout(900);

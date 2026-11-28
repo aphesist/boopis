@@ -22,7 +22,7 @@ const MEASURE = (sel) => {
     const name = e.hasAttribute('data-plus') ? 'plus' : e.hasAttribute('data-stop') ? 'stop' : e.hasAttribute('data-mic') ? 'mic' : 'primary';
     return { name, corner: i === 0 || i === els.length - 1, l: r.left - b.left, r: b.right - r.right, t: r.top - b.top, b: b.bottom - r.bottom, w: r.width, h: r.height, rad: Math.min(px(s.borderTopLeftRadius), r.height / 2), ring, focused };
   });
-  const tipEl = document.querySelector('.ui-tip.is-in'), tr = tipEl && tipEl.getBoundingClientRect();
+  const tipEl = document.querySelector('.k7-tip.is-in'), tr = tipEl && tipEl.getBoundingClientRect();
   const keep = [...root.querySelectorAll('.k7-composer__text')].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
   return {
     box: { l: b.left, t: b.top, r: b.right, b: b.bottom, h: b.height, rad: Math.min(px(cs.borderTopLeftRadius) || b.height / 2, b.height / 2) },

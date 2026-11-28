@@ -1,7 +1,7 @@
 /* What a session's turn says, as the options of the kit's parts (boards 10, S09, S20 and S23): the work line's words, the steps
    under it, the tool row a change or a command waits on, the approval a ship asks for, the turn's foot and the status line. Pure:
    the conversation (conversation.ts) builds the kit's components from these and wires them; the tests read them as data. */
-import { ui } from '@boopis/ui';
+import { modelMark } from '@boopis/ui';
 import type { AskAnswer, AskCardOpts, StepOpts, ToolRowOpts, TurnFootOpts } from '@boopis/ui';
 import { cap1 } from '../../core/dom';
 import type { AgentTurn, FormSpec, FormStatus, Step, Todo } from '../../data';
@@ -130,14 +130,14 @@ export const lapsedCard = (f: FormSpec, model: string): AskCardOpts => ({ state:
 export const isOpen = (f: FormSpec, st?: AskState): boolean => !(st?.status ?? f.resolved);
 
 /* ───────── the foot and the status line ───────── */
-const names = (model: string): string => ui.modelMark.parse(model).map((m) => ui.modelMark.short(m) || ui.modelMark.called(m) || m).join(' → ');
+const names = (model: string): string => modelMark.parse(model).map((m) => modelMark.short(m) || modelMark.called(m) || m).join(' → ');
 /** what a finished turn's foot can do: each action only where it exists */
 export interface FootCan { /** the checkpoint the turn left, counted over the session (0: it kept nothing) */ checkpoint: number; undo: { ok: boolean; why?: string } | null; edit: boolean; fork: boolean }
 /** a finished turn's foot (board S23): "Checkpoint 3", Undo (the rewind), Edit from here and Fork where they exist, then who answered,
     how long it took and what it cost; none while the turn runs */
 export function footOf(a: AgentTurn, can: FootCan): TurnFootOpts | null {
   if (a.status === 'running') return null;
-  const last = ui.modelMark.last(a.model);
+  const last = modelMark.last(a.model);
   const note = [a.why, !a.steps.length && a.stepCount ? a.stepCount + (a.stepCount === 1 ? ' step' : ' steps') : ''].filter(Boolean).join(', ');
   return {
     kind: 'session', ...(last ? { model: last, modelName: names(a.model) } : { modelName: UNKNOWN_MODEL }), ...(note ? { note } : {}),
@@ -150,7 +150,7 @@ export function footOf(a: AgentTurn, can: FootCan): TurnFootOpts | null {
   };
 }
 /** the turn as a screen reader names it */
-export const sayTurn = (a: AgentTurn): string => (ui.modelMark.parse(a.model).map((m) => ui.modelMark.called(m) || m).join(' then ') || 'unknown model') + (a.status === 'running' ? ', working' : ', ' + a.time + ', ' + a.cost) + (a.ungoverned ? ', ungoverned' : '');
+export const sayTurn = (a: AgentTurn): string => (modelMark.parse(a.model).map((m) => modelMark.called(m) || m).join(' then ') || 'unknown model') + (a.status === 'running' ? ', working' : ', ' + a.time + ', ' + a.cost) + (a.ungoverned ? ', ungoverned' : '');
 /** what the status line says while the turn runs: what it waits on you for (at rest), or what it is doing (the sweep) */
 export function statusOf(a: AgentTurn, waiting: boolean): { phrase: string; working: boolean } | null {
   if (a.status !== 'running') return null;

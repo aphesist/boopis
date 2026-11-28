@@ -3,7 +3,7 @@
    from the provider's `sessionControls` (the capability map, the launch settings) and the details' governance; a change is
    a command on it, and why it was refused is said, never swallowed. */
 import { cap1 } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { kit, markHTML, modelMark } from '@boopis/ui';
 import { data } from '../../data';
 import { later } from '../chat/compose';
 import type { CarefulStep } from '../../data';
@@ -53,7 +53,7 @@ export function openModel(anchor: HTMLElement): void {
   const now = g.smart || !g.model ? SMART : g.model;
   /* S19's two-line rows: the name, and under it whose model it is; the one that answers now is the chosen row */
   const entries = [{ label: 'Automatic', meaning: 'Smart picks a model for each message', value: SMART, icon: 'spark', chosen: now === SMART },
-    ...d.choices.get().map((c) => ({ label: ui.modelMark.short(c.model) || c.model, value: c.value, leadHTML: ui.html.modelMark(c.value, { size: 16, label: false }), meaning: c.providerName, chosen: now !== SMART && ui.modelMark.same(c.value, now) }))];
+    ...d.choices.get().map((c) => ({ label: modelMark.short(c.model) || c.model, value: c.value, leadHTML: markHTML(c.value, { size: 16, label: false }), meaning: c.providerName, chosen: now !== SMART && modelMark.same(c.value, now) }))];
   kit.openMenu(anchor, { label: 'Model', variant: 'options', entries, place: 'below', align: 'center', attrs: v7Attrs(), onSelect: (v) => { const why = d.setGovernance(v === SMART ? { smart: true } : { smart: false, model: v }); if (why) say(why); } });
 }
 

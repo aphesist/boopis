@@ -12,7 +12,7 @@ import { clipSpots, tipsIfClipped, watchCuts } from '../../core/clip';
 import { STORE_ITEM } from '../../core/engine-words';
 import { reduced } from '../../core/dom';
 import type { FormOutcome, FormSpec, FormsSource, InstallPlan, InstallReceipt, StageResult, StoreBrowse, StoreDetail, StoreItem, StoreKind, StoreProvider, StoreScope, StoreSource, UpdateDiff } from '../../data';
-import { ui } from '@boopis/ui';
+import { card as hostCard } from '@boopis/ui';
 import '../cards';
 import { useFormsHost } from '../cards/forms-host';
 import {
@@ -82,7 +82,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
   const release = (): void => { useFormsHost(null); };
   const card = (spec: FormSpec, sink: FormsSource): HTMLElement => {
     useFormsHost(sink);
-    const c = ui.card('form', spec as unknown as Record<string, unknown>, { size: 'inline', enter: deps.enter ?? true });
+    const c = hostCard('form', spec as unknown as Record<string, unknown>, { size: 'inline', enter: deps.enter ?? true });
     queueMicrotask(() => { focusForm(c); });
     return c;
   };

@@ -1,0 +1,63 @@
+/* The orb (orb.ts, stack.ts): a bot's face and the avatar stack, the kit's engine for bots (its Avatar, InlineChip, the dock and the rail
+   draw them). Kept when the v6 component library went at the repass's step 2b. */
+/* ───────────── orb: the bot's face (aphesist/orb2), always beside its name ───────────── */
+.ui-orb { --o: 20; position: relative; display: inline-block; flex: none; width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); line-height: 0; vertical-align: middle; }
+.ui-orb > orb-avatar { display: block; width: 100%; height: 100%; }
+.ui-orb[data-render] > orb-avatar { position: absolute; left: 0; top: 0; width: calc(var(--r) * 1px); height: calc(var(--r) * 1px); transform-origin: 0 0; transform: scale(calc(var(--o) / var(--r))); }
+.ui-orb > .ui-dot--flag { position: absolute; right: 0; top: 0; }
+.ui-orb[data-size="l"] > .ui-dot--flag { right: 1px; top: 1px; }
+.ui-orb-btn { appearance: none; display: inline-grid; place-items: center; padding: 0; margin: 0; border: 0; border-radius: var(--r-pill); background: transparent; cursor: pointer; }
+.ui-orb-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.ui-orb-btn[aria-pressed="true"], .ui-orb-btn[aria-current="true"] { box-shadow: 0 0 0 1.5px var(--brass); }
+/* stack: several bots as overlapped orbs (stack.ts). One step (a third of an orb), the first member underneath and each next one
+   on top, "+N" the last member on a disc of the same size. Nothing is cut or masked (the owner, 22 November 2026: "styled on top
+   of one another, but still fully visible. i don't want this cutting/masking thing"): an orb is drawn whole, with no disc and no
+   ring under it, and the next simply lies over it, so a round disc never bites into the bot beneath a triangle. "+N" is a disc
+   of --bg-3 (with a row's fill, --stack-fill, over it), its own body, with no ring either. The 2px padding gives the stack's focus
+   ring its room; the stack is a row, not a surface. An orb's wrapper is positioned, so each orb lies over the one before it, and
+   "+N" is positioned too, so it lies on the last orb like one more member, never under it. */
+.ui-stack { --s: 20px; --places: 3; --stack-step: calc(var(--s) / -3); box-sizing: content-box; --stack-fill: transparent; display: inline-flex; align-items: center; flex: none; padding: var(--gap-hair); line-height: 0; vertical-align: middle; }
+.ui-stack[hidden] { display: none; }
+.ui-stack__one, .ui-stack__more { flex: none; box-sizing: border-box; height: var(--s); margin-left: var(--stack-step); border-radius: var(--r-pill); }
+.ui-stack > :first-child { margin-left: 0; }
+.ui-stack__one { display: inline-grid; place-items: center; width: var(--s); }
+.ui-stack__more {
+  position: relative; display: inline-grid; place-items: center; min-width: var(--s); padding: 0 var(--gap-hair);
+  background: linear-gradient(var(--stack-fill), var(--stack-fill)) var(--bg-3); color: var(--text-dim);
+  font: 500 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums;
+}
+.ui-stack__more::before { content: attr(data-more); }
+.ui-stack[tabindex]:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); border-radius: var(--r-pill); }
+/* in a row (a group's lead) the stack has a slot of its own: the lead grows to hold it, so it never covers the row's text; "+N"
+   takes the row's fill (rest, hover, current), and the first orb keeps the row's orb axis */
+
+/* a cluster (stack.ts `shape: 'cluster'`): the same places set around a circle, a group's avatar. Its box is the cluster's own
+   (--w by --h, from clusterLayout), so centring the box centres the cluster; each place sits at its --x, --y, the first
+   underneath and each next one on top, with the line's size, step and "+N" disc. In a row it is the lead's one item (no slot of
+   places, no ring padding: the row draws the ring). While its row is hovered or focused the members breathe out a pixel each
+   (--dx, --dy, whole pixels, on the compositor), and settle back; reduced motion keeps them where they are. */
+.ui-stack--cluster { position: relative; display: inline-block; width: var(--w); height: var(--h); padding: 0; }
+.ui-stack--cluster > :is(.ui-stack__one, .ui-stack__more) { position: absolute; left: var(--x); top: var(--y); margin: 0; transition: translate var(--dur-2) var(--ease); }
+
+/* a cluster's "+N" is a counter, not a member (the owner, 23 November 2026: "that +2 is too big"): a chip --fs-2xs tall (half
+   an orb when that is more), --sp-4 wide for one digit, --sp-5 for two, --sp-6 for three, with the key chip's hairline and the
+   figures centred. Every size is a token and none comes from the font, and the chip keeps its place's outer corner (data-h,
+   data-v, from stack.ts): its outer edges, and so its insets in the row's corner, are the same in any font and for any N. */
+.ui-stack--cluster > .ui-stack__more {
+  --more-h: max(var(--fs-2xs), calc(var(--s) / 2)); --more-w: max(var(--sp-4), var(--more-h)); --more-x: .5; --more-y: .5;
+  left: calc(var(--x) + (var(--s) - var(--more-w)) * var(--more-x)); top: calc(var(--y) + (var(--s) - var(--more-h)) * var(--more-y));
+  width: var(--more-w); min-width: 0; height: var(--more-h); padding: 0; overflow: visible; white-space: nowrap;
+  box-shadow: inset 0 0 0 1px var(--hair); letter-spacing: 0;
+}
+.ui-stack--cluster > .ui-stack__more[data-digits="2"] { --more-w: max(var(--sp-5), var(--more-h)); }
+.ui-stack--cluster > .ui-stack__more[data-digits="3"] { --more-w: max(var(--sp-6), var(--more-h)); }
+.ui-stack--cluster > .ui-stack__more[data-h="start"] { --more-x: 0; }
+.ui-stack--cluster > .ui-stack__more[data-h="end"] { --more-x: 1; }
+.ui-stack--cluster > .ui-stack__more[data-v="start"] { --more-y: 0; }
+.ui-stack--cluster > .ui-stack__more[data-v="end"] { --more-y: 1; }
+
+.ui-state { font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); white-space: nowrap; }
+.ui-state[data-tone="attention"] { color: var(--red-text); }
+.ui-state[data-tone="busy"] { color: var(--text-dim); }
+.ui-dot--flag { width: 8px; height: 8px; background: var(--red); box-shadow: 0 0 0 2px var(--ui-ring, var(--bg-1)); }
+@media (prefers-reduced-motion: reduce) { .ui-stack--cluster > * { transition: none; } }

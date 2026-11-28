@@ -2,7 +2,7 @@
    data provider, the modules (each registers into its slot as it loads), then the shell boots and mounts them. */
 import './styles';
 import '../vendor/boopis-logo.js';
-import { kit, ui } from '@boopis/ui';
+import { card, kit, popover, scrollEdges, squircle, tooltip } from '@boopis/ui';
 import { notifyWhenReady } from './modules/shell/notices';
 import { startGlance } from '@boopis/ui';
 import { orbState, setupOrbs } from '@boopis/ui';
@@ -25,8 +25,8 @@ const log = logger('main');
 /* where the engine can, the orbs draw in a worker (components/orb-worker); everywhere else the vendored element draws on this thread */
 const orbs = setupOrbs();
 /* the continuous corners: observe the document before anything is drawn (each module binds its own surfaces at import) */
-ui.squircle.start();
-ui.scrollEdges.start();
+squircle.start();
+scrollEdges.start();
 
 /* the watchdog's and the engine update's notices wait for the shell (`notifyWhenReady`): a notice shown while the app is still
    booting has no work to sit over. The update's may offer an action (Set up) */
@@ -49,13 +49,13 @@ async function start(): Promise<void> {
   setProvider(provider);
   await provider.ready;
   startGlance();
-  ui.tooltip.enable();
+  tooltip.enable();
   boot();
   if (inTauri()) void import('./host/links').then((m) => m.wireExternalLinks(undefined, (e) => { kit.notify(e instanceof Error ? e.message : 'The link did not open'); }));
   if (inTauri()) void import('./host/connectors-notice').then((m) => m.listenConnectorRestarts()).catch((e: unknown) => { log.warn('connector notices are not listened for', e); });
   if (__HX_TEST_API__) {
     /* the Playwright smoke and parity tests drive the app through this; it is compiled in only for `vite build --mode e2e` */
-    (window as unknown as Record<string, unknown>)['__hx'] = { state, setState, on, emit, ui, theme: themeApi, dock: getDockApi, layout: getLayout, data: () => provider, orbs: orbState };
+    (window as unknown as Record<string, unknown>)['__hx'] = { state, setState, on, emit, card, squircle, popover, tooltip, theme: themeApi, dock: getDockApi, layout: getLayout, data: () => provider, orbs: orbState };
   }
 }
 start().catch((err: unknown) => {

@@ -6,7 +6,7 @@
 
    Replaces the v6 first-run view (`host/first-run.ts`: a checklist, the hub of every provider, a summary with the ladder, optional
    Connectors and Store steps): round 3 draws one model question, and the rest lives in Settings › Models and Connectors. */
-import { kit, ui } from '@boopis/ui';
+import { card as hostCard, icon, kit, markHTML } from '@boopis/ui';
 import type { SetupAction, SetupPageOpts } from '@boopis/ui';
 import '../cards';
 import { useFormsHost } from '../cards/forms-host';
@@ -192,7 +192,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         const rows = settingsOf(form);
         return page({
           title: 'Settings boopis needs', lede: 'boopis changes three engine settings, and only these. It asks before it changes any other.',
-          bodyHTML: kit.html.card({ variant: 'settings', rows: rows.map((r) => ({ label: r.label, subHTML: '<span class="k7-mono">' + esc(r.line) + '</span>', control: '<span class="hx-fr__on" role="img" aria-label="Changed">' + ui.icon('check') + '</span>' })), attrs: { 'aria-label': 'The settings it changes' } }),
+          bodyHTML: kit.html.card({ variant: 'settings', rows: rows.map((r) => ({ label: r.label, subHTML: '<span class="k7-mono">' + esc(r.line) + '</span>', control: '<span class="hx-fr__on" role="img" aria-label="Changed">' + icon('check') + '</span>' })), attrs: { 'aria-label': 'The settings it changes' } }),
           actions: [{ label: 'Apply the changes', primary: true, value: 'apply', busy }, { label: 'Not now', value: 'decline', disabled: busy }],
           ...(error ? { noticeHTML: kit.html.notice({ tone: 'red', icon: 'alert', text: error }) } : {})
         });
@@ -225,7 +225,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       const model = fromConnectorForm(form);
       page({ title: form.title, mark: 'top', bodyHTML: '<div data-fr-form></div>', ...(error ? { noticeHTML: kit.html.notice({ tone: 'red', icon: 'alert', text: error }) } : {}), skip: skip() });
       const slot = root.querySelector<HTMLElement>('[data-fr-form]');
-      const c = ui.card('form', model.spec as unknown as Record<string, unknown>, { size: 'inline' });
+      const c = hostCard('form', model.spec as unknown as Record<string, unknown>, { size: 'inline' });
       slot?.append(c);
       const more = formExtras(form, deps, () => { void run({ form_id: form.form_id, cancelled: false, values: {}, secrets: {} }, false); });
       if (more) { slot?.append(more.node); const prev = detachExtras; detachExtras = () => { prev(); more.destroy(); }; }
@@ -267,7 +267,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         offer: 'Use a plan you already pay for, or a key. Nothing is signed in on this computer yet.',
         all: 'Sign in with a plan you already pay for, or add a key.'
       };
-      const list = rows.map((r) => kit.html.optionRow({ variant: 'question', label: r.name, meaning: r.meaning, chosen: r.way === s.chosen, value: r.way, ...(r.model ? { leadHTML: ui.html.modelMark(r.model, { size: 16, label: false }) } : { icon: 'terminal' }), attrs: { role: 'radio' } })).join('');
+      const list = rows.map((r) => kit.html.optionRow({ variant: 'question', label: r.name, meaning: r.meaning, chosen: r.way === s.chosen, value: r.way, ...(r.model ? { leadHTML: markHTML(r.model, { size: 16, label: false }) } : { icon: 'terminal' }), attrs: { role: 'radio' } })).join('');
       const keyField = row?.kind === 'key' ? kit.html.field({ id: 'hx-fr-key', secret: true, ariaLabel: row.name.replace(/^Use an? /, '') , placeholder: 'Paste the key', value: typedKey }) : '';
       const offline = !online();
       const actions: SetupAction[] = s.mode === 'offer'

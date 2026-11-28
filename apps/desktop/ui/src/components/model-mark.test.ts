@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { arrowHTML, families, isKnownModel, isRoute, lastModel, markHTML, modelFamily, modelHTML, modelMark, parseRoute, routeHTML, swapMark } from './model-mark';
-import { html } from './html';
 
 describe('which logo a model gets', () => {
   it.each([
@@ -66,13 +65,5 @@ describe('drawing a mark', () => {
     expect(next?.getAttribute('data-family')).toBe('openai');
     expect(chip.querySelector('.ui-mm')?.getAttribute('width')).toBe('14');
     expect(swapMark(document.createElement('div'), 'gpt-5')).toBeNull();
-  });
-});
-
-describe('the library takes a model through the one primitive', () => {
-  it("an agent entry's leading model lines carry their marks, a time never does", () => {
-    const h = html.entry({ kind: 'agent', callno: ['qwen3-coder', '→ sonnet 5.5', '3m 42s', '$0.37'] });
-    expect((h.match(/<svg/g) ?? []).length).toBe(2);
-    expect(h).toContain('3m 42s');
   });
 });

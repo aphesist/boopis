@@ -2,7 +2,7 @@
 /* The stack's cluster (the collapsed sidebar's group avatar): where each member lies for two to six members, the same every time,
    and the markup the kit draws from it. The line stack is checked where it is drawn (modules/bots/groups.test.ts, one-look.test.ts). */
 import { describe, expect, it } from 'vitest';
-import { clusterLayout, html, stackSplit } from '@boopis/ui';
+import { clusterLayout, stack, stackSplit } from '@boopis/ui';
 
 const S = 16;
 /** the distance between two places' centres */
@@ -52,7 +52,7 @@ describe('clusterLayout', () => {
 const team = ['kai', 'nina', 'moss', 'iris', 'hex', 'nimbus'].map((id) => ({ id, name: id, state: 'idle' }));
 function cluster(n: number, opts: Record<string, unknown> = {}): HTMLElement {
   const host = document.createElement('div');
-  host.innerHTML = html.stack({ members: team.slice(0, n), size: S, shape: 'cluster', still: true, ...opts });
+  host.innerHTML = stack({ members: team.slice(0, n), size: S, shape: 'cluster', still: true, ...opts });
   return host.firstElementChild as HTMLElement;
 }
 const places = (el: HTMLElement): string[] => [...el.children].map((c) => (c.classList.contains('ui-stack__more') ? c.getAttribute('data-more') ?? '' : c.querySelector('orb-avatar')?.getAttribute('label') ?? '') + ' ' + (c as HTMLElement).style.getPropertyValue('--x') + ',' + (c as HTMLElement).style.getPropertyValue('--y'));
@@ -89,7 +89,7 @@ describe('a stack drawn as a cluster', () => {
     expect(more(cluster(0, { extra: 3 }))).toEqual(['center', 'center', '-']);
     expect(more(cluster(3, { extra: 12 }))).toEqual(['start', 'end', '2']);
     expect(more(cluster(3, { extra: 120 }))).toEqual(['start', 'end', '3']);
-    const line = document.createElement('div'); line.innerHTML = html.stack({ members: team, size: S, max: 4, extra: 20, still: true });
+    const line = document.createElement('div'); line.innerHTML = stack({ members: team, size: S, max: 4, extra: 20, still: true });
     expect(['data-h', 'data-v', 'data-digits'].map((a) => line.querySelector('.ui-stack__more')!.hasAttribute(a))).toEqual([false, false, false]);
   });
   it('draws its orbs still, at 16px', () => {
@@ -102,7 +102,7 @@ describe('a stack drawn as a cluster', () => {
   });
   it('leaves the line stack as it was', () => {
     const host = document.createElement('div');
-    host.innerHTML = html.stack({ members: team, size: S, max: 4, still: true });
+    host.innerHTML = stack({ members: team, size: S, max: 4, still: true });
     const line = host.firstElementChild as HTMLElement;
     expect(line.classList.contains('ui-stack--cluster')).toBe(false);
     expect(line.getAttribute('style')).toBe('--s:16px;--places:4');

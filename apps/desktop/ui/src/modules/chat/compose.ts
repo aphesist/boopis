@@ -8,7 +8,7 @@
    circle (the primary button with no text) is always there (owner, 26 November): it talks once a voice model is set up (the
    provider's `voice`), and until then says what it needs, with the way to Settings, Models (`voiceTool`). */
 import { emit } from '../../core/bus';
-import { kit, ui } from '@boopis/ui';
+import { kit, markdown } from '@boopis/ui';
 import { REST_REACTION, restReact } from '@boopis/ui';
 import type { ComposerChip, KitMentions, MarkdownCtx } from '@boopis/ui';
 import { data } from '../../data';
@@ -18,7 +18,7 @@ import type { DictationEvent } from '../../data/provider';
 /** the mentions a draft holds, each as the chip the sent message will draw (the kit's InlineChip with its words): a bot's orb and name
     in its colour, the room's stack for @all, a bot that is not here muted. `ctx` is the context the conversation draws its messages with */
 export function mentionChips(text: string, ctx: MarkdownCtx): ComposerChip[] {
-  return ui.markdown.spans(text, ctx).map((s) => {
+  return markdown.spans(text, ctx).map((s) => {
     const t = s.target, words = s.text;
     const html = t.kind === 'you' ? kit.html.inlineChip({ kind: 'you', words })
       : t.kind === 'all' ? kit.html.inlineChip({ kind: 'mention', text: words, members: t.members, words })

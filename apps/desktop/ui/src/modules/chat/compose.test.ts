@@ -4,7 +4,7 @@
    provider until it is switched off (the bot's orbs listen meanwhile), the voice circle is always
    there and either talks (a voice model is set up) or says what it needs and leads to Settings, Models; send and stop are said as events. */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { kit, ui } from '@boopis/ui';
+import { kit, orbHtml } from '@boopis/ui';
 import { on } from '../../core/bus';
 import { setProvider } from '../../data';
 import type { DataProvider } from '../../data';
@@ -240,7 +240,7 @@ describe('the bot listens while you dictate', () => {
   it('its orbs on the page listen while the mic is on and go back to what they were: one at rest to its pose, one in a state to that state', () => {
     const KAI = { id: 'kai', name: 'kai', state: 'idle' as const };
     const row = document.createElement('div');
-    row.innerHTML = ui.html.orb(KAI, { size: 28, rest: true }) + ui.html.orb({ ...KAI, state: 'working' as const }, { size: 20 }) + ui.html.orb({ id: 'nina', name: 'nina', state: 'idle' as const }, { size: 28, rest: true });
+    row.innerHTML = orbHtml(KAI, { size: 28, rest: true }) + orbHtml({ ...KAI, state: 'working' as const }, { size: 20 }) + orbHtml({ id: 'nina', name: 'nina', state: 'idle' as const }, { size: 28, rest: true });
     document.body.append(row);
     const [rest, working, nina] = [...row.querySelectorAll('orb-avatar')] as unknown as [Element, Element, Element];
     const before = [rest.getAttribute('reaction'), working.getAttribute('reaction'), nina.getAttribute('reaction')];

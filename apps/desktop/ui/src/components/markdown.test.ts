@@ -51,7 +51,7 @@ describe('markdown blocks', () => {
     const well = d.querySelector('.ui-codeblock') as HTMLElement;
     expect(well.hasAttribute('data-folded')).toBe(true);
     expect(well.querySelectorAll('.ui-codeblock__l:not(.ui-codeblock__rest *)')).toHaveLength(12);
-    expect(well.querySelector('.ui-codeblock__fold')?.textContent).toBe('Show 8 more lines');
+    expect(well.querySelector('[data-code="fold"]')?.textContent).toBe('Show 8 more lines');
     expect(codeOf(well).split('\n')).toHaveLength(20);
   });
   it('tints a diff', () => {
@@ -66,7 +66,7 @@ describe('markdown inline', () => {
     expect(inlineHTML('snake_case_name and 2*3*4')).toBe('snake_case_name and 2*3*4');
   });
   it('keeps code as code, and styles nothing inside it', () => {
-    expect(inlineHTML('`**x**`')).toBe('<code class="ui-code">**x**</code>');
+    expect(inlineHTML('`**x**`')).toBe('<code class="k7-chip-in k7-code">**x**</code>');
   });
   it('draws web links, and only web links', () => {
     const h = inlineHTML('[docs](https://example.org/a) and [x](javascript:alert(1))');
@@ -85,7 +85,7 @@ describe('markdown inline', () => {
   it('makes an image an attachment chip, never a remote load', () => {
     const d = dom(inlineHTML('![contact sheet](https://example.org/sheet.png)'));
     expect(d.querySelector('img')).toBeNull();
-    expect(d.querySelector('.ui-file')?.textContent).toBe('contact sheet');
+    expect(d.querySelector('[data-md-image]')?.textContent).toBe('contact sheet');
   });
 });
 
@@ -102,7 +102,7 @@ describe('mentions', () => {
   });
   it('draw a known handle as a chip and leave an unknown one, or "@kai.", as text', () => {
     const d = dom(inlineHTML('@kai look, @nobody here, and @kai. done', ctx));
-    const chips = d.querySelectorAll('.ui-mention');
+    const chips = d.querySelectorAll('[data-kit~="InlineChip"][data-kind="mention"]');
     expect(chips).toHaveLength(1);
     expect(chips[0]?.getAttribute('data-mention')).toBe('kai');
     expect(chips[0]?.getAttribute('aria-label')).toBe('kai, showrunner. Open its chat');
@@ -111,11 +111,11 @@ describe('mentions', () => {
   });
   it('draw @all with the members', () => {
     const d = dom(inlineHTML('@all ready?', ctx));
-    expect(d.querySelector('.ui-mention--all')?.getAttribute('aria-label')).toBe('@all: kai, nina');
+    expect(d.querySelector('[data-mention="@all"]')?.getAttribute('aria-label')).toBe('@all: kai, nina');
   });
   it('are not chips inside code or link labels', () => {
     const d = dom(inlineHTML('`@kai` and [@kai](https://x.y)', ctx));
-    expect(d.querySelector('.ui-mention')).toBeNull();
+    expect(d.querySelector('[data-kind="mention"]')).toBeNull();
   });
 });
 
@@ -133,13 +133,12 @@ describe('paths', () => {
   it('stay code until the host resolves them, then become buttons', () => {
     const d = dom(markdownHTML('Saved in `out/a/beat.png` and `nowhere/x.md`.'));
     expect(pathCandidates(d)).toEqual(['out/a/beat.png', 'nowhere/x.md']);
-    expect(d.querySelector('.ui-path')).toBeNull();
+    expect(d.querySelector('[data-abs]')).toBeNull();
     const n = upgradePaths(d, new Map([['out/a/beat.png', { path: 'out/a/beat.png', abs: '/w/out/a/beat.png', kind: 'file' as const }]]));
     expect(n).toBe(1);
-    const b = d.querySelector('button.ui-path') as HTMLElement;
-    expect(b.dataset['abs']).toBe('/w/out/a/beat.png');
-    expect(b.querySelector('.ui-path__base')?.textContent).toBe('beat.png');
-    expect(b.querySelector('.ui-path__dir')?.textContent).toBe('out/a/');
+    const b = d.querySelector('button[data-kind="file"][data-abs]') as HTMLElement;
+    expect([b.dataset['abs'], b.getAttribute('data-kit')]).toEqual(['/w/out/a/beat.png', 'InlineChip']);
+    expect(b.textContent).toBe('out/a/beat.png');
     expect(b.getAttribute('aria-label')).toContain('/w/out/a/beat.png');
     expect(d.querySelector('code[data-path="nowhere/x.md"]')).not.toBeNull();
   });
@@ -148,7 +147,7 @@ describe('paths', () => {
 describe('the element side', () => {
   it('copies, wraps and unfolds a well', () => {
     const el = markdown('```\na\n```');
-    const wrap = el.querySelector<HTMLButtonElement>('.ui-codeblock__wrap')!;
+    const wrap = el.querySelector<HTMLButtonElement>('[data-code="wrap"]')!;
     wrap.click();
     expect(wrap.getAttribute('aria-pressed')).toBe('true');
     expect(el.querySelector('.ui-codeblock')?.hasAttribute('data-wrap')).toBe(true);
@@ -181,7 +180,7 @@ describe('a mention of a bot that is not in the room', () => {
     const nimbus = { id: 'nimbus', name: 'nimbus', handle: 'nimbus' };
     const ctx = { mention: () => null, outside: (h: string) => (h === 'nimbus' ? nimbus : null) };
     const html = inlineHTML('@nimbus and @nobody', ctx);
-    expect(html).toContain('ui-mention--out');
+    expect(html).toContain('data-out');
     expect(html).toContain("nimbus isn&#39;t in this room");
     expect(html).toContain('@nobody');
     expect(html).not.toContain('data-mention');
@@ -190,33 +189,32 @@ describe('a mention of a bot that is not in the room', () => {
 
 describe('a mention of the person in a room (the engine’s handle for them, @user)', () => {
   const room: MarkdownCtx = { ...ctx, you: true };
-  it('draws @user as the person’s own capsule, "you" with the attention dot and no orb, never a bot’s', () => {
+  it('draws @user as the person’s own capsule (the kit\'s InlineChip you), "you" and no orb, never a bot’s', () => {
     const d = dom(inlineHTML('@user, the fixes are ready. Should she go ahead?', room));
-    const you = d.querySelector('.ui-mention--you');
+    const you = d.querySelector('[data-kit~="InlineChip"][data-kind="you"]');
     expect(you?.textContent).toBe('you');
-    expect(you?.querySelector('.ui-dot--attention')).not.toBeNull();
     expect(you?.querySelector('.ui-orb')).toBeNull();
     expect(you?.tagName).toBe('SPAN');   /* nothing to open */
     expect(d.textContent).toBe('you, the fixes are ready. Should she go ahead?');
   });
   it('reads it exactly as the engine reads a handle: any case, never with a mark glued to it, never outside a room', () => {
-    expect(dom(inlineHTML('@User look', room)).querySelector('.ui-mention--you')).not.toBeNull();
-    expect(dom(inlineHTML('@user. look', room)).querySelector('.ui-mention--you')).toBeNull();
-    expect(dom(inlineHTML('@users look', room)).querySelector('.ui-mention--you')).toBeNull();
-    expect(dom(inlineHTML('@you look', room)).querySelector('.ui-mention--you')).toBeNull();
-    expect(dom(inlineHTML('@user look', ctx)).querySelector('.ui-mention--you')).toBeNull();
-    expect(dom(inlineHTML('`@user` look', room)).querySelector('.ui-mention--you')).toBeNull();
+    expect(dom(inlineHTML('@User look', room)).querySelector('[data-kind="you"]')).not.toBeNull();
+    expect(dom(inlineHTML('@user. look', room)).querySelector('[data-kind="you"]')).toBeNull();
+    expect(dom(inlineHTML('@users look', room)).querySelector('[data-kind="you"]')).toBeNull();
+    expect(dom(inlineHTML('@you look', room)).querySelector('[data-kind="you"]')).toBeNull();
+    expect(dom(inlineHTML('@user look', ctx)).querySelector('[data-kind="you"]')).toBeNull();
+    expect(dom(inlineHTML('`@user` look', room)).querySelector('[data-kind="you"]')).toBeNull();
   });
   it('leaves @user to a member whose handle it is, as the engine resolves members first', () => {
     const named: MarkdownCtx = { mention: (h) => (h.toLowerCase() === 'user' ? { id: 'user', name: 'user' } : null), you: true };
     const d = dom(inlineHTML('@user hi', named));
-    expect(d.querySelector('.ui-mention--you')).toBeNull();
-    expect(d.querySelector('.ui-mention')?.getAttribute('data-mention')).toBe('user');
+    expect(d.querySelector('[data-kind="you"]')).toBeNull();
+    expect(d.querySelector('[data-kind="mention"]')?.getAttribute('data-mention')).toBe('user');
   });
-  it('marks a message that addresses the person, and only that message', () => {
-    expect(dom(markdownHTML('Done.\n\n@user, should nina go ahead?', room)).firstElementChild?.hasAttribute('data-to-you')).toBe(true);
-    expect(dom(markdownHTML('@nina, go ahead.', room)).firstElementChild?.hasAttribute('data-to-you')).toBe(false);
-    expect(dom(markdownHTML('@user, look', ctx)).firstElementChild?.hasAttribute('data-to-you')).toBe(false);
+  it('knows a message that addresses the person, and only that message (the kit\'s Bubble carries its wash)', () => {
+    expect(addressesYou('Done.\n\n@user, should nina go ahead?', room)).toBe(true);
+    expect(addressesYou('@nina, go ahead.', room)).toBe(false);
+    expect(addressesYou('@user, look', ctx)).toBe(false);
   });
   it('keeps the mark as a reply grows, and flashes it once as it arrives (the class the CSS animates; none under reduced motion)', async () => {
     const root = markdown('Working on it.', room);

@@ -1,0 +1,78 @@
+/* What a bot or an agent wrote (markdown.ts, md-view.ts): the prose and the subset's own styles, its code well. Kept when the v6 component
+   library went at the repass's step 2b: content rendering; its mentions, code, paths and links are the kit's InlineChips. */
+
+.ui-prose { max-width: 100%; }
+.ui-prose p, .ui-prose ul, .ui-prose ol { margin: 0 0 var(--sp-3); }
+.ui-prose ul, .ui-prose ol { padding-left: var(--sp-4); }
+.ui-prose li { margin-bottom: var(--sp-1); }
+.ui-prose li::marker { color: var(--text-quiet); }
+.ui-prose > :last-child { margin-bottom: 0; }
+
+/* ───────────── markdown (markdown.ts): what bots and agents write, one renderer for every conversation ─────────────
+   The prose above, plus the styles the subset adds. Bold is 600 in --text-strong, italics are the bundled italic faces (fonts.ts),
+   struck text steps back; one heading size (14/600); quotes are a 2px rule and --text-dim; a hairline for ---. Links are words in
+   --text-strong over a --line-strong underline (never brass, never an arrow: R-copy-4). */
+.ui-md { width: 100%; min-width: 0; }
+.ui-md p { text-wrap: pretty; }
+.ui-md strong { font-weight: 600; color: var(--text-strong); }
+.ui-md em { font-style: italic; }
+.ui-md del { color: var(--text-dim); text-decoration-color: var(--line-strong); }
+.ui-md li > ul, .ui-md li > ol { margin: var(--sp-1) 0 0; }
+.ui-md__lists { margin: 0 0 var(--sp-3); }
+.ui-md__lists > :last-child { margin-bottom: 0; }
+.ui-md__h { margin: var(--sp-4) 0 var(--sp-2); font: 600 var(--fs-m)/var(--lh-tight) var(--sans); color: var(--text-strong); text-wrap: balance; }
+.ui-md > .ui-md__h:first-child { margin-top: 0; }
+.ui-md__quote { margin: 0 0 var(--sp-3); padding: 0 0 0 var(--sp-3); border-left: 2px solid var(--line-strong); color: var(--text-dim); }
+.ui-md__quote p { margin: 0 0 var(--sp-1); }
+.ui-md__quote p:last-child { margin-bottom: 0; }
+.ui-md__quote strong { color: var(--text); }
+.ui-md__hr { height: 1px; margin: var(--sp-4) 0; border: 0; background: var(--hair); }
+.ui-md__table { max-width: 100%; margin: 0 0 var(--sp-3); }
+.ui-md__table:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); }
+.ui-md__table table { border-collapse: collapse; font: 400 var(--fs-s)/var(--lh-ui) var(--sans); }
+.ui-md__table th, .ui-md__table td { padding: var(--sp-1) var(--sp-3) var(--sp-1) 0; border-bottom: 1px solid var(--hair); text-align: left; vertical-align: top; }
+.ui-md__table th { font-weight: 500; color: var(--text-strong); border-bottom-color: var(--line); }
+.ui-md__table [data-align="right"] { text-align: right; }
+.ui-md__table [data-align="center"] { text-align: center; }
+
+/* A chip set into running text sits on the text's line (the lab's inline-baseline check): its words stand on the sentence's baseline
+   (`vertical-align: baseline`, never a nudge in px, which only lands for the font it was tuned on), its box is centred on the cap band
+   (as much room over the cap height as under the baseline), and the line is no taller for it. A flex chip takes its baseline from its
+   words: they are the one item aligned by baseline (`align-self: baseline`) and fill the chip's height, their box trimmed to the cap
+   height and the baseline (`text-box`) with half of what is left above and half below, so where the words sit is measured from the
+   font in use (`1cap`), not assumed. Where `text-box` is missing the words are centred by a line as tall as the chip. */
+/* A chip is never taller than the line it sits in: it scales with the text (the owner: consistency across the app beats exceptions).
+   The text's line height reaches the chip as a length (`--text-line`, the parent's 1lh); a chip takes its full size where the line has
+   room for it and shrinks with a dense line (13px at 1.35), keeping a hairline (--pad-row) clear of the line's edges, never below 16px */
+@property --text-line { syntax: '<length>'; inherits: true; initial-value: 20px; }
+
+.ui-md { overflow-wrap: anywhere; }   /* a long link or name breaks inside the column, never past it */
+
+/* a code block: the well (--bg-0, mono 11/1.6), its language and line count, Wrap and Copy (the kit's ghost Button and IconButton) in its head,
+   sideways scroll by default, folded past 14 lines to 12 with "Show N more lines" (no fade mask), diffs in the add and del tints */
+.ui-codeblock { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); width: 100%; min-width: 0; box-sizing: border-box; margin: 0 0 var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg); }
+.ui-codeblock__head {
+  display: flex; align-items: center; gap: var(--sp-3); min-height: calc(var(--corner-inset) * 2 + var(--corner-size)); box-sizing: border-box;
+  font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums;
+}
+.ui-codeblock__lang { color: var(--text-dim); margin-left: var(--sp-3); }
+.ui-codeblock [data-code="wrap"] { margin-left: auto; }
+.ui-codeblock [data-code="wrap"][aria-pressed="true"] { color: var(--text-strong); background: var(--current); }
+.ui-codeblock__pre {
+  margin: 0; padding: 0 var(--sp-4) var(--sp-4); overflow-x: auto; overscroll-behavior: contain; border-radius: 0 0 var(--r-outer) var(--r-outer);
+  font: 400 var(--fs-2xs)/1.6 var(--mono); letter-spacing: var(--track-mono); color: var(--text); white-space: pre; tab-size: 2;
+}
+.ui-codeblock[data-folded] .ui-codeblock__pre, .ui-codeblock:has(.ui-codeblock__foot) .ui-codeblock__pre { padding-bottom: var(--sp-2); }
+.ui-codeblock__pre:focus-visible { outline: none; }
+.ui-codeblock:has(.ui-codeblock__pre:focus-visible) { outline: var(--focus-w) solid var(--focus); outline-offset: var(--corner-ring); }
+.ui-codeblock__pre > code { display: block; min-width: fit-content; font: inherit; letter-spacing: inherit; }
+.ui-codeblock[data-wrap] .ui-codeblock__pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ui-codeblock[data-wrap] .ui-codeblock__pre > code { min-width: 0; }
+.ui-codeblock__l { display: block; min-height: 1.6em; }
+.ui-codeblock__rest[hidden] { display: none; }
+.ui-codeblock__rest:not([hidden]) { display: block; }
+.ui-codeblock__l[data-d] { margin: 0 calc(var(--sp-4) * -1); padding: 0 var(--sp-4); }
+.ui-codeblock__l[data-d="add"] { background: color-mix(in srgb, var(--add) 10%, transparent); }
+.ui-codeblock__l[data-d="del"] { background: color-mix(in srgb, var(--del) 10%, transparent); }
+.ui-codeblock__l[data-d="hunk"] { color: var(--text-quiet); }
+.ui-codeblock__foot { padding: 0 var(--sp-2) var(--sp-2); }

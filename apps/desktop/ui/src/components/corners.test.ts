@@ -82,8 +82,8 @@ describe('concentric corners (DESIGN-SYSTEM.md §8.2: R-corner-3, R-corner-4, R-
     }
   });
 
-  it('components.css declares exactly these formulas, once', () => {
-    const css = readFileSync(join(__dirname, 'components.css'), 'utf8').replace(/\s+/g, ' ');
+  it('corners.css declares exactly these formulas, once', () => {
+    const css = readFileSync(join(__dirname, 'corners.css'), 'utf8').replace(/\s+/g, ' ');
     expect(css).toContain('--r-in: ' + CORNER_CSS.rIn + ';');
     expect(css).toContain('--r-corner: ' + CORNER_CSS.radius + ';');
     expect(css).toContain('--corner-inset: ' + CORNER_CSS.inset + ';');
@@ -93,7 +93,7 @@ describe('concentric corners (DESIGN-SYSTEM.md §8.2: R-corner-3, R-corner-4, R-
   });
 
   it('every library surface that declares --r-outer is in the one container rule', () => {
-    const css = readFileSync(join(__dirname, 'components.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+    const css = readFileSync(join(__dirname, 'corners.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
     const list = /:where\(([^)]*)\) \{ --corner-size/.exec(css)?.[1]?.split(',').map((x) => x.trim()) ?? [];
     expect(list).toContain('.ui-nest');
     const missing: string[] = [];

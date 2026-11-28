@@ -35,7 +35,7 @@ export async function formCards(env) {
       document.body.append(host);
       const out = [];
       for (const size of ['inline', 'compact', 'mini']) for (const st of states) for (const [k, sp] of Object.entries(specs)) {
-        const c = __hx.ui.card('form', { ...JSON.parse(JSON.stringify(sp)), id: `g-${size}-${st}-${k}` }, { size, state: st });
+        const c = __hx.card('form', { ...JSON.parse(JSON.stringify(sp)), id: `g-${size}-${st}-${k}` }, { size, state: st });
         host.append(c);
         out.push({ k, st, size, state: c.state, label: !!c.querySelector('[data-kit~="AskCard"][aria-label]'), text: c.textContent.length > 8 });
       }
@@ -55,7 +55,7 @@ export async function formCards(env) {
 
   await s.safe('forms', async () => {
     const page = await s.fresh({ w: 1100, h: 900, reduced: true });
-    const mount = (spec, o) => page.evaluate(([sp, op]) => { let h = document.getElementById('gal'); if (!h) { h = document.createElement('div'); h.id = 'gal'; h.style.cssText = 'position:fixed;inset:0;z-index:9999;overflow:auto;background:var(--bg-0);padding:16px;max-width:540px'; document.body.append(h); } h.replaceChildren(); const c = __hx.ui.card('form', sp, op); window.__c = c; h.append(c); window.__events = []; c.addEventListener('hx:card-action', (e) => window.__events.push(JSON.stringify({ a: e.detail.action, v: e.detail.value }))); }, [spec, o]);
+    const mount = (spec, o) => page.evaluate(([sp, op]) => { let h = document.getElementById('gal'); if (!h) { h = document.createElement('div'); h.id = 'gal'; h.style.cssText = 'position:fixed;inset:0;z-index:9999;overflow:auto;background:var(--bg-0);padding:16px;max-width:540px'; document.body.append(h); } h.replaceChildren(); const c = __hx.card('form', sp, op); window.__c = c; h.append(c); window.__events = []; c.addEventListener('hx:card-action', (e) => window.__events.push(JSON.stringify({ a: e.detail.action, v: e.detail.value }))); }, [spec, o]);
     /* validation: errors are in the field's description, the field is invalid, the first one is announced and focused */
     await mount(SPECS.credential, { size: 'inline' });
     await page.keyboard.press('Tab');
@@ -122,7 +122,7 @@ export async function formCards(env) {
     await page.evaluate(([specs, states]) => {
       const host = document.createElement('div'); host.id = 'gal'; host.style.cssText = 'position:fixed;inset:0;z-index:9999;overflow:auto;background:var(--bg-0);padding:16px;display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,500px))';
       document.body.append(host);
-      for (const size of ['inline', 'compact']) for (const st of states) for (const [k, sp] of Object.entries(specs)) host.append(__hx.ui.card('form', { ...JSON.parse(JSON.stringify(sp)), id: `a-${size}-${st}-${k}` }, { size, state: st }));
+      for (const size of ['inline', 'compact']) for (const st of states) for (const [k, sp] of Object.entries(specs)) host.append(__hx.card('form', { ...JSON.parse(JSON.stringify(sp)), id: `a-${size}-${st}-${k}` }, { size, state: st }));
     }, [SPECS, ['open', 'invalid', 'done', 'deferred']]);
     await page.waitForTimeout(500);
     await page.addScriptTag({ content: AXE });

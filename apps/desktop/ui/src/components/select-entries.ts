@@ -16,3 +16,10 @@ export interface SelectGroup { label: string; model?: U<ModelRef>; icon?: U<stri
 export type SelectEntry = SelectOption | SelectGroup;
 
 export const isGroup = (e: SelectEntry): e is SelectGroup => 'options' in e;
+
+/** a menu's row as data (what the session's composer and its model menu build before the kit's Menu draws them) */
+export interface MenuItem {
+  label?: string; /** a model: a brand mark leads the label (a menu of models is the picker) */ model?: ModelRef; modelColor?: 'mono' | 'brand'; value?: string | number; desc?: string; icon?: string; keys?: string; checked?: boolean; mono?: boolean; disabled?: boolean; stamp?: string;
+  role?: 'menuitem' | 'menuitemradio' | 'menuitemcheckbox'; lead?: string; content?: boolean; title?: string; foot?: string;
+}
+export type MenuEntry = MenuItem | '-';

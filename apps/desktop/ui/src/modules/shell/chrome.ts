@@ -8,7 +8,7 @@
    the palette, the dialogs) keep v6's tokens until their wave C branches move them; then the root moves up to the body. */
 import { emit } from '../../core/bus';
 import { $, frag } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { esc, kit } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import { data } from '../../data';
 import { loadChrome } from '../../core/settings';
@@ -110,7 +110,7 @@ export function setTitle(name: string, lead: TitleLead, label: string): void {
   const subEl = pill.querySelector('.k7-title__sub');
   if (!lead.sub) subEl?.remove();
   else if (subEl) { if (subEl.textContent !== lead.sub) subEl.textContent = lead.sub; }
-  else nameEl?.insertAdjacentHTML('afterend', ' <span class="k7-title__sub k7-mono">' + ui.esc(lead.sub) + '</span>');   /* a word break before it: the pill's name holds its visible words (the pill is a flex row: the space takes no room) */
+  else nameEl?.insertAdjacentHTML('afterend', ' <span class="k7-title__sub k7-mono">' + esc(lead.sub) + '</span>');   /* a word break before it: the pill's name holds its visible words (the pill is a flex row: the space takes no room) */
   if (sig !== leadSig) {
     leadSig = sig;
     const next = frag(kit.html.titlePill({ title: name, ...(lead.members?.length ? { members: lead.members } : lead.bot ? { bot: lead.bot } : lead.icon ? { icon: lead.icon } : {}) }));

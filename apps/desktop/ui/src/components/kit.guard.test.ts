@@ -7,8 +7,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, posix, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { variants } from './variants';
-import { html } from './html';
 
 const ROOT = join(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
@@ -61,25 +59,25 @@ const GROUPS: Group[] = [
     allow: { 'src/modules/shell/shell.css': 'the rail list hides its bar so every orb stays on the x = 28 axis' } },
   { name: 'scroller declared outside the kit', where: 'css', re: /overflow(-[xy])?\s*:\s*[^;}]*\b(auto|scroll)\b/,
     allow: { 'src/modules/shell/shell.css': 'the failed-module notice (.hx-stub) and the theme JSON textarea (.hxt-json, a field the user resizes)' } },
-  /* tab bars: ui.tabs or ui.segmented({mode: 'tabs'}) (R-tab-1) */
+  /* tab bars: the kit's Segmented tabs (R-tab-1) */
   { name: 'tab markup', where: 'ts', re: /role:\s*'tab'(?!list|panel)|<[^>]*\brole="tab"/ },
   { name: 'tab styling', where: 'css', re: /\[aria-selected/ },
-  /* key chips: ui.html.keys / kbd / comboKbds (R-kbd-1 to 3) */
+  /* key chips: the kit's Kbd (R-kbd-1 to 3) */
   { name: 'key chip markup', where: 'ts', re: /<kbd\b/ },
   { name: 'key chip markup', where: 'html', re: /class="ui-kbd"/ },
   { name: 'key chip styling', where: 'css', re: /(^|[\s,}])kbd\b[^-]|\.ui-kbd\s*\{/ },
-  /* search fields: ui.search (R-search-1) */
+  /* search fields: the kit's Field (search) (R-search-1) */
   { name: 'search field markup', where: 'ts', re: /data-icon="search"|ui-search__/ },
   { name: 'search field markup', where: 'html', re: /data-icon="search"|ui-search/ },
-  /* settings rows and sections: ui.html.setRow, setHead, setSection (§14.21) */
+  /* settings rows and sections: the kit's Card rows and SectionHead (§14.21) */
   { name: 'settings row or heading markup', where: 'ts', re: /class="ui-set__(row|head|label)"|['"]hx-set['"]|class="hx-set"/ },
-  /* switches: ui.html.switch (R-switch-1 to 3); there is no checkbox (R-check-1) */
+  /* switches: the kit's Switch (R-switch-1 to 3); there is no checkbox (R-check-1) */
   { name: 'switch or checkbox markup', where: 'ts', re: /type="checkbox"|type:\s*'checkbox'/ },
-  /* buttons and text controls: ui.html.button, iconButton, input, field */
+  /* buttons and text controls: the kit's Button, IconButton and Field */
   { name: 'button markup', where: 'ts', re: /class="ui-btn\b|class:\s*'ui-btn\b|class="ui-ib\b|class:\s*'ui-ib\b/ },
   { name: 'text control markup', where: 'ts', re: /class="ui-input\b|class:\s*'ui-input\b/ },
   { name: 'hand-built button styling', where: 'css', re: /appearance:\s*none/ },
-  /* the quiet mark: ui.html.badge */
+  /* the quiet mark: the kit's Badge */
   { name: 'badge styling', where: 'css', re: /border-radius:\s*var\(--r-pill\)[^}]*font:[^}]*var\(--mono\)/ },
   /* floating surfaces and messages the kit draws: menus, tooltips, notices, empty states */
   { name: 'tooltip or empty state markup', where: 'ts', re: /class="ui-(tip|empty)"|class:\s*'ui-(tip|empty)'/ },
@@ -103,15 +101,4 @@ describe('no module re-implements a kit component', () => {
       expect({ unexpected, stale }).toEqual({ unexpected: [], stale: [] });
     });
   }
-});
-
-describe('every component exports its variants for the UI lab', () => {
-  it('each variant list names a template the kit draws', () => {
-    const drawn = new Set([...Object.keys(html), 'menu', 'progress', 'composer', 'orb', 'select', 'tip']);
-    expect(Object.keys(variants).filter((k) => !drawn.has(k))).toEqual([]);
-  });
-  it('the new templates render from props alone (pure: the same output twice, no global read)', () => {
-    const once = (): string => html.scroll({ axis: 'x', bare: true, body: 'x' }) + html.badge({ label: 'outside' });
-    expect(once()).toBe(once());
-  });
 });

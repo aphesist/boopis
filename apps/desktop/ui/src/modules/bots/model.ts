@@ -2,7 +2,7 @@
    The copies are mutated in place (closures in the settings sheet hold them); the provider stays the source of truth. */
 import { emit } from '../../core/bus';
 import { state } from '../../core/state';
-import { ui } from '@boopis/ui';
+import { botState } from '@boopis/ui';
 import type { Bot, BotsEvent, Group, GroupMessage, ThreadMessage } from '../../data';
 import type { Follower } from './orbs';
 import { data } from '../../data';
@@ -57,8 +57,8 @@ export const railOn = (): boolean => state.left === 'rail';
 export const bot = (id: string | null | undefined): Bot | undefined => S.bots.find((b) => b.id === id);
 export const thread = (id: string): ThreadMessage[] => (S.threads[id] ??= []);
 export const pending = (): Bot[] => S.bots.filter((b) => b.attention);
-/** the one state map (ui.botState); a transient reaction (listening while you type) overlays it */
-export const stateOf = (b: Bot, transient: string | null) => ui.botState(transient && !b.attention ? { ...b, state: transient } : b);
+/** the one state map (botState); a transient reaction (listening while you type) overlays it */
+export const stateOf = (b: Bot, transient: string | null) => botState(transient && !b.attention ? { ...b, state: transient } : b);
 export const BUSY_STATES = new Set(['working', 'thinking', 'speaking', 'compute']);
 
 export function announceAttention(): void {

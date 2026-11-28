@@ -7,11 +7,11 @@
    - a teammate asked to help, and a routine proposed, are the AskCard's question form, as board 12 draws the routine line, answered with
      6d's "You …" receipts.
    Each builder returns a kit element and calls back what the person chose; nothing here holds state or talks to a provider. */
-import { kit, ui } from '@boopis/ui';
+import { kit, modelMark } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-const named = (m: string): string => ui.modelMark.short(m) || ui.modelMark.called(m) || m;
+const named = (m: string): string => modelMark.short(m) || modelMark.called(m) || m;
 
 /* ───────── an escalation ───────── */
 export interface Escalation { /** the model it moved to (or would have) */ to: string; /** why, in a few words ("after 2 failed gate runs on cheaper models") */ reason: string; /** the cap stopped it: why, in the words of the cap ("the session's $0.60 cap is reached") */ capped?: string | undefined }

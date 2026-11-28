@@ -3,7 +3,7 @@
    colour (R-colour-8).
 
    ONE resolver. `lookOf(bot)` is the look of a bot wherever an orb of it is drawn: its own shape and colour when it
-   has them (the plugin's record, the new-bot sheet, the look editor), else the look its name gives. `ui.orb` draws
+   has them (the plugin's record, the new-bot sheet, the look editor), else the look its name gives. ``orb`` draws
    every orb through it, the live provider maps the plugin's record through it, and `lookAttrs` turns a look into the
    attributes an <orb-avatar> carries (its eyes cut to its surface, whatever its colour), so no two places can draw the same
    bot two ways. A look derived from a name is a default, never stored: the same name always draws the same bot, until

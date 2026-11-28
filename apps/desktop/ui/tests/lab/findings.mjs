@@ -55,7 +55,7 @@ function cause(check, msg, el) {
     case 'scrollbar':
       if (m.includes('webkitgtk ignores') && !el) return 'the source sets `scrollbar-width`; R-scroll-1 draws bars with `::-webkit-scrollbar` from the `--scroll-*` tokens and sets nothing else';
       if (m.includes('overscroll')) return 'the scroller lacks `overscroll-behavior: contain` (R-scroll-8)';
-      return 'no `::-webkit-scrollbar` rules exist yet: one rule set in components.css from the `--scroll-*` tokens fixes every scroller at once';
+      return 'no `::-webkit-scrollbar` rules exist yet: one rule set in scroll.css from the `--scroll-*` tokens fixes every scroller at once';
     case 'geometry.target': return 'a target smaller than `--hit-min` with a neighbour inside its 24px circle; give it a 24px hit area (R-a11y-2)';
     case 'geometry.clip': return 'a fixed width or height with overflow hidden and no `text-overflow: ellipsis` (R-overflow-1)';
     case 'geometry.center': return 'aligned by padding, a baseline or a fixed line height instead of flex centring with line height 1 (R-type-11)';

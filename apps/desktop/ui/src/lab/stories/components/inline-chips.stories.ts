@@ -3,7 +3,7 @@
    in the person's request bubble and in a paragraph of markdown (a composer's chips and marks are the kit's: `kit/composer`,
    `kit/inline-chip`). The `inline-baseline` check (tests/lab/probe.js) measures every chip here against its line: the owner saw nina's
    "[you] staging needs your approval before I deploy." with the capsule riding off the sentence's line. */
-import { ui, html } from '@boopis/ui';
+import { kit, markdown } from '@boopis/ui';
 import type { MarkdownCtx, MdBot } from '@boopis/ui';
 import { put, stage } from '../../story';
 import type { Story } from '../../types';
@@ -23,35 +23,29 @@ const ROOM: MarkdownCtx = {
   you: true
 };
 const PATH = 'episodes/cooking-pot/episode.json';
-const paths = (m: HTMLElement): void => { ui.markdown.upgradePaths(m, new Map([[PATH, { path: PATH, abs: '/work/boopis/' + PATH, kind: 'file' as const }]])); };
+const paths = (m: HTMLElement): void => { markdown.upgradePaths(m, new Map([[PATH, { path: PATH, abs: '/work/boopis/' + PATH, kind: 'file' as const }]])); };
 
 const NINA = '@user staging needs your approval before I deploy.';
 const ALL = '@kai and @moss, the `deploy.yaml` diff is in `' + PATH + '`; @all please read it, and @rex can wait.';
 
-/** nina's message in the room, as the room draws a member's message */
+/** nina's message in the room, as the room draws a member's message: the kit's Bubble (2b: the v6 entry went) */
+const inBubble = (kind: 'bot' | 'user', m: HTMLElement): HTMLElement => kit.bubble({ kind, html: m.outerHTML });
 const botMessage = (text: string) => ({ root }: { root: HTMLElement }): void => {
-  const m = ui.markdown(text, ROOM); paths(m);
-  const e = ui.entry({ kind: 'agent', who: 'nina', callno: ['09:14'], label: 'nina, 09:14' });
-  e.querySelector('.ui-entry__body')?.append(m);
-  put(root, e);
+  const m = markdown(text, ROOM); paths(m);
+  put(root, inBubble('bot', m));
 };
 /** the person's request bubble, as the room draws what they sent */
 const request = (text: string) => ({ root }: { root: HTMLElement }): void => {
-  const e = ui.entry({ kind: 'user', who: 'you', callno: ['09:13'], body: html.request(''), label: 'You, 09:13' });
-  const b = e.querySelector<HTMLElement>('.ui-request');
-  if (b) b.innerHTML = ui.markdown.plain(text, ROOM);
-  put(root, e);
+  put(root, kit.bubble({ kind: 'user', html: markdown.plain(text, ROOM) }));
 };
 /** a paragraph of markdown with every inline kind (the v6 blank went with its card at step 6f: the kit's Mark draws a blank, kit/mark) */
 const paragraph = (text: string) => ({ root }: { root: HTMLElement }): void => {
-  const m = ui.markdown(text + '\n\n![the pot, in the accounts](pot.png)', ROOM); paths(m);
-  const e = ui.entry({ kind: 'agent', who: 'nina', callno: ['09:15'], label: 'nina, 09:15' });
-  e.querySelector('.ui-entry__body')?.append(m);
-  put(root, e);
+  const m = markdown(text + '\n\n![the pot, in the accounts](pot.png)', ROOM); paths(m);
+  put(root, inBubble('bot', m));
 };
 /** the same paragraph in dense interface text (13px at 1.35, a card's or the dock's), where the 20px capsule does not fit the line */
 const dense = (text: string) => ({ root }: { root: HTMLElement }): void => {
-  const m = ui.markdown(text, ROOM); paths(m);
+  const m = markdown(text, ROOM); paths(m);
   put(root, m);
 };
 const W = 340;   /* narrow enough that every width the lab uses (390 and up) draws the state */

@@ -120,7 +120,7 @@ const room: Story = {
     'the composer: "@" names a teammate': st(['open', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, '@')(c); }, { overlay: { anchor: BOT_COMPOSER + ' .k7-composer__box', layer: '.k7-menu[data-floating]' }, allow: LISTENING }),
     'the composer: a teammate drawn as a chip': st(['variant', 'owner'], {}, async (c) => { await pick('atlas')(c); await typeIn(BOT_COMPOSER, 'ask @nina before you merge it ')(c); }, { allow: LISTENING }),
     'composer send hover': st(['hover', 'owner'], {}, pick('atlas'), { force: [{ sel: BOT_COMPOSER + ' [data-send]', state: 'hover' }] }),
-    'composer attach tooltip': st(['tooltip', 'owner'], {}, async (c) => { await pick('atlas')(c); const b = document.querySelector<HTMLElement>(BOT_COMPOSER + ' .k7-composer [data-plus]'); if (b) { b.focus(); c.hx.ui.tooltip.show(b); } await c.wait(250); }, { overlay: { anchor: BOT_COMPOSER + ' .k7-composer [data-plus]', layer: '.ui-tip' } })
+    'composer attach tooltip': st(['tooltip', 'owner'], {}, async (c) => { await pick('atlas')(c); const b = document.querySelector<HTMLElement>(BOT_COMPOSER + ' .k7-composer [data-plus]'); if (b) { b.focus(); c.hx.tooltip.show(b); } await c.wait(250); }, { overlay: { anchor: BOT_COMPOSER + ' .k7-composer [data-plus]', layer: '.k7-tip' } })
   }
 };
 

@@ -3,21 +3,9 @@
    anything not listed fails the gate. docs/UI-LAB.md. */
 import type { Tag } from './types';
 
-/** `ui` members that are not components: helpers, data, behaviours with nothing of their own to draw */
-export const NOT_COMPONENTS: Readonly<Record<string, string>> = {
-  version: 'a string', html: 'the string templates: each is covered through its factory or as html.<name>', esc: 'escaping', icons: 'the icon names (drawn by the icon button story, "every icon")',
-  announce: 'a live-region message, nothing visible', botState: 'a bot\'s state word as data', botLabel: 'an accessible name as data', states: 'the state table (drawn by the orb story, "states")',
-  hydrate: 'wires markup that the stories already draw', liven: 'an orb\'s motion policy (orbs are drawn still in the lab)', glance: 'eye steps under reduced motion (behaviour)',
-  shape: 'a cached token reader', scrollClass: 'the scroll area\'s class, drawn by components/scroll', listbox: 'drawn by components/listbox',
-  squircle: 'the corner engine every story runs through (the concentric check reads its paths)',
-  scrollEdges: 'the edge-fade flags every scroller in every story gets (the scrollbar check reads them, R-scroll-9)',
-  kit: 'the v7 kit: each of its components is covered as kit.<name> by its own story in its folder (src/components/v7/<name>/) (coverage.test.ts, "the v7 kit")'
-};
-/** html templates that are only strings (no factory), and why some need no story of their own */
-export const HTML_ONLY_EXCUSED: Readonly<Record<string, string>> = {
-  kbd: 'an alias of keys', switch: 'the switch factory covers it', orb: 'the orb factory covers it', model: 'the model factory covers it', modelRoute: 'the modelRoute factory covers it', modelMark: 'the modelMark factory covers it',
-  leadFor: 'covered by the row story', stateWord: 'covered by the row story', icon: 'covered by the icon button story'
-};
+/** the engines the kit draws with (named exports of `@boopis/ui` that draw something of their own: the v6 library went at step 2b),
+    each covered as engine:<name> by a story */
+export const ENGINES: readonly string[] = ['orb', 'stack', 'model-mark', 'markdown', 'card'];
 
 /** surfaces: the app's places that are more than one component */
 export const SURFACES: readonly string[] = [
@@ -34,15 +22,14 @@ export const PAGES: readonly string[] = ['empty', 'conversation', 'live', 'bots'
 /** the states every component and card story needs */
 export const MIN_COMPONENT: readonly Tag[] = ['typical', 'long'];
 /** components and cards where "empty" means something (nothing to show, no items, no value) */
-export const EMPTY_APPLIES: readonly string[] = ['ui.row', 'ui.chipGroup', 'ui.field', 'ui.ladder', 'ui.measure', 'ui.entry', 'ui.section', 'ui.code', 'ui.modView', 'ui.request', 'card:*', 'form:*'];
+export const EMPTY_APPLIES: readonly string[] = ['card:*', 'form:*'];
 /** where "error" applies (a failure, an invalid value, an unknown model, a refused tree) */
-export const ERROR_APPLIES: readonly string[] = ['ui.field', 'ui.chip', 'ui.measure', 'ui.modelMark', 'ui.modView', 'card:approval', 'card:connector', 'form:*'];
+export const ERROR_APPLIES: readonly string[] = ['engine:model-mark', 'card:approval', 'card:connector', 'form:*'];
 /** surfaces need a typical state and at least this many states */
 export const MIN_SURFACE_STATES = 3;
 
 /** stories excused from a minimum, by story id and tag, with the reason */
 export const STATE_EXCUSED: Readonly<Record<string, Readonly<Partial<Record<Tag, string>>>>> = {
-  'components/keys': { empty: 'a key needs a key' },
   'cards/form-theme': { error: 'a theme card cannot be invalid: Keep or Reject' },
   'cards/form-permission': { error: 'a permission is the AskCard: it has no field to get wrong' },
   'cards/form-signin': { error: 'a sign-in has no field to get wrong; its failure is the host\'s' },

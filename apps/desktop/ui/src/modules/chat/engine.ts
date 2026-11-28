@@ -2,7 +2,7 @@
    out, "Start it again". The same line in a session, a bot's chat and a room (the last two derived from S36). The state is the
    provider's `engine` (the link to the engine: lost and not back at once, or given up on); the action is its `restart`, which asks the
    host to reach the engine again now, and is not drawn where no host can (a control shows only once its feature exists). */
-import { kit, ui } from '@boopis/ui';
+import { announce, kit } from '@boopis/ui';
 import { data } from '../../data';
 
 export const ENGINE_STOPPED = 'boopis\'s engine stopped', ENGINE_START = 'Start it again';
@@ -16,7 +16,7 @@ export function engineLine(): HTMLElement | null {
   if (b && s.restarting) b.setAttribute('aria-disabled', 'true');
   b?.addEventListener('click', () => {
     if (b.getAttribute('aria-disabled') === 'true') return;
-    ui.announce('Starting boopis\'s engine');
+    announce('Starting boopis\'s engine');
     /* why it could not be asked is said, never swallowed; whether it came back is the line itself (it goes when the engine is reachable) */
     void e.restart?.().catch((err: unknown) => { kit.notify(err instanceof Error ? err.message : 'boopis\'s engine could not be started.'); });
   });

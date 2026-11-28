@@ -8,7 +8,7 @@ import { emit } from '../../core/bus';
 import { cap1, el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
 import { openDraft } from './rule-route';
-import { kit, lookOf, repaintLook, ui } from '@boopis/ui';
+import { botState, copyText as copyToClipboard, kit, lookOf, markdown, modelMark, orbHtml, repaintLook, scrollClass } from '@boopis/ui';
 import { bubbleOf, placeActs, turnActs, turnBody, turnEntry } from './turn';
 import type { AskAnswer, MarkdownCtx } from '@boopis/ui';
 import { data } from '../../data';
@@ -71,7 +71,7 @@ export function mountView(root: HTMLElement): void {
   nb.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.bots.length && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); openBot(S.sel); focusConversation(); } });
 }
 function buildRoom(): void {
-  const scroll = el('div', { class: 'bt-scroll ' + ui.scrollClass({ ground: true }) });
+  const scroll = el('div', { class: 'bt-scroll ' + scrollClass({ ground: true }) });
   const col = el('div', { class: 'bt-col' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Messages' });
   if (data().info.preview.has('bots')) col.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview. These bots are sample data and are not connected to boopis yet.' }));
@@ -158,7 +158,7 @@ function renderThread(b: Bot): void {
   requestAnimationFrame(() => { if (S.scroll) S.scroll.scrollTop = S.scroll.scrollHeight; });
 }
 /* what the bot writes: the kit's markdown; its mentions of teammates open their chats, its paths open where the bot works */
-const ctx = (): MarkdownCtx => ({ ...mentionCtx(S.bots.map((x) => ({ ...x, id: x.id, name: x.name }))), kit: true });
+const ctx = (): MarkdownCtx => ({ ...mentionCtx(S.bots.map((x) => ({ ...x, id: x.id, name: x.name }))) });
 const rootsOf = (id: string): string[] => { const w = data().bots.workspace?.(id); return w ? [w] : []; };
 function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   if (m.kind === 'note') { const line = kit.systemLine({ text: m.text }); line.setAttribute('role', 'status'); line.classList.add('bt-note'); return line; }   /* what the app says in the thread: the kit's SystemLine */
@@ -172,8 +172,8 @@ function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
     if (paths) card.addEventListener('click', () => { void paths.resolve([m.name], rootsOf(b.id)).then(([hit]) => (hit ? paths.open(hit.abs) : Promise.reject(new Error(m.name + ' was not found in ' + b.name + '’s workspace.')))).catch((e: unknown) => { notify(e instanceof Error ? e.message : m.name + ' could not be opened.'); }); });
     return card;
   }
-  if (m.who === 'you') { const r = el('p', { class: 'bt-request' }); r.innerHTML = ui.markdown.plain(m.text, ctx()); return r; }
-  const md = ui.markdown(m.text, ctx());
+  if (m.who === 'you') { const r = el('p', { class: 'bt-request' }); r.innerHTML = markdown.plain(m.text, ctx()); return r; }
+  const md = markdown(m.text, ctx());
   void resolvePaths(md, rootsOf(m.who === 'you' ? b.id : (bot(m.who)?.id ?? b.id)));
   return md;
 }
@@ -201,7 +201,7 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   if (!you) {
     const name = (who as Bot).name;
     /* board 11 draws two hover actions, copy and "more": more holds the other thing a turn can do today, the copy as Markdown (KEYMAP 5's C) */
-    turnActs(entry, { name, copy: () => turnText(entry), more: (a) => { kit.openMenu(a, { label: 'More', place: 'below', align: 'start', entries: [{ label: 'Copy as Markdown', icon: 'copy', value: 'md' }], onSelect: () => { void ui.copyText('**' + name + '**\n\n' + turnText(entry)); notify('Copied'); } }); } });
+    turnActs(entry, { name, copy: () => turnText(entry), more: (a) => { kit.openMenu(a, { label: 'More', place: 'below', align: 'start', entries: [{ label: 'Copy as Markdown', icon: 'copy', value: 'md' }], onSelect: () => { void copyToClipboard('**' + name + '**\n\n' + turnText(entry)); notify('Copied'); } }); } });
     placeActs(entry);
   }
   livenIn(entry);
@@ -240,8 +240,8 @@ function paintStatus(id: string): void {
   const list = thread(id), last = list[list.length - 1];
   const waits = !!b && list.some((m) => m.kind === 'approval' && !m.resolved);
   const replying = !!last && last.who !== 'you' && last.kind === 'text' && log.getAttribute('aria-busy') === 'true';
-  const works = !!b && (S.runs.has(id) || ui.botState(b).busy) && !replying;
-  const phrase = waits ? 'Waiting for you' : works ? cap1((b as Bot).activity || ui.botState(b as Bot).word || 'Working') : '';
+  const works = !!b && (S.runs.has(id) || botState(b).busy) && !replying;
+  const phrase = waits ? 'Waiting for you' : works ? cap1((b as Bot).activity || botState(b as Bot).word || 'Working') : '';
   const sig = phrase + '|' + (waits ? 'w' : 'r');
   if (!phrase || !b) { STATUS?.remove(); STATUS = null; return; }
   if (STATUS && STATUS.isConnected && STATUS.dataset['sig'] === sig) return;
@@ -385,7 +385,7 @@ function buildComposer(host: HTMLElement): void {
     const model = b.info?.model ?? b.cfg.model;
     const items = [
       { label: 'Governance', value: gov ? 'Governed' : 'Not governed', icon: 'ladder', plain: true, attrs: { 'data-line': 'gov', 'data-kbd': 'alt+G', 'aria-pressed': String(gov) } },
-      ...(model ? [{ label: 'Model', value: ui.modelMark.short(model) || model, model, plain: true, attrs: { 'data-line': 'model', 'data-kbd': 'alt+M' } }] : []),
+      ...(model ? [{ label: 'Model', value: modelMark.short(model) || model, model, plain: true, attrs: { 'data-line': 'model', 'data-kbd': 'alt+M' } }] : []),
       ...(cap && spent ? [{ label: 'Spend', value: spent + ' of ' + cap, mono: true, end: true }] : spent && run?.spent ? [{ label: 'Spend', value: spent, mono: true, end: true }] : [])
     ];
     return { items, sig: JSON.stringify(items) + (botsPartShown(b) ? '|first-run' : '') };
@@ -414,7 +414,7 @@ function buildComposer(host: HTMLElement): void {
     mentions: {
       label: 'Bots', foot: () => (bot(S.sel)?.name ?? 'This bot') + ' reads the name. The bot you name does not see this chat.',
       chips: (t) => mentionChips(t, mentionCtx(S.bots.filter((x) => x.id !== S.sel).map((x) => ({ ...x, id: x.id, name: x.name })))),
-      entries: () => S.bots.filter((x) => x.id !== S.sel).map((x) => ({ value: x.id, label: x.name, ...(x.role ? { desc: x.role } : {}), leadHTML: ui.html.orb(x, { size: 16, still: true }) }))
+      entries: () => S.bots.filter((x) => x.id !== S.sel).map((x) => ({ value: x.id, label: x.name, ...(x.role ? { desc: x.role } : {}), leadHTML: orbHtml(x, { size: 16, still: true }) }))
     }
   });
   slot.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
@@ -461,7 +461,7 @@ function openModelMenu(anchor: HTMLElement): void {
   kit.openMenu(anchor, {
     label: 'Model', place: 'above', align: 'start',
     entries: [{ label: 'Governed', desc: 'Starts cheap, climbs the ladder', value: 'governed', ...(gov ? { icon: 'check' } : {}) },
-      ...bots().catalog().models.map((m) => ({ label: ui.modelMark.called(m) || m, value: 'm:' + m, ...(!gov && b.cfg.model === m ? { icon: 'check' } : {}) }))],
+      ...bots().catalog().models.map((m) => ({ label: modelMark.called(m) || m, value: 'm:' + m, ...(!gov && b.cfg.model === m ? { icon: 'check' } : {}) }))],
     onSelect: (v) => {
       if (v === 'governed') { b.cfg.gov = 'governed'; bots().update(b.id, { cfg: { gov: 'governed' } }); } else { b.cfg.gov = 'ungoverned'; b.cfg.model = v.slice(2); bots().update(b.id, { cfg: { gov: 'ungoverned', model: v.slice(2) } }); }
       refreshPresence(); if (S.sheetOpen) openSettings(b.id, null, { keepFocus: true });
@@ -526,7 +526,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       if (node && node.isConnected) {
         /* block by block: finished blocks stay as they are, the open one is redrawn, a new one fades in */
         const follow = S.scroll ? atEnd(S.scroll) : false;
-        const drawn = ui.markdown.stream(node, ev.text, ctx());
+        const drawn = markdown.stream(node, ev.text, ctx());
         const roots = rootsOf(m.who === 'you' ? ev.botId : (bot(m.who)?.id ?? ev.botId));
         if (ev.type === 'message-end') void resolvePaths(node, roots);
         else for (const d of drawn.slice(0, -1)) void resolvePaths(d, roots);

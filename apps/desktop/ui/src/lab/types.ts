@@ -2,14 +2,14 @@
    components by their public name, card kinds, surfaces, pages) and its named states. A state either renders on the
    lab's stage (components and cards: `render`) or boots the whole app on a provider and drives it (`app`: surfaces
    and pages). Nothing here imports the app: stories reach it through `kit.ts` and the contexts below. */
-import type { Ui } from '@boopis/ui';
+import type { card, popover, squircle, tooltip } from '@boopis/ui';
 import type { DataProvider } from '../data/provider';
 import type { DockApi } from '../core/registry';
 
 /** the fix agents' areas; `pnpm lab:check --area <id>` runs one */
 export type Area = 'components' | 'composer' | 'shell' | 'settings' | 'bots' | 'cards' | 'dock' | 'store';
 export const AREAS: Readonly<Record<Area, string>> = {
-  components: 'Components (the HX.ui primitives)',
+  components: 'Components (the engines the kit draws with)',
   composer: 'Conversation and composer',
   shell: 'Shell (sidebar, palette, menus, toasts)',
   settings: 'Settings and first run',
@@ -52,14 +52,14 @@ export type Render = (ctx: StageCtx) => void | Promise<void>;
 export interface StageCtx {
   /** the cell the state draws into */
   root: HTMLElement;
-  ui: Ui;
+  card: typeof card; squircle: typeof squircle; popover: typeof popover; tooltip: typeof tooltip;
   wait(ms: number): Promise<void>;
 }
 export interface LabHx {
   state: Record<string, unknown>;
   setState(patch: Record<string, unknown>): void;
   emit(type: string, detail?: unknown): void;
-  ui: Ui;
+  card: typeof card; squircle: typeof squircle; popover: typeof popover; tooltip: typeof tooltip;
   theme: { preset(id: string): void };
   data(): DataProvider;
   dock(): DockApi | null;

@@ -1,14 +1,14 @@
 /* The form card on the kit (REPASS.md 6d, derived): a form is the AskCard's block of boards 11 and K04. Every kind in every state, the
    dock's compact width and the one row, a long one, its primary hovered and focused; the questions with options (S23's chips, K02-11's
    lettered rows, "Something else"); who asks. Their ids stay `cards/form-*`: the lab keeps `kit/` for the kit's own components. The data are the lab's form fixtures (the v6 mock-up's own forms). */
-import { ui } from '@boopis/ui';
+import { card as hostCard } from '@boopis/ui';
 import { fill, frames } from '../../story';
 import type { Render, State, Story } from '../../types';
 import { FORM_LONG, FORM_SPECS, FORM_STATES } from '../../fixtures';
 
 const TAG: Record<string, State['tags'][number]> = { open: 'typical', invalid: 'error', submitting: 'loading', done: 'success', deferred: 'variant', expired: 'expired', cancelled: 'disabled' };
 const draw = (spec: Record<string, unknown>, o: { state?: string; size?: 'inline' | 'compact' | 'mini'; ground?: 'dock'; then?: (root: HTMLElement) => void | Promise<void> } = {}): Render => async ({ root }) => {
-  fill(root, ui.card('form', JSON.parse(JSON.stringify(spec)) as Record<string, unknown>, { size: o.size ?? 'inline', state: o.state, ground: o.ground, enter: false }));
+  fill(root, hostCard('form', JSON.parse(JSON.stringify(spec)) as Record<string, unknown>, { size: o.size ?? 'inline', state: o.state, ground: o.ground, enter: false }));
   await frames(3);
   if (o.then) { await o.then(root); await frames(2); }
 };
@@ -50,7 +50,7 @@ const questions: Story = {
 };
 
 const askers: Story = {
-  id: 'cards/form-askers', title: 'Form: who is asking', area: 'cards', kind: 'card', covers: ['card:form', 'ui.card', 'form:origin'],
+  id: 'cards/form-askers', title: 'Form: who is asking', area: 'cards', kind: 'card', covers: ['card:form', 'engine:card', 'form:origin'],
   states: {
     typical: { tags: ['typical'], width: 608, render: draw(FORM_SPECS['approval'] as Record<string, unknown>) },
     'the agent of a session': { tags: ['variant'], width: 608, render: draw(FORM_SPECS['credential'] as Record<string, unknown>) },

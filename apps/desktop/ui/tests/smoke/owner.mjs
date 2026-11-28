@@ -112,7 +112,7 @@ export async function ownerDecisions(env) {
       const heights = [];
       const o = Element.prototype.animate;
       Element.prototype.animate = function (k, opt) { try { const ks = Array.isArray(k) ? k : []; if (ks.some((f) => f && 'height' in f)) heights.push([ks[0].height, ks[ks.length - 1].height, typeof opt === 'object' ? opt.duration : opt]); } catch { /* keep going */ } return o.call(this, k, opt); };
-      const c = __hx.ui.card('form', { id: 'smoke-height', kind: 'approval', title: 'Deploy 0.2.0 to staging', why: 'The dry run matched all 200 invoices to the cent.', origin: { kind: 'agent', model: 'sonnet 5.5' }, schema: { properties: {} } }, { size: 'inline' });
+      const c = __hx.card('form', { id: 'smoke-height', kind: 'approval', title: 'Deploy 0.2.0 to staging', why: 'The dry run matched all 200 invoices to the cent.', origin: { kind: 'agent', model: 'sonnet 5.5' }, schema: { properties: {} } }, { size: 'inline' });
       document.getElementById('hx-view-session').appendChild(c); await new Promise((r) => setTimeout(r, 200));
       c.update({ state: 'done', receiptText: 'You approved it' }); await new Promise((r) => setTimeout(r, 700));
       Element.prototype.animate = o; c.remove();
@@ -186,7 +186,7 @@ export async function ownerDecisions(env) {
   const WORDS = 'Made outside boopis, for example on the command line. boopis keeps its look and settings once you change them here.';
   check('owner', 'a profile boopis did not make carries "made outside boopis", with its words as the tooltip and the accessible description', mk.rowText === 'outside' && mk.head === 'made outside boopis' && mk.rowDesc === WORDS && mk.headDesc === WORDS && mk.tip === WORDS && mk.label === "sage, reads release notes, outside" && mk.others === 0, mk);
   await page.keyboard.press('Shift'); await page.focus('#hx-view-bots .bt-outside[tabindex="0"]'); await page.waitForTimeout(300);   /* a key first, so the focus is a keyboard's (:focus-visible) */
-  const tip = await ev(() => { const t = document.querySelector('.ui-tip'); return { text: t?.textContent, shown: t?.classList.contains('is-in'), w: t ? Math.round(t.getBoundingClientRect().width) : 0, fits: t ? t.getBoundingClientRect().right <= innerWidth : false }; });
+  const tip = await ev(() => { const t = document.querySelector('.k7-tip'); return { text: t?.textContent, shown: t?.classList.contains('is-in'), w: t ? Math.round(t.getBoundingClientRect().width) : 0, fits: t ? t.getBoundingClientRect().right <= innerWidth : false }; });
   check('owner', 'the mark is reachable by keyboard and its tooltip shows on focus, within the window', tip.shown && tip.text === WORDS && tip.fits, tip);
   await ev(() => __hx.data().bots.update('sage', { cfg: { cap: '1.00' } })); await page.waitForTimeout(300);
   const gone = await ev(() => document.querySelectorAll('.bt-outside').length);

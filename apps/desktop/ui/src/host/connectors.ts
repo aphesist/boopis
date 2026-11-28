@@ -12,7 +12,7 @@
    rows. For one bot, the page is that bot's (a select at its top). */
 import { STORE_ITEM } from '../core/engine-words';
 import { unlessEngine } from './errors';
-import { connectorKey, itemTile, kit, ui } from '@boopis/ui';
+import { card as hostCard, connectorKey, itemTile, kit } from '@boopis/ui';
 import type { ItemRef } from '@boopis/ui';
 import type { RowOpts } from '@boopis/ui';
 import { reduced } from '../core/dom';
@@ -195,7 +195,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   };
   const card = (spec: FormSpec, handlers: Handlers): HTMLElement => {
     useFormsHost(sink(handlers));
-    const c = ui.card('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
+    const c = hostCard('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
     queueMicrotask(() => { focusForm(c); });
     return c;
   };

@@ -21,9 +21,8 @@
    guessed: an unresolved path stays code. */
 import { attrs, cx, esc } from '../core/dom';
 import type { BotLike } from './bot-state';
-import { html } from './html';
-import { icon } from './icons';
-import { orbHtml } from './orb';
+import { button } from './v7/button/button';
+import { iconButton } from './v7/icon-button/icon-button';
 import { inlineChip } from './v7/inline-chip/inline-chip';
 import rule from '../../../../shared/data/room-mentions.json';
 
@@ -55,9 +54,6 @@ export interface MarkdownCtx {
   fold?: number | undefined;
   /** links to https only (a mod's tree: MODS section 2); http stays words */
   httpsOnly?: boolean | undefined;
-  /** drawn on a v7 screen: mentions, the person's capsule, inline code, paths and links are the v7 kit's InlineChips (mention, you,
-      code, reference, cite), as the approved boards draw them in a bubble */
-  kit?: boolean | undefined;
 }
 
 /** the handles a text mentions, as the engine matches them (case folded, in order, once each) */
@@ -109,14 +105,8 @@ export function pathCandidate(code: string): string | null {
 /** what the host says a path is */
 export interface PathTarget { path: string; abs: string; kind: 'file' | 'folder' }
 /** a resolved path as a button: the code chip with a file or folder glyph, its folders cut from the left so the name shows */
-export function pathHTML(t: PathTarget, label?: string, kit = false): string {
-  const shown = label ?? t.path;
-  if (kit) return inlineChip({ kind: 'reference', text: shown, action: true, label: t.abs + '. Open it, or press the menu key for more', attrs: { 'data-path': t.path, 'data-abs': t.abs, 'data-kind': t.kind, 'data-tip': t.abs, 'aria-haspopup': 'menu' } });
-  const trimmed = shown.replace(/\/$/, '');
-  const cut = trimmed.lastIndexOf('/') + 1;
-  const dir = shown.slice(0, cut), base = shown.slice(cut);
-  return '<button type="button" class="ui-code ui-path"' + attrs({ 'data-path': t.path, 'data-abs': t.abs, 'data-kind': t.kind, 'data-tip': t.abs, 'aria-haspopup': 'menu', 'aria-label': t.abs + '. Open it, or press the menu key for more' }) + '>' +
-    icon(t.kind === 'folder' ? 'folder' : 'file') + (dir ? '<span class="ui-path__dir"><span>' + esc(dir) + '</span></span>' : '') + '<span class="ui-path__base">' + esc(base) + '</span></button>';
+export function pathHTML(t: PathTarget, label?: string): string {
+  return inlineChip({ kind: 'reference', text: label ?? t.path, action: true, label: t.abs + '. Open it, or press the menu key for more', attrs: { 'data-path': t.path, 'data-abs': t.abs, 'data-kind': t.kind, 'data-tip': t.abs, 'aria-haspopup': 'menu' } });
 }
 /** turn the path candidates under `root` that the host resolved into buttons (the others stay code) */
 export function upgradePaths(root: ParentNode, resolved: ReadonlyMap<string, PathTarget>): number {
@@ -124,7 +114,7 @@ export function upgradePaths(root: ParentNode, resolved: ReadonlyMap<string, Pat
   for (const c of root.querySelectorAll<HTMLElement>('code[data-path]')) {
     const t = resolved.get(c.dataset['path'] ?? ''); if (!t) continue;
     const tpl = document.createElement('template');
-    tpl.innerHTML = pathHTML(t, c.textContent ?? t.path, c.classList.contains('k7-code'));
+    tpl.innerHTML = pathHTML(t, c.textContent ?? t.path);
     const b = tpl.content.firstElementChild; if (!b) continue;
     c.replaceWith(b); n++;
   }
@@ -134,28 +124,6 @@ export function upgradePaths(root: ParentNode, resolved: ReadonlyMap<string, Pat
 export const pathCandidates = (root: ParentNode): string[] => [...new Set([...root.querySelectorAll<HTMLElement>('code[data-path]')].map((c) => c.dataset['path'] ?? '').filter(Boolean))];
 
 /* ───────────── mentions ───────────── */
-/** a mention: the bot's still orb and its name in a capsule; a button (the surface opens the bot's chat, and its card) */
-export function mentionHTML(b: MdBot): string {
-  return '<button type="button" class="ui-mention"' + attrs({ 'data-mention': b.id, 'aria-haspopup': 'dialog', 'aria-label': b.name + (b.role ? ', ' + b.role : '') + '. Open its chat' }) + '>' +
-    orbHtml(b, { size: 16, still: true }) + '<span class="ui-mention__name">' + esc(b.name) + '</span></button>';
-}
-/** a mention of a bot that is not in this room: the same capsule, muted, saying so (not a button: there is nothing to open here) */
-export function mentionOutsideHTML(b: MdBot, note = "isn't in this room"): string {
-  const said = b.name + ' ' + note;
-  return '<span class="ui-mention ui-mention--out" tabindex="0"' + attrs({ 'data-tip': said, 'aria-label': said }) + '>' + orbHtml(b, { size: 16, still: true }) + '<span class="ui-mention__name">' + esc(b.name) + '</span></span>';
-}
-const stackHTML = (members: readonly MdBot[]): string => '<span class="ui-mention__stack" aria-hidden="true">' + members.slice(0, 4).map((m) => orbHtml(m, { size: 16, still: true })).join('') + '</span>';
-/** `@all`: the members' orbs, overlapping, and the word */
-export function everyoneHTML(word: string, members: readonly MdBot[]): string {
-  return '<button type="button" class="ui-mention ui-mention--all"' + attrs({ 'data-mention': '@all', 'aria-label': word + ': ' + members.map((m) => m.name).join(', ') }) + '>' +
-    stackHTML(members) + '<span class="ui-mention__name">' + esc(word) + '</span></button>';
-}
-
-/** `@user` in a room: the person, as a capsule of their own. Not a bot's: no orb (the person has none) but the attention dot, the word
-    "you" in attention text, the capsule's ring and glow in attention red, since a bot that writes it is waiting on them (R-colour-2:
-    red is what the user owes). Not a button: there is nothing to open */
-export const youHTML = (): string => '<span class="ui-mention ui-mention--you">' + html.dot('attention') + '<span class="ui-mention__name">you</span></span>';
-
 /** what a handle names in a context, by the engine's rule: a bot of this conversation, the whole room (`@all`, `@everyone`), the
     person (`@user`, in a room), or a bot that exists but is not here; null when it names nobody (it stays text) */
 export type MentionTarget = { kind: 'bot'; bot: MdBot } | { kind: 'out'; bot: MdBot } | { kind: 'all'; members: readonly MdBot[] } | { kind: 'you' };
@@ -176,7 +144,7 @@ function kitTargetHTML(t: MentionTarget, word: string, ctx: MarkdownCtx): string
   if (t.kind === 'out') { const said = t.bot.name + ' ' + (ctx.outsideNote ?? "isn't in this room"); return inlineChip({ kind: 'mention', bot: t.bot, out: true, label: said, attrs: { tabindex: '0', 'data-tip': said } }); }
   return inlineChip({ kind: 'mention', bot: t.bot, colour: t.bot.color ?? undefined, action: true, label: t.bot.name + (t.bot.role ? ', ' + t.bot.role : '') + '. Open its chat', attrs: { 'data-mention': t.bot.id, 'aria-haspopup': 'dialog' } });
 }
-const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => (ctx.kit ? kitTargetHTML(t, word, ctx) : t.kind === 'all' ? everyoneHTML(word, t.members) : t.kind === 'bot' ? mentionHTML(t.bot) : t.kind === 'you' ? youHTML() : mentionOutsideHTML(t.bot, ctx.outsideNote));
+const targetHTML = (t: MentionTarget, word: string, ctx: MarkdownCtx): string => kitTargetHTML(t, word, ctx);
 const hasMentions = (ctx: MarkdownCtx): boolean => !!(ctx.mention || ctx.everyone || ctx.outside || ctx.you);
 /** whether a text addresses the person: a room's member wrote `@user` (the engine's handle for them), and no member answers to it */
 export const addressesYou = (text: string, ctx: MarkdownCtx): boolean => !!ctx.you && mentionSpans(text, ctx).some((s) => s.target.kind === 'you');
@@ -195,9 +163,12 @@ export function mentionSpans(text: string, ctx: MarkdownCtx): MentionSpan[] {
   return out;
 }
 
+/** inline `code` in a data string as the kit's code chips (InlineChip code), everything else escaped: words the app writes about a
+    session (a child task's title, a council's question), not markdown */
+export const inlineCodeHTML = (text: string): string => esc(text).replace(/`([^`]+)`/g, '<code class="k7-chip-in k7-code">$1</code>');
+
 /* ───────────── inline ───────────── */
 const linkHost = (href: string): string => href.replace(/^https?:\/\//i, '').replace(/[/?#].*$/, '');
-const v6LinkHTML = (label: string, href: string): string => '<a class="ui-link"' + attrs({ href, target: '_blank', rel: 'noopener noreferrer', 'data-tip': linkHost(href) }) + '>' + label + '</a>';
 const SAFE_URL = /^https?:\/\/[^\s<>"'`]+$/i;
 const PH = (k: string, i: number): string => '\u0000' + k + i + '\u0000';
 
@@ -211,13 +182,13 @@ export function inlineHTML(src: string, ctx: MarkdownCtx = {}): string {
   s = s.replace(/(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/g, (_m, _t: string, body: string) => {
     const code = body.length > 2 && body.startsWith(' ') && body.endsWith(' ') ? body.slice(1, -1) : body;
     const p = pathCandidate(code);
-    return hold('<code class="' + (ctx.kit ? 'k7-chip-in k7-code' : 'ui-code') + '"' + attrs({ 'data-path': p }) + '>' + esc(code) + '</code>');
+    return hold('<code class="k7-chip-in k7-code"' + attrs({ 'data-path': p }) + '>' + esc(code) + '</code>');
   });
-  const linkHTML = (label: string, href: string): string => (ctx.kit ? inlineChip({ kind: 'cite', text: '', href, attrs: { 'data-tip': linkHost(href) } }).replace('</a>', label + '</a>') : v6LinkHTML(label, href));
+  const linkHTML = (label: string, href: string): string => inlineChip({ kind: 'cite', text: '', href, attrs: { 'data-tip': linkHost(href) } }).replace('</a>', label + '</a>');
   /* images: an attachment chip (nothing remote is loaded), a link to it when it is on the web */
   s = s.replace(/!\[([^\]\n]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_m, alt: string, href: string) => {
     const name = alt.trim() || href.replace(/[?#].*$/, '').split('/').pop() || 'image';
-    const chip = '<span class="ui-file ui-file--static ui-md__image">' + icon('file') + '<span>' + esc(name) + '</span></span>';
+    const chip = inlineChip({ kind: 'reference', text: name, attrs: { 'data-md-image': '' } });
     return hold(ok(href) ? '<a class="ui-md__image-link"' + attrs({ href, target: '_blank', rel: 'noopener noreferrer', 'data-tip': linkHost(href), 'aria-label': name + ', image' }) + '>' + chip + '</a>' : chip);
   });
   /* links: [label](https://...) ; anything but http and https keeps its words and loses its target */
@@ -364,10 +335,10 @@ export function codeHTML(lang: string, code: readonly string[], ctx: MarkdownCtx
   const name = lang || 'text', count = n + (n === 1 ? ' line' : ' lines');
   return '<div class="ui-codeblock ui-nest" data-sq' + attrs({ role: 'group', 'aria-label': name + ' code, ' + count, 'data-lang': lang || null, 'data-folded': folded ? '' : null }) + '>' +
     '<div class="ui-codeblock__head ui-corners" data-edge="both"><span class="ui-codeblock__lang">' + esc(name) + '</span><span class="ui-codeblock__n">' + esc(count) + '</span>' +
-    html.button({ label: 'Wrap', size: 's', variant: 'ghost', class: 'ui-codeblock__wrap', attrs: { 'aria-pressed': 'false', 'data-tip': 'Wrap long lines' } }) +
-    html.iconButton({ icon: 'copy', label: 'Copy the code', size: 's', tip: 'Copy', tipPos: 'top', class: 'ui-corner ui-codeblock__copy' }) + '</div>' +
+    button({ label: 'Wrap', size: 28, variant: 'ghost', tip: 'Wrap long lines', attrs: { 'aria-pressed': 'false', 'data-code': 'wrap' } }) +
+    iconButton({ icon: 'copy', label: 'Copy the code', variant: 'ghost', tip: 'Copy', attrs: { 'data-tip-pos': 'top', 'data-code': 'copy' } }) + '</div>' +
     '<pre class="ui-codeblock__pre" tabindex="0"' + attrs({ 'aria-label': name + ' code' }) + '><code>' + body + '</code></pre>' +
-    (folded ? '<div class="ui-codeblock__foot">' + html.button({ label: 'Show ' + (n - show) + ' more lines', size: 's', variant: 'ghost', class: 'ui-codeblock__fold', attrs: { 'aria-expanded': 'false', 'data-more': String(n - show) } }) + '</div>' : '') +
+    (folded ? '<div class="ui-codeblock__foot">' + button({ label: 'Show ' + (n - show) + ' more lines', size: 28, variant: 'ghost', attrs: { 'aria-expanded': 'false', 'data-more': String(n - show), 'data-code': 'fold' } }) + '</div>' : '') +
     '</div>';
 }
 
@@ -399,5 +370,5 @@ export function blockHTML(b: Block, ctx: MarkdownCtx = {}): string {
 
 /** a whole text to HTML: the prose wrapper and its blocks */
 export function markdownHTML(text: string, ctx: MarkdownCtx = {}, o: { class?: string } = {}): string {
-  return '<div class="' + cx('ui-prose ui-md', o.class) + '"' + (!ctx.kit && addressesYou(text, ctx) ? ' data-to-you' : '')   /* on a v7 screen the kit's Bubble carries the wash */ + '>' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';
+  return '<div class="' + cx('ui-prose ui-md', o.class) + '">' + splitBlocks(text).map((b) => blockHTML(b, ctx)).join('') + '</div>';   /* the kit's Bubble carries the wash of a text addressed to you */
 }

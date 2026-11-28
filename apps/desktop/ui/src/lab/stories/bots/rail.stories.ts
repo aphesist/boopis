@@ -23,7 +23,7 @@ const scrolledToEnd = async (c: AppCtx): Promise<void> => { await rail('iris')(c
 const tipOn = (sel: string) => async (c: AppCtx): Promise<void> => {
   await rail('iris')(c);
   const b = document.querySelector<HTMLElement>(sel), side = document.querySelector<HTMLElement>('#hx-side');
-  if (b && side && b.getBoundingClientRect().right <= side.getBoundingClientRect().right + 0.5) { b.focus(); c.hx.ui.tooltip.show(b); }
+  if (b && side && b.getBoundingClientRect().right <= side.getBoundingClientRect().right + 0.5) { b.focus(); c.hx.tooltip.show(b); }
   await c.wait(250);
 };
 const MOCK = { url: '/v6/__index.html', note: 'the mock collapses to the rail with ctrl shift B; its Bots tab is alt+2' };
@@ -46,8 +46,8 @@ const story: Story = {
     'a group hovered': st(['hover'], roster(7, 2), rail('iris'), { force: [{ sel: '#hx-rail .k7-tile[data-gid="room-paper"]', state: 'hover' }] }),
     'a group focused': st(['focus'], roster(7, 2), rail('iris'), { force: [{ sel: '#hx-rail .k7-tile[data-gid="room-paper"]', state: 'focus' }] }),
     'New bot focused': st(['focus'], roster(7, 2), rail('iris'), { force: [{ sel: '#hx-rail [data-rail-act="new"]', state: 'focus' }] }),
-    'a group\'s tooltip': st(['tooltip'], roster(7, 2), tipOn('#hx-rail .k7-tile[data-gid="room-paper"]'), { overlay: { anchor: '#hx-rail .k7-tile[data-gid="room-paper"]', layer: '.ui-tip' } }),
-    'New bot\'s tooltip': st(['tooltip'], roster(7, 2), tipOn('#hx-rail [data-rail-act="new"]'), { overlay: { anchor: '#hx-rail [data-rail-act="new"]', layer: '.ui-tip' } }),
+    'a group\'s tooltip': st(['tooltip'], roster(7, 2), tipOn('#hx-rail .k7-tile[data-gid="room-paper"]'), { overlay: { anchor: '#hx-rail .k7-tile[data-gid="room-paper"]', layer: '.k7-tip' } }),
+    'New bot\'s tooltip': st(['tooltip'], roster(7, 2), tipOn('#hx-rail [data-rail-act="new"]'), { overlay: { anchor: '#hx-rail [data-rail-act="new"]', layer: '.k7-tip' } }),
     'seven bots and five groups, larger (112%)': st(['size', 'variant'], roster(7, 5), rail('iris'), { zoom: 1.12 })
   }
 };
