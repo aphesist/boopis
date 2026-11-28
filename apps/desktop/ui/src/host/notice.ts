@@ -22,7 +22,7 @@ export function showStartupFailure(err: unknown, opts: NoticeOptions = {}): HTML
   const root = document.createElement('div');
   root.className = 'hx-notice';
   /* a v7 root of its own (it covers the window outside the app's), in the scheme of the theme */
-  const light = document.documentElement.getAttribute('data-hx-theme') === 'light' || (document.getElementById('hx-app') ?? document.body).getAttribute('data-theme') === 'light';
+  const light = document.documentElement.getAttribute('data-hx-theme') === 'light' || (document.querySelector('#hx-app[data-theme]') ?? document.body).getAttribute('data-theme') === 'light';
   kit.applyTheme(root, { theme: light ? 'light' : 'dark' });
   const bar = windowBar(opts.windowControls);
   const body = document.createElement('div');
