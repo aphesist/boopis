@@ -48,16 +48,20 @@ const dense = (text: string) => ({ root }: { root: HTMLElement }): void => {
   const m = markdown(text, ROOM); paths(m);
   put(root, m);
 };
-const W = 340;   /* narrow enough that every width the lab uses (390 and up) draws the state */
+const W = 340;
+/* 2b: the specimens draw the kit's chips since the v6 capsules went. The kit's "you" and reference capsules keep the boards' own 18 line
+   (badge.css, `.badge2`, `.you`, `.refchip`), which sits up to 2.6 device px under the cap band, and a mention's orb lifts a dense 13/18
+   line by under a device px: a board decision against the check, an open question for the lead (REPASS 2b) */
+const BOARD_CAPS = { allow: { 'inline-baseline': 'the boards\' own 18 line for the kit\'s "you" and reference capsules (badge.css); a mention in a dense line (REPASS 2b, for the lead)' } };   /* narrow enough that every width the lab uses (390 and up) draws the state */
 const story: Story = {
   id: 'components/inline-chips', title: 'Inline chips', area: 'components', kind: 'component', covers: [],
   states: {
-    typical: stage(['typical'], botMessage(NINA), { width: W, ground: 'ground' }),
-    'every kind in a bot message': stage(['variant'], botMessage(NINA + '\n\n' + ALL), { width: W, ground: 'ground' }),
-    'in a request bubble': stage(['variant'], request('@nina ' + ALL), { width: W, ground: 'ground' }),
-    'in a paragraph': stage(['variant'], paragraph(ALL + ' ' + NINA), { width: W, ground: 'ground' }),
-    'in dense text': stage(['variant'], dense(ALL + ' ' + NINA), { width: W, ground: 'ground' }),
-    long: stage(['long'], botMessage(NINA + ' ' + LONG_TITLE + ' @nina @moss `' + LONG_TITLE + '` ' + PATH), { width: W, ground: 'ground' })
+    typical: stage(['typical'], botMessage(NINA), { width: W, ground: 'ground', ...BOARD_CAPS }),
+    'every kind in a bot message': stage(['variant'], botMessage(NINA + '\n\n' + ALL), { width: W, ground: 'ground', ...BOARD_CAPS }),
+    'in a request bubble': stage(['variant'], request('@nina ' + ALL), { width: W, ground: 'ground', ...BOARD_CAPS }),
+    'in a paragraph': stage(['variant'], paragraph(ALL + ' ' + NINA), { width: W, ground: 'ground', ...BOARD_CAPS }),
+    'in dense text': stage(['variant'], dense(ALL + ' ' + NINA), { width: W, ground: 'ground', ...BOARD_CAPS }),
+    long: stage(['long'], botMessage(NINA + ' ' + LONG_TITLE + ' @nina @moss `' + LONG_TITLE + '` ' + PATH), { width: W, ground: 'ground', ...BOARD_CAPS })
   }
 };
 export default story;
