@@ -13,5 +13,5 @@
 .ss-mod-card > hx-card { width: 100%; }
 
 /* a mod's status on the composer's line: it gives way first, cut by its ellipsis, so the line never runs past the composer */
-.ss-composer .k7-composer__item[data-mod-status] { flex: 0 1 auto; min-width: 0; }
+.ss-composer .k7-composer__item[data-mod-status] { flex: 0 1000 auto; min-width: 0; }   /* it gives way before every item of the line */
 .ss-composer .k7-composer__item[data-mod-status] > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

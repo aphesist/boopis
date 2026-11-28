@@ -20,7 +20,7 @@
 }
 .ss-view::before { content: ""; position: absolute; z-index: 1; left: 0; right: 0; top: 0; height: var(--scroll-fade); pointer-events: none; background: linear-gradient(var(--bg-2), transparent); opacity: 0; }
 .ss-view:has(> .ss-scroll[data-more-top])::before { opacity: 1; }
-.ss-scroll { padding-bottom: calc(var(--ss-comp-h, 68px) + var(--hx-dock-space, 0px) + var(--composer-bottom) + var(--sp-5)); }
+.ss-scroll { padding-bottom: calc(var(--ss-comp-h, 68px) + var(--hx-dock-space, 0px) + var(--composer-bottom) + var(--sp-5) + var(--hx-notify-room, 0px)); }   /* a Notice that shows takes its own room (notices.ts) */
 
 /* ================================================================ boards S20 and S23 (docs/design/v7/boards: sessiontab.js shell, s2, s4)
    The thread's column: 640 wide on the work's centre, its first line 72 under the window's top. A turn is the kit's session thread

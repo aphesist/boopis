@@ -605,8 +605,12 @@ function openFind(): boolean {
 /** a mod's placed row (or a card it raised) goes at the end of the conversation; gone when the session changes or clears */
 function placeRow(node: HTMLElement, o: { quiet: boolean }): void {
   if (!VIEW.col) return;
+  /* a quiet row (a mod's log line, a card) moves nobody: a reader at the end stays at the end, a reader further up stays where they are */
+  const sc = VIEW.scroll, atEnd = !!sc && sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4;
   VIEW.col.append(node);
-  if (!o.quiet && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
+  if (sc && (!o.quiet || atEnd)) {
+    sc.scrollTop = sc.scrollHeight;
+  }
 }
 
 /** what the title pill says of a session: its name, and the branch it works on once it has started (board S20). With no folder to
@@ -644,6 +648,11 @@ export function mountView(root: HTMLElement): void {
   VIEW.scroll.append(VIEW.col);
   root.replaceChildren(VIEW.scroll);
   VIEW.col.addEventListener('keydown', onTurnKey);
+  /* a reader at the thread's end stays there while what is drawn grows after it was placed (a card's swatches, a reply settling): the
+     end is where the reader left it, read on every scroll */
+  let pinned = true;
+  VIEW.scroll.addEventListener('scroll', () => { const sc = VIEW.scroll; if (sc) pinned = sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4; }, { passive: true });
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { const sc = VIEW.scroll; if (pinned && sc) sc.scrollTop = sc.scrollHeight; }).observe(VIEW.col);
   wireRefs(VIEW.col, { bot: () => null });
   VIEW.col.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t && e.target === t) rove(t); });
   followEngine(() => VIEW.col);   /* board S36: the engine stopped mid-session: the thread ends with the line that says so and starts it again */

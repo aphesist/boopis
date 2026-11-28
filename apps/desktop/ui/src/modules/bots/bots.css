@@ -20,7 +20,7 @@
 .bt-view { overflow: hidden; }
 .bt-room, .bt-new { position: absolute; inset: 0; }
 .bt-scroll, .bt-new-scroll { position: absolute; inset: 0; }   /* scroll areas (.ui-scroll) */
-.bt-scroll { padding-bottom: calc(var(--bt-composer-h, 96px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
+.bt-scroll { padding-bottom: calc(var(--bt-composer-h, 96px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5) + var(--hx-notify-room, 0px)); }
 .bt-col, .bt-new-col {
   width: var(--hx-col-w, var(--col-w)); max-width: 100%;
   margin-left: calc(var(--hx-col-left, 0px) - var(--hx-view-left, 0px));
@@ -105,7 +105,7 @@ orb-avatar.is-live { cursor: pointer; }
    720 wide (600 beside the open details pane), centred, 24 over the window's foot; what is said about it (a hint, held messages)
    sits over it, 8 apart. */
 #hx-view-bots { background: var(--bg-2); }   /* the Bots view's ground runs up under the floating chrome (shell.css) */
-.bt-room .bt-scroll { padding-bottom: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--sp-5)); }
+.bt-room .bt-scroll { padding-bottom: calc(var(--bt-composer-h, 68px) + var(--composer-bottom) + var(--sp-5) + var(--hx-notify-room, 0px)); }   /* a Notice that shows takes its own room (notices.ts) */
 .bt-room .bt-col { width: var(--col-w); max-width: calc(100% - 2 * var(--sp-5)); margin: 0 auto; padding-top: calc(var(--thread-top) - var(--drag-h)); }
 .bt-log > .k7-time { align-self: center; }
 .bt-log > .k7-time[data-unread] { align-self: stretch; }
@@ -133,7 +133,7 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-group .bt-turn .k7-gutter { align-self: stretch; }
 .bt-group .bt-log > .bt-ask { margin-top: var(--gap-s); align-self: stretch; }
 .bt-group .bt-ask > .bt-cardslot { margin-top: var(--sp-2); }
-[data-outside] { align-self: flex-start; margin-left: var(--gutter); }
+.bt-room [data-outside] { align-self: flex-start; margin-left: var(--gutter); }
 .k7-lrow > [data-outside] { align-self: center; margin-left: 0; }   /* in a roster row the mark sits on the row's centre line, never on its top edge (6f) */
 /* the composer and what sits over it */
 .bt-composer-zone { position: absolute; z-index: 3; left: 50%; width: var(--composer-w); max-width: calc(100% - 2 * var(--sp-5)); bottom: var(--composer-bottom); transform: translateX(-50%); display: flex; flex-direction: column; }

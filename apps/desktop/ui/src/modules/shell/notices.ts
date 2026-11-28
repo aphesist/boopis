@@ -2,7 +2,7 @@
    the v7 spec's "floating (bottom centre)"). The kit's `kit.notify` is the one API; its layer is `#hx-notify`, and the shell says where
    the bottom of the work is: just above the open view's composer stack (the composer and the held or queued strip or a mod's band
    over it), or above the dock where the view has no composer. The stack's top is read when a Notice comes in, when the layout changes
-   and when the stack's size changes while one shows (never in a frame), and written as `--hx-notify-bottom` on the host; shell.css
+   and when the stack's size changes while one shows, and written as `--hx-notify-bottom` on the host; the thread makes room for it (`--hx-notify-room`); shell.css
    adds the gap. */
 import { kit } from '@boopis/ui';
 import type { NotifyOpts } from '@boopis/ui';
@@ -35,6 +35,20 @@ export function placeNotice(host: HTMLElement | null = document.getElementById('
   watch(c);
   if (!c || box.height === 0) host.style.removeProperty('--hx-notify-bottom');
   else host.style.setProperty('--hx-notify-bottom', Math.max(0, Math.round(box.bottom - stackTop(c))) + 'px');
+  makeRoom(host);
+}
+/** the thread makes room for a Notice that shows (the lead, 2b: it never covers what has actions): the open view's scroller grows by the
+    Notice's height (`--hx-notify-room` on the app, read by session.css and bots.css), and one that rested at its end stays there */
+function makeRoom(host: HTMLElement): void {
+  const app = document.getElementById('hx-app');
+  if (!app) return;
+  const n = host.querySelector<HTMLElement>('.k7-notify[data-in]');
+  const want = n ? Math.round(n.getBoundingClientRect().height) + 'px' : '';
+  const scrollers = [...document.querySelectorAll<HTMLElement>('.hx-view.is-active :is(.ss-scroll, .bt-scroll)')];
+  const room = n ? n.getBoundingClientRect().height : 0;
+  if (app.style.getPropertyValue('--hx-notify-room') !== want) { if (want) app.style.setProperty('--hx-notify-room', want); else app.style.removeProperty('--hx-notify-room'); }
+  /* a reader at the thread's end (or within the Notice's own height of it) is brought to the end, so the room shows */
+  if (room) for (const sc of scrollers) if (sc.scrollHeight - sc.scrollTop - sc.clientHeight <= room + 8) sc.scrollTop = sc.scrollHeight;
 }
 
 /* the stack grows or shrinks while a Notice shows (a message is held, a mod's band opens): the Notice moves with its top. Read when the
