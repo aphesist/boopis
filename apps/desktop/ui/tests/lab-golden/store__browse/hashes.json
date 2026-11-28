@@ -1,71 +1,71 @@
 {
  "a-row-focused-from-the-search-down-arrow@bone": {
-  "sha": "44a7d1ca23df0de27a5181c5c7bc9cd955377877",
+  "sha": "5e558737c10918c83552dc19791ee7911befac1a",
   "w": 1416,
   "h": 664
  },
  "a-row-focused-from-the-search-down-arrow@catalog": {
-  "sha": "3eafbc769bcd2bfec10ea65ce783cba0e23ae897",
+  "sha": "c19db526df9a58cc93c3bb947236614225bee5a9",
   "w": 1416,
   "h": 664
  },
  "a-row-focused-from-the-search-down-arrow@graphite": {
-  "sha": "44ec28cf572797c1f1c6bf1cd511d12206fd2293",
+  "sha": "1c7b5e87b2d549e2dd1a8d07827eea7b0bf7807f",
   "w": 1416,
   "h": 664
  },
  "a-row-focused-from-the-search-down-arrow@typewriter": {
-  "sha": "1a37c81ee767c7ac705962c2a04fe2d7a1eda82f",
+  "sha": "c018e74eb494a7c3c1d2227d9812becc0ff91b0f",
   "w": 1416,
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@bone": {
-  "sha": "1a5798808811076c35fffecbe5f3a37cbfb8ff85",
+  "sha": "39160cd4af65398188fba6acd049a06bc63b9c7f",
   "w": 1416,
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@catalog": {
-  "sha": "6f4f5e6e0e244863870a83b6dc981bb301d43e68",
+  "sha": "eb61e03101c25ad937e6e9ef858a6185473e8b4d",
   "w": 1416,
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@graphite": {
-  "sha": "c4dda1d83a15971efe5b3cdc2df50f0d7ff47c65",
+  "sha": "4d1b4004ba2921b160e44b1e201aa7dfa6a77939",
   "w": 1416,
   "h": 664
  },
  "boopis-s-whole-collection-by-kind@typewriter": {
-  "sha": "c4dda1d83a15971efe5b3cdc2df50f0d7ff47c65",
+  "sha": "4d1b4004ba2921b160e44b1e201aa7dfa6a77939",
   "w": 1416,
   "h": 664
  },
  "connectors-only@bone": {
-  "sha": "dddb95310bb2e9c6e6b2fe07e767609749b10685",
+  "sha": "848637ad115a855c0a1314db7148a2cf939158ca",
   "w": 1416,
   "h": 664
  },
  "connectors-only@catalog": {
-  "sha": "94360b20290a53477f6cffc4f9807a529d5855c0",
+  "sha": "1b412057e1c5dacbac7dabd9f4be7aa9ace1e2ca",
   "w": 1416,
   "h": 664
  },
  "connectors-only@graphite": {
-  "sha": "8d501bc916cb31b49c0041e21170f4887f7af3a2",
+  "sha": "d7f7719538fd303b2af38069a7780759d6a7f424",
   "w": 1416,
   "h": 664
  },
  "connectors-only@typewriter": {
-  "sha": "8d501bc916cb31b49c0041e21170f4887f7af3a2",
+  "sha": "d7f7719538fd303b2af38069a7780759d6a7f424",
   "w": 1416,
   "h": 664
  },
  "engine-plugins-only@bone": {
-  "sha": "e5479884bc8e5a17d90fa91044e3ffa0d1f32862",
+  "sha": "d9f078228d107f1b57cc98564a92e6a0733e9371",
   "w": 1416,
   "h": 664
  },
  "engine-plugins-only@catalog": {
-  "sha": "6182cb4d5a9a5b9b904301f6a1baa5f595c61b52",
+  "sha": "2014dcf6daa1757dc7fb2627384579cebd077c0a",
   "w": 1416,
   "h": 664
  },
@@ -80,92 +80,92 @@
   "h": 664
  },
  "front-page-recommended@bone": {
-  "sha": "f84fbbdd3b5189c273ecc46984031cdb854bec0f",
+  "sha": "84659393f20e1a235bb0abbc05d3af75d8602ec3",
   "w": 1416,
   "h": 664
  },
  "front-page-recommended@catalog": {
-  "sha": "2062e73391950b826900a4e277729ed8882f48f3",
+  "sha": "da9bcdebbf00dc0be65e278a70f5a342e3203d05",
   "w": 1416,
   "h": 664
  },
  "front-page-recommended@graphite": {
-  "sha": "96194e298ea3ae795bb98b4c325a5c56ca33e343",
+  "sha": "95ad4754023176b97cab2ec994caa2240f333e1f",
   "w": 1416,
   "h": 664
  },
  "front-page-recommended@typewriter": {
-  "sha": "43b7d25f35a370d91abecbdb0973410d0db45aab",
+  "sha": "95ad4754023176b97cab2ec994caa2240f333e1f",
   "w": 1416,
   "h": 664
  },
  "get-focus@bone": {
-  "sha": "927412dea07b0bd0042d67e349fe054d6f73470f",
+  "sha": "97a19af6653b550289d9547cde63153bfa83737a",
   "w": 1416,
   "h": 664
  },
  "get-focus@catalog": {
-  "sha": "16ddf4be2ccd92cedd8cedd2d1144a9587879fd0",
+  "sha": "caae28b91982444478e4a212161c9f57123dbeeb",
   "w": 1416,
   "h": 664
  },
  "get-focus@graphite": {
-  "sha": "f0306418d10fd1508d31941e8b61dafb0aed44a1",
+  "sha": "9e9ef36c51ac8e5cc73c69c9dd79d940a772dbe1",
   "w": 1416,
   "h": 664
  },
  "get-focus@typewriter": {
-  "sha": "f0306418d10fd1508d31941e8b61dafb0aed44a1",
+  "sha": "9e9ef36c51ac8e5cc73c69c9dd79d940a772dbe1",
   "w": 1416,
   "h": 664
  },
  "get-hover@bone": {
-  "sha": "b57e8f38c439428f82747c94ed2a44a7efa6cfa2",
+  "sha": "d80cf361af4b1f5e4101570788726df0f83d3eae",
   "w": 1416,
   "h": 664
  },
  "get-hover@catalog": {
-  "sha": "47ab15c4314012fb6aafe5697db2c596999039ed",
+  "sha": "09036e40994a45ec7ff7dbb4abb94b96e029b9c9",
   "w": 1416,
   "h": 664
  },
  "get-hover@graphite": {
-  "sha": "ed107441e4821b6c148c81c78e609fa0b7817bfa",
+  "sha": "3272e8f2721ada09e4a3b8bd5ab456d2f014a4b3",
   "w": 1416,
   "h": 664
  },
  "get-hover@typewriter": {
-  "sha": "ed107441e4821b6c148c81c78e609fa0b7817bfa",
+  "sha": "73f37676a2a2928ab070dac22f4bb01d88877ddd",
   "w": 1416,
   "h": 664
  },
  "long-names@bone": {
-  "sha": "7cdf78e2f4302b7623b74fe50e7e02a297c612a4",
+  "sha": "59513b378a1bb5371a88687d2f8dbbbe0903ad56",
   "w": 1416,
   "h": 664
  },
  "long-names@catalog": {
-  "sha": "ef19bea159d8bcb119350312e117e47778dbb430",
+  "sha": "4a42f3fd904d56bf06b19cf97b14b699c88b64d2",
   "w": 1416,
   "h": 664
  },
  "long-names@graphite": {
-  "sha": "82338a72879b7c303349b57311f5c1a55b17bd54",
+  "sha": "2efae60bb09c4f1197aaabe7db555282865647f1",
   "w": 1416,
   "h": 664
  },
  "long-names@typewriter": {
-  "sha": "82338a72879b7c303349b57311f5c1a55b17bd54",
+  "sha": "2efae60bb09c4f1197aaabe7db555282865647f1",
   "w": 1416,
   "h": 664
  },
  "no-sources-on@bone": {
-  "sha": "665e3d1a98baa28c1e7957cac8751f0b21ccdcc1",
+  "sha": "646c8700ff2ca8aade531257d6f7732f20a53b7b",
   "w": 1416,
   "h": 664
  },
  "no-sources-on@catalog": {
-  "sha": "4932ca819edccfb3acc03987f4c46caa721ce6a7",
+  "sha": "67d5b519ff34c72f8026ad4877afff36922c5ad2",
   "w": 1416,
   "h": 664
  },
@@ -175,7 +175,7 @@
   "h": 664
  },
  "no-sources-on@typewriter": {
-  "sha": "4709710c206c7e5a6b017c2baea62778b862f788",
+  "sha": "59e94d890da6ffb02081f8f92d8493e99b231a43",
   "w": 1416,
   "h": 664
  },
@@ -185,17 +185,17 @@
   "h": 664
  },
  "nothing-matches-in-one-kind-show-everything@catalog": {
-  "sha": "a2a9e72debea9dc909c1217733cfd67b346c11be",
+  "sha": "48fc2b77aa68301a97e2176a85e640c7a5a4cdeb",
   "w": 1416,
   "h": 664
  },
  "nothing-matches-in-one-kind-show-everything@graphite": {
-  "sha": "421e4d2ea407611e3c4716e5754fc585c1a1f4fd",
+  "sha": "f4140dacc14b03f9b782192287a8a601ccb9752d",
   "w": 1416,
   "h": 664
  },
  "nothing-matches-in-one-kind-show-everything@typewriter": {
-  "sha": "421e4d2ea407611e3c4716e5754fc585c1a1f4fd",
+  "sha": "f4140dacc14b03f9b782192287a8a601ccb9752d",
   "w": 1416,
   "h": 664
  },
@@ -205,137 +205,137 @@
   "h": 664
  },
  "nothing-matches@catalog": {
-  "sha": "98386ad0ad75708c1793e04ef3919273cc51caeb",
+  "sha": "8b57fa6f9197525ae51974bd6854836a569be4fe",
   "w": 1416,
   "h": 664
  },
  "nothing-matches@graphite": {
-  "sha": "8f774e12f4aa88f97f597b8eff570568906514f4",
+  "sha": "909ca95d431e05cc7b32af74a5f6f5999223fe58",
   "w": 1416,
   "h": 664
  },
  "nothing-matches@typewriter": {
-  "sha": "8f774e12f4aa88f97f597b8eff570568906514f4",
+  "sha": "909ca95d431e05cc7b32af74a5f6f5999223fe58",
   "w": 1416,
   "h": 664
  },
  "offline-with-the-saved-copy@bone": {
-  "sha": "4e70e923714e4ff7ff91d86f4b54f19c16ee949b",
+  "sha": "59e6c2bf62847cb4c193ef6cd9e322cc1d04215f",
   "w": 1416,
   "h": 664
  },
  "offline-with-the-saved-copy@catalog": {
-  "sha": "456dcb6558ba715064ef12e89316a4d26f182037",
+  "sha": "13fc723076d044172ee7e1d1575d6f1e462c49c4",
   "w": 1416,
   "h": 664
  },
  "offline-with-the-saved-copy@graphite": {
-  "sha": "e1f7e28921c3806abef6f8cefd862382c73fdf0d",
+  "sha": "224c289ce399e6d2b74ddba2393689e42f8c0a19",
   "w": 1416,
   "h": 664
  },
  "offline-with-the-saved-copy@typewriter": {
-  "sha": "e1f7e28921c3806abef6f8cefd862382c73fdf0d",
+  "sha": "224c289ce399e6d2b74ddba2393689e42f8c0a19",
   "w": 1416,
   "h": 664
  },
  "out-of-date-a-source-could-not-be-read@bone": {
-  "sha": "6266daeac67b42bf27dbdad3f2f3fcb442b0f43e",
+  "sha": "7eb09c812da18d4d95aea7760e2670ad1fa471d8",
   "w": 1416,
   "h": 664
  },
  "out-of-date-a-source-could-not-be-read@catalog": {
-  "sha": "f5a24f651f2d1ce0938ac45a0cffaf6d8bcde974",
+  "sha": "5fb8303769265cd4f0a65fc7dc1ee121ebf54d66",
   "w": 1416,
   "h": 664
  },
  "out-of-date-a-source-could-not-be-read@graphite": {
-  "sha": "a75b91ffff8843084cfb1a2ba9b69e78f29ecb45",
+  "sha": "425dd045425586a6d250a385b016b0429514ace8",
   "w": 1416,
   "h": 664
  },
  "out-of-date-a-source-could-not-be-read@typewriter": {
-  "sha": "a75b91ffff8843084cfb1a2ba9b69e78f29ecb45",
+  "sha": "425dd045425586a6d250a385b016b0429514ace8",
   "w": 1416,
   "h": 664
  },
  "out-of-date-due-a-read-again@bone": {
-  "sha": "0fbc9514de5a00ae47b3850aa3459fd46824d245",
+  "sha": "a01f0a730062f689e8f32b655a4faa8e41f8be30",
   "w": 1416,
   "h": 664
  },
  "out-of-date-due-a-read-again@catalog": {
-  "sha": "2e4a46393b2a32528ac9d4555ea0dd9acad34b30",
+  "sha": "0f905899bd2cfad8831100602059a843a8d34c5d",
   "w": 1416,
   "h": 664
  },
  "out-of-date-due-a-read-again@graphite": {
-  "sha": "36b8d944b81b0568c3944e8b77661f9a34fd25e8",
+  "sha": "3e80b697e0039cb2d781e6eeb944c4497492e084",
   "w": 1416,
   "h": 664
  },
  "out-of-date-due-a-read-again@typewriter": {
-  "sha": "36b8d944b81b0568c3944e8b77661f9a34fd25e8",
+  "sha": "d205487c0915aaf7b49b2dc879afc1484b321e31",
   "w": 1416,
   "h": 664
  },
  "out-of-date-several-could-not-be-read-with-the-reasons-one-tap-away@bone": {
-  "sha": "5082591626ff90788f3313d23c2f3312a8c72bab",
+  "sha": "73f5f741bda18644cd169904f7093bf7839940e6",
   "w": 1416,
   "h": 664
  },
  "out-of-date-several-could-not-be-read-with-the-reasons-one-tap-away@catalog": {
-  "sha": "83eba0844a74412907d4cb5c74e279ba76b81649",
+  "sha": "fbb130fd9af0208d13ab0be72661cc2db4241118",
   "w": 1416,
   "h": 664
  },
  "out-of-date-several-could-not-be-read-with-the-reasons-one-tap-away@graphite": {
-  "sha": "697e6cf82e21978e54af3e56872cef77e225a33c",
+  "sha": "fa3de217bea53a651f01c250a918504ef7503285",
   "w": 1416,
   "h": 664
  },
  "out-of-date-several-could-not-be-read-with-the-reasons-one-tap-away@typewriter": {
-  "sha": "697e6cf82e21978e54af3e56872cef77e225a33c",
+  "sha": "fa3de217bea53a651f01c250a918504ef7503285",
   "w": 1416,
   "h": 664
  },
  "row-hover@bone": {
-  "sha": "f5aa8b98b5735a1c216e5de8c2bfa491d046437d",
+  "sha": "b963c99bd46206f71aae3383d6bec6921195af00",
   "w": 1416,
   "h": 664
  },
  "row-hover@catalog": {
-  "sha": "28dbcbf5b5650e9ce3208f4769423accff4f52b1",
+  "sha": "efdef738f3012c1e3594c2d5065764896a3748a0",
   "w": 1416,
   "h": 664
  },
  "row-hover@graphite": {
-  "sha": "dfb4f8b30fbd6928dad32212b6411268379e5874",
+  "sha": "65ece794536e5c3a37e962c747dd1afc3def75b8",
   "w": 1416,
   "h": 664
  },
  "row-hover@typewriter": {
-  "sha": "dfb4f8b30fbd6928dad32212b6411268379e5874",
+  "sha": "65ece794536e5c3a37e962c747dd1afc3def75b8",
   "w": 1416,
   "h": 664
  },
  "search-results@bone": {
-  "sha": "0458dd7d452ce906d0a5b0ab4943967ef96fe288",
+  "sha": "dee823aa26f14b1ca3cc5c9b080cc8f5b7e97f30",
   "w": 1416,
   "h": 664
  },
  "search-results@catalog": {
-  "sha": "ee398da3ab49868a8ed1fd35764b251953fe9033",
+  "sha": "92f3691a9fb6879d5ee7ea7f35172e407355f384",
   "w": 1416,
   "h": 664
  },
  "search-results@graphite": {
-  "sha": "ec40677142659cd4d0b35927d77d7ce47f84e301",
+  "sha": "0557410ca4aaf97d3b433408ce7c322be94cc476",
   "w": 1416,
   "h": 664
  },
  "search-results@typewriter": {
-  "sha": "ec40677142659cd4d0b35927d77d7ce47f84e301",
+  "sha": "fb71f3e1c30a015bb548b3d4e352ac7e577a3297",
   "w": 1416,
   "h": 664
  },
@@ -345,77 +345,77 @@
   "h": 664
  },
  "search-with-results-across-kinds@catalog": {
-  "sha": "9a680ac9ab115fa1aa951351641ec04a9d8d1814",
+  "sha": "85dd6e14b8b82a0081f25c361b1d0d43813c1020",
   "w": 1416,
   "h": 664
  },
  "search-with-results-across-kinds@graphite": {
-  "sha": "c22cd419c72c089388ceb48167634a7ec95baac9",
+  "sha": "6221c390e962373831fab1e0202056f8e3bc4da8",
   "w": 1416,
   "h": 664
  },
  "search-with-results-across-kinds@typewriter": {
-  "sha": "c22cd419c72c089388ceb48167634a7ec95baac9",
+  "sha": "6221c390e962373831fab1e0202056f8e3bc4da8",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@bone": {
-  "sha": "4864b99df238019b32b31053216a4e3dbfebe8c7",
+  "sha": "897b6684ab9f3e35ad9c53ab660677f1a02e7019",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@catalog": {
-  "sha": "a78edfa9c2d3a8e68bc2764521827ad46cffb5d7",
+  "sha": "f8d99d5d1393daf627a83b0cbea18d68df8800ed",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@graphite": {
-  "sha": "3a602b4169c403584aac862053262725b4ed1365",
+  "sha": "f72bf92a2718270b9d6d903cc6c311a8a8de1477",
   "w": 1416,
   "h": 664
  },
  "skills-only-most-used-first@typewriter": {
-  "sha": "ae4f0daaa7e62b43ed0c62242ea3d32252294a67",
+  "sha": "f72bf92a2718270b9d6d903cc6c311a8a8de1477",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@bone": {
-  "sha": "38b260dec6c9ffaff015ba98b6cf1b98c3fece81",
+  "sha": "232d89ce9d44728202c8e7807cc7d800b8577373",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@catalog": {
-  "sha": "dd0f50dc8de3f12ee61f7ffc519fa85fe3ccbcbc",
+  "sha": "7efa3c1c2414f801a98e34ad1ad0e9fbabbb623a",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@graphite": {
-  "sha": "d8953c663786828cf7d73d59ee112244a491152c",
+  "sha": "7811bd4f9978bceb97c4ef35b674e13c718989f3",
   "w": 1416,
   "h": 664
  },
  "the-front-page-with-boopis-s-skills-and-plugins-most-used-first@typewriter": {
-  "sha": "c187d8b53a2edf6287d7cd2c369d85cddba16dd6",
+  "sha": "7811bd4f9978bceb97c4ef35b674e13c718989f3",
   "w": 1416,
   "h": 664
  },
  "the-sources-being-read-source-by-source@bone": {
-  "sha": "191f54488b29531a8ad563666c6f5f4ff6408bc6",
+  "sha": "791adc9d126b99eed1d83df9336244da37a9ad65",
   "w": 1416,
   "h": 664
  },
  "the-sources-being-read-source-by-source@catalog": {
-  "sha": "b2c867560fd05e2d53b7e7fa463b5c1ad35e6ef8",
+  "sha": "537a016507358ea8864e3a9d21eb23beca332f92",
   "w": 1416,
   "h": 664
  },
  "the-sources-being-read-source-by-source@graphite": {
-  "sha": "34d4027cc904df838abb5699a431d19e7d96624a",
+  "sha": "72d188823f9b1775f451e7de493db21f298b6935",
   "w": 1416,
   "h": 664
  },
  "the-sources-being-read-source-by-source@typewriter": {
-  "sha": "34d4027cc904df838abb5699a431d19e7d96624a",
+  "sha": "72d188823f9b1775f451e7de493db21f298b6935",
   "w": 1416,
   "h": 664
  },
@@ -435,27 +435,27 @@
   "h": 664
  },
  "the-store-did-not-load@typewriter": {
-  "sha": "698db6f42be19b170ae349ea9a3967e774f408c1",
+  "sha": "3158c44eabdad8f704271d5fb557d9eb041b6793",
   "w": 1416,
   "h": 664
  },
  "up-to-date-after-a-read@bone": {
-  "sha": "5263135857d5061e1bc3a67821138b125ebec0df",
+  "sha": "6b04b590262417d81f88642f1ce6e8ae4267608f",
   "w": 1416,
   "h": 664
  },
  "up-to-date-after-a-read@catalog": {
-  "sha": "0944c893ad27d71d3b1853f11651c0530e95c55a",
+  "sha": "4ac99597f3ca4bba2b7e959d0ed4d62c61be4677",
   "w": 1416,
   "h": 664
  },
  "up-to-date-after-a-read@graphite": {
-  "sha": "dc237f6ec7948b5a7ddd4054881e252b67bfdbd6",
+  "sha": "27eef32f8b47bc2f0b42988e60ac0bee3b60acbd",
   "w": 1416,
   "h": 664
  },
  "up-to-date-after-a-read@typewriter": {
-  "sha": "aa1c0a0fd516cfb3decd9142c958ea0dce4cf057",
+  "sha": "27eef32f8b47bc2f0b42988e60ac0bee3b60acbd",
   "w": 1416,
   "h": 664
  }

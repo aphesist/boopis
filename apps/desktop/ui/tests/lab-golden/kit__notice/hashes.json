@@ -19,6 +19,26 @@
   "w": 664,
   "h": 68
  },
+ "floating-a-mod-s-notice@dark": {
+  "sha": "7cf5234128462296d3d26c4df7e087fcf82270e5",
+  "w": 1416,
+  "h": 68
+ },
+ "floating-a-mod-s-notice@light": {
+  "sha": "6fb7b0034c4f2ae284db34fefd8c35873fca70fc",
+  "w": 1416,
+  "h": 68
+ },
+ "floating-two-more-waiting-2@dark": {
+  "sha": "28ac88143d6245bbe66b38b599f64bac33646e00",
+  "w": 1416,
+  "h": 68
+ },
+ "floating-two-more-waiting-2@light": {
+  "sha": "62f1454e7524e3e7c258f3b36977390eda8ed8c4",
+  "w": 1416,
+  "h": 68
+ },
  "floating@dark": {
   "sha": "b573eb81ec40bd12b1eabba98f62d7b96c727c0c",
   "w": 1416,
@@ -45,7 +65,7 @@
   "h": 68
  },
  "hover@light": {
-  "sha": "b1913b178a936341a4e10cd8b770bf89c37cd4cd",
+  "sha": "d29b5890ef5009941714000a8e4d4e84a886e405",
   "w": 664,
   "h": 68
  },

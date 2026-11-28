@@ -1,101 +1,121 @@
 {
+ "a-notice-with-n@bone": {
+  "sha": "39dc14cb631ab25f5a67d4c9ea04d0832840966f",
+  "w": 356,
+  "h": 68
+ },
+ "a-notice-with-n@catalog": {
+  "sha": "ad29082a06c6770e063ca7f79b6fa38c852bc092",
+  "w": 322,
+  "h": 68
+ },
+ "a-notice-with-n@graphite": {
+  "sha": "9f5ec5063ad76c4bbfbdbc49bb93146c906b5ae5",
+  "w": 356,
+  "h": 68
+ },
+ "a-notice-with-n@typewriter": {
+  "sha": "ed696be9133a4ba594623c660c5051f1e91eadf4",
+  "w": 356,
+  "h": 68
+ },
  "band-and-status@bone": {
-  "sha": "2b80685b858ae8f3286cb3d599de96aaf1854bb2",
+  "sha": "eb853d3d3bc40e8c4999af3d2568e2534ebe0252",
   "w": 744,
-  "h": 779
+  "h": 166
  },
  "band-and-status@catalog": {
-  "sha": "5f36ef842cbdd8a899517561c2eb444d9917e78e",
+  "sha": "bbb89d7a6d70b875e844784a3bbb6173e08e955d",
   "w": 744,
-  "h": 779
+  "h": 166
  },
  "band-and-status@graphite": {
-  "sha": "f887192593e3645eaa0cd59fdb6f3074d643a4fe",
+  "sha": "6c75b24c96e2203a6c63b0e3c0510fb74ba5fdef",
   "w": 744,
-  "h": 779
+  "h": 166
  },
  "band-and-status@typewriter": {
-  "sha": "2380a81f8fd69ac864ae4ce4d8f2a0e197913585",
+  "sha": "72257bd61998b6f85ea53688065748d06425cf71",
   "w": 744,
-  "h": 193
+  "h": 178
  },
  "pane-in-the-details-panel@bone": {
-  "sha": "340cfdb9d1ec124cb941e17846a7d76566d13844",
-  "w": 888,
-  "h": 872
+  "sha": "a1d338b3cd0dc39e6d73ecbd70d7ee68735c80aa",
+  "w": 368,
+  "h": 900
  },
  "pane-in-the-details-panel@catalog": {
-  "sha": "a9abf60da18e051947feed1b89336864fd06c93d",
-  "w": 895,
-  "h": 872
+  "sha": "8188fc018a0e3768d1b43ba4c9a048b9989f7a85",
+  "w": 368,
+  "h": 900
  },
  "pane-in-the-details-panel@graphite": {
-  "sha": "d079f621536f409a19429bdb52311aad0bacec0b",
-  "w": 886,
-  "h": 872
+  "sha": "92b466fced81931a39b8b0470365fb5af244efd0",
+  "w": 368,
+  "h": 900
  },
  "pane-in-the-details-panel@typewriter": {
-  "sha": "28e7008e572e884a537f3772a8f97acef28cd110",
-  "w": 312,
-  "h": 872
+  "sha": "5c0fb9da439ec746e4ce5e8365aec4de57bb6cfb",
+  "w": 368,
+  "h": 900
  },
  "the-conversation-with-placed-rows@bone": {
-  "sha": "d2040987aeafec1891840db68e212d7db65f3d80",
-  "w": 1180,
-  "h": 872
+  "sha": "e39088e8795acf635a6f7cd59ec015bb40796233",
+  "w": 1152,
+  "h": 856
  },
  "the-conversation-with-placed-rows@catalog": {
-  "sha": "98685a2a6a82bef307cd6890aa77b2b77e311f97",
-  "w": 1180,
-  "h": 872
+  "sha": "ede08ed7a4072bb4fa018e3bad1095927b2bd4e0",
+  "w": 1152,
+  "h": 856
  },
  "the-conversation-with-placed-rows@graphite": {
-  "sha": "f5578648499e2cd629a481bb923921609d62ec0a",
-  "w": 1180,
-  "h": 872
+  "sha": "ede08ed7a4072bb4fa018e3bad1095927b2bd4e0",
+  "w": 1152,
+  "h": 856
  },
  "the-conversation-with-placed-rows@typewriter": {
-  "sha": "4f79cf418bc8a5f0cc114a0f8779dad1263ed740",
-  "w": 1180,
-  "h": 872
+  "sha": "ed9c0e2bac3d7befac905d27859b28c43c80f90e",
+  "w": 1152,
+  "h": 856
  },
  "theme-card-hover@bone": {
-  "sha": "e2a41688a1d842641e3c3365ddeb2566107bed08",
-  "w": 1180,
-  "h": 872
+  "sha": "4e78b54ee5f6d6444e0a1b391e2066c4a8c9677e",
+  "w": 1152,
+  "h": 856
  },
  "theme-card-hover@catalog": {
-  "sha": "df5686c4c2f6382169c4499363eb8857731d6efb",
-  "w": 1180,
-  "h": 872
+  "sha": "68cb8de398d01f44066149c0e3258d0dc49e8eca",
+  "w": 1152,
+  "h": 856
  },
  "theme-card-hover@graphite": {
-  "sha": "c6744880fb5b8d067cab16d2f4b16bff693e29c6",
-  "w": 1180,
-  "h": 872
+  "sha": "ede08ed7a4072bb4fa018e3bad1095927b2bd4e0",
+  "w": 1152,
+  "h": 856
  },
  "theme-card-hover@typewriter": {
-  "sha": "7eec557fd087c9cfee26d65eff6068329d4b75f1",
-  "w": 1180,
-  "h": 872
+  "sha": "ed9c0e2bac3d7befac905d27859b28c43c80f90e",
+  "w": 1152,
+  "h": 856
  },
  "whole-window@bone": {
-  "sha": "6004dc9ea359b8d47a95a08ee31357e80cbe3cbd",
+  "sha": "9ca253433168599e2106cbee082c0595f6afcb40",
   "w": 1440,
   "h": 900
  },
  "whole-window@catalog": {
-  "sha": "6aa49ccf726906115a7be06df41bdfc682314173",
+  "sha": "2ef0c577e5ef08ef470ab21bb3974dde27cfde0e",
   "w": 1440,
   "h": 900
  },
  "whole-window@graphite": {
-  "sha": "7901f1265403bea29cc1eab512f169a18d72f48d",
+  "sha": "2ef0c577e5ef08ef470ab21bb3974dde27cfde0e",
   "w": 1440,
   "h": 900
  },
  "whole-window@typewriter": {
-  "sha": "2396666f3aedb4305e10acda9a04bff381116a81",
+  "sha": "5f8d72c0eb79aab8969b850ee50758f9f5412dbb",
   "w": 1440,
   "h": 900
  }

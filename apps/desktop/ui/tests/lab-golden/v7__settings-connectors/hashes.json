@@ -1,41 +1,41 @@
 {
  "a-connector-with-several-ways-its-menu@dark": {
-  "sha": "ea3a4a071539756a5ecd4c35eeb1964fe69f8dd4",
+  "sha": "1062dcc0c7c455f065673532f1161a575620822e",
   "w": 1416,
   "h": 1081
  },
  "a-connector-with-several-ways-its-menu@light": {
-  "sha": "ba293c7806df500da01424bdfae6b8b7a8b6e36b",
+  "sha": "18ff229704c6cdf9c462d88682c90b6bbd6ce745",
   "w": 1416,
   "h": 1081
  },
  "every-state-of-an-installed-connector@dark": {
-  "sha": "9773b4e99bc6bbc3608f0a2041198100722b4830",
+  "sha": "e24d3549cf7ebbb0911b3e6f4aa25d5d0735e06d",
   "w": 1416,
   "h": 1509
  },
  "every-state-of-an-installed-connector@light": {
-  "sha": "24f486521ab9cc7824e1d454ee54a1ae9c6845bf",
+  "sha": "a2be4caa14088f9422cd962cc865d928ce372f01",
   "w": 1416,
   "h": 1509
  },
  "long-names@dark": {
-  "sha": "0e37255afb26631fc2aa35306e48ac14ad5ea6c6",
+  "sha": "aacc07a1e21e3dc6069a4c6e954dc8814392c05e",
   "w": 1416,
   "h": 1199
  },
  "long-names@light": {
-  "sha": "c3660f71146ff48c825ace877c5a62a775ea9a73",
+  "sha": "71a8477237b5ba30ce718849d279918414e7ed89",
   "w": 1416,
   "h": 1199
  },
  "nothing-installed-yet@dark": {
-  "sha": "ea3a4a071539756a5ecd4c35eeb1964fe69f8dd4",
+  "sha": "1062dcc0c7c455f065673532f1161a575620822e",
   "w": 1416,
   "h": 1081
  },
  "nothing-installed-yet@light": {
-  "sha": "ba293c7806df500da01424bdfae6b8b7a8b6e36b",
+  "sha": "18ff229704c6cdf9c462d88682c90b6bbd6ce745",
   "w": 1416,
   "h": 1081
  },
@@ -50,37 +50,37 @@
   "h": 653
  },
  "row-focus@dark": {
-  "sha": "b48cbb7cb80c89c33a773cc408adef45a79bf718",
+  "sha": "48395628bdac875f88be46d4a8a0739586a31018",
   "w": 1416,
   "h": 1137
  },
  "row-focus@light": {
-  "sha": "cd2de14d566150a887b1b811b5032db925e4859c",
+  "sha": "148ae4f55ac502c88462c6648916a2ac032ba7ad",
   "w": 1416,
   "h": 1137
  },
  "row-hover@dark": {
-  "sha": "8cd416ff325187dbfde249cfc9ac30e1e81a038d",
+  "sha": "a626d275312a88434d356dccd3545c3386229564",
   "w": 1416,
   "h": 1137
  },
  "row-hover@light": {
-  "sha": "34c7bb0585d672f24a758118f466c1cfaa2380fe",
+  "sha": "092372397bbe3f21a033ef3d5f6c159b3724259e",
   "w": 1416,
   "h": 1137
  },
  "the-list-could-not-be-read@dark": {
-  "sha": "3ea641def87357c591d9ae91b02298bc12736e2e",
+  "sha": "e5c93686ea0581b4b5db58280dfdb61900c9c629",
   "w": 1416,
   "h": 1081
  },
  "the-list-could-not-be-read@light": {
-  "sha": "1581972b9ddf70141feccfd4619aec643b841fd7",
+  "sha": "bbdd51ee6ca5df4d9ce26eed97e9b3e3e1223f86",
   "w": 1416,
   "h": 1081
  },
  "the-search-narrows-both-lists@dark": {
-  "sha": "12b2c2e7c1c90fc83c9674639a914cd219a97644",
+  "sha": "592aa7e4d36844e7fbe1092eadd4b53735da2dbe",
   "w": 1416,
   "h": 703
  },
@@ -90,12 +90,12 @@
   "h": 703
  },
  "with-boopis-s-collection@dark": {
-  "sha": "cffa0bd693b56c926b6302d844cfb78cb0a4ccab",
+  "sha": "b6ce06f972e65bea892bd12de2cec6185a4fd83e",
   "w": 1416,
   "h": 1137
  },
  "with-boopis-s-collection@light": {
-  "sha": "96ca7d602c67bffa4637894846ea2e8797483d12",
+  "sha": "3da867368963787ef3a0b4f2aa56a815f6b92739",
   "w": 1416,
   "h": 1137
  }

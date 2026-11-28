@@ -1,121 +1,121 @@
 {
  "an-update-is-available@bone": {
-  "sha": "f46e561ab9d7b47f8310ed79d448b3299e746d08",
+  "sha": "1cf5281f6f0a6fed6d566450fffb92b3a855d743",
   "w": 1416,
   "h": 664
  },
  "an-update-is-available@catalog": {
-  "sha": "934eecc9c229598e86e4b4467e60d5c321c3f390",
+  "sha": "d3ce44c223d343d29cfe23eeb5894c90ebd569c5",
   "w": 1416,
   "h": 664
  },
  "an-update-is-available@graphite": {
-  "sha": "2924d40b965c9b7128844cdcf30d049e770d9f3a",
+  "sha": "726201fe9a7e13bac92914c82432e00a35c46b22",
   "w": 1416,
   "h": 664
  },
  "an-update-is-available@typewriter": {
-  "sha": "2924d40b965c9b7128844cdcf30d049e770d9f3a",
+  "sha": "726201fe9a7e13bac92914c82432e00a35c46b22",
   "w": 1416,
   "h": 664
  },
  "button-pressed@bone": {
-  "sha": "012edfb070632bd795e3a45c4e690634211e8fee",
+  "sha": "da0ec5d43a6e02bb0eedca448b9037e2e72f1760",
   "w": 1416,
   "h": 664
  },
  "button-pressed@catalog": {
-  "sha": "39c94cb9aea865f3880a03663ddc78acbd2e255b",
+  "sha": "be19fe53261ca6b1e63c1090fee6ac818ddc1460",
   "w": 1416,
   "h": 664
  },
  "button-pressed@graphite": {
-  "sha": "8a950e9473c21a23b83a115920121330b3478d37",
+  "sha": "4d574bc745719b7779d6d6c232c3ed4b067f46d4",
   "w": 1416,
   "h": 664
  },
  "button-pressed@typewriter": {
-  "sha": "8a950e9473c21a23b83a115920121330b3478d37",
+  "sha": "4d574bc745719b7779d6d6c232c3ed4b067f46d4",
   "w": 1416,
   "h": 664
  },
  "in-a-governed-project-the-switch-is-on@bone": {
-  "sha": "185e078b8596c1b1a239d2ab039ff3b41b8fb6a1",
+  "sha": "28118c7f51552a6eeccb2232f7decb32ada9327e",
   "w": 1416,
   "h": 664
  },
  "in-a-governed-project-the-switch-is-on@catalog": {
-  "sha": "2ef235e546bcc9a10f9549f4e42ede13b1133e9c",
+  "sha": "e144067c5570bf72987ce8a27d7ddb0638d03a39",
   "w": 1416,
   "h": 664
  },
  "in-a-governed-project-the-switch-is-on@graphite": {
-  "sha": "c102d4d37d457ad829deed39f264adb11e697200",
+  "sha": "fbaf6caf63c1b2c4547253b2b07c088c57857b2f",
   "w": 1416,
   "h": 664
  },
  "in-a-governed-project-the-switch-is-on@typewriter": {
-  "sha": "c102d4d37d457ad829deed39f264adb11e697200",
+  "sha": "fbaf6caf63c1b2c4547253b2b07c088c57857b2f",
   "w": 1416,
   "h": 664
  },
  "in-an-ordinary-project-the-switch-is-off@bone": {
-  "sha": "cc85c34bf51e0352bf61a217952fdf07b3ffd82a",
+  "sha": "da12421bfa041f80bf0a451eb8e4339c4fdb2420",
   "w": 1416,
   "h": 664
  },
  "in-an-ordinary-project-the-switch-is-off@catalog": {
-  "sha": "5557160f113951b17b443022d72c2b5615526614",
+  "sha": "49ce3d2730fb7fd90433866daa2cb7b801eba6f7",
   "w": 1416,
   "h": 664
  },
  "in-an-ordinary-project-the-switch-is-off@graphite": {
-  "sha": "4d6ea414ec2ea14fff544216f60a51723ceb35ac",
+  "sha": "44bc6b4696ee5cd424590014d7ac4f1a568b302d",
   "w": 1416,
   "h": 664
  },
  "in-an-ordinary-project-the-switch-is-off@typewriter": {
-  "sha": "4d6ea414ec2ea14fff544216f60a51723ceb35ac",
+  "sha": "44bc6b4696ee5cd424590014d7ac4f1a568b302d",
   "w": 1416,
   "h": 664
  },
  "installed@bone": {
-  "sha": "5b6fe7bf0608c715dab7698d0b73500029bab788",
+  "sha": "6d2027713a4dc827d5ac4c63cf687ab2c050ce9a",
   "w": 1416,
   "h": 664
  },
  "installed@catalog": {
-  "sha": "03c30afbb22cf427002caa937afd2d02a264cc99",
+  "sha": "b0b3ed31c618b30fa9c045ea1db607678ad755bc",
   "w": 1416,
   "h": 664
  },
  "installed@graphite": {
-  "sha": "5d90577ee31c4fd5f056ce1f208f1172bdee03a4",
+  "sha": "f8bc0af801029ea459f603c7c2f352a285cfbf21",
   "w": 1416,
   "h": 664
  },
  "installed@typewriter": {
-  "sha": "5d90577ee31c4fd5f056ce1f208f1172bdee03a4",
+  "sha": "f8bc0af801029ea459f603c7c2f352a285cfbf21",
   "w": 1416,
   "h": 664
  },
  "long-name@bone": {
-  "sha": "b75416c5f528fd407ebea4bd171c22a792553a41",
+  "sha": "4a28ead955a67052b840708410a40e5e210adf5c",
   "w": 1416,
   "h": 664
  },
  "long-name@catalog": {
-  "sha": "89bc7ae66a27b7450282cb19aaf990170f2bfff5",
+  "sha": "405dd5e8715119d829832097cc7a7e96ecadd7be",
   "w": 1416,
   "h": 664
  },
  "long-name@graphite": {
-  "sha": "e9398247f6a71e1791e246ac1bf2a0fd8a33e463",
+  "sha": "a5e3de15f462fc096a300e371723ae41874e0e2e",
   "w": 1416,
   "h": 664
  },
  "long-name@typewriter": {
-  "sha": "e9398247f6a71e1791e246ac1bf2a0fd8a33e463",
+  "sha": "a5e3de15f462fc096a300e371723ae41874e0e2e",
   "w": 1416,
   "h": 664
  },
@@ -140,62 +140,62 @@
   "h": 664
  },
  "remove-its-keys@bone": {
-  "sha": "e3c467fc5371f7b41525182510f4ba7454a306d3",
+  "sha": "740326152b0b434cbf300212aac36127c5fc11aa",
   "w": 1416,
   "h": 664
  },
  "remove-its-keys@catalog": {
-  "sha": "11385354d671cb55673a3bb0ccac2c8d0f499744",
+  "sha": "862f678d6c914be2a6e5a7ac2d5e8a0ad7c34920",
   "w": 1416,
   "h": 664
  },
  "remove-its-keys@graphite": {
-  "sha": "1e52e87f824d899287f72fb8fc5bf8e3c9d486ed",
+  "sha": "c89f02c6d72700662379ba5c0a2f63fc7a4f9cdf",
   "w": 1416,
   "h": 664
  },
  "remove-its-keys@typewriter": {
-  "sha": "654b17d11f7a0b6f2ed49eef1a8ce5e9e232b08c",
+  "sha": "c0cc7ae63e51f2a9bb742799cf609dfdac5ad6d0",
   "w": 1416,
   "h": 664
  },
  "switch-focus@bone": {
-  "sha": "09e5bf9404ed6f6441231f9dccc798ff1d26f286",
+  "sha": "7cdca0f63206d8fa2b4ed30481ea2ef709821d22",
   "w": 1416,
   "h": 664
  },
  "switch-focus@catalog": {
-  "sha": "2e0ed744d8258d35b2386c11b9ebd48ad1c52f99",
+  "sha": "0ece2dde1fc5254a0591f240c7caf7df3d6ae04d",
   "w": 1416,
   "h": 664
  },
  "switch-focus@graphite": {
-  "sha": "7cfae2eda7332a6d308412e501f0116ffbe73087",
+  "sha": "64a61668dbcc87a738d34da529f7e80de764e48d",
   "w": 1416,
   "h": 664
  },
  "switch-focus@typewriter": {
-  "sha": "7cfae2eda7332a6d308412e501f0116ffbe73087",
+  "sha": "64a61668dbcc87a738d34da529f7e80de764e48d",
   "w": 1416,
   "h": 664
  },
  "taken-down-by-its-source-banner@bone": {
-  "sha": "c7044f4e33ec2bf05d4f69819ab8a39175066420",
+  "sha": "753bf5a1f1a1e8c1c627a7746cf0bf30ec97d024",
   "w": 1416,
   "h": 664
  },
  "taken-down-by-its-source-banner@catalog": {
-  "sha": "504049b99ce89db595ccee1936f92b5439c08376",
+  "sha": "141e39dc2f53b458063b140ac8b6b2e3278dd42e",
   "w": 1416,
   "h": 664
  },
  "taken-down-by-its-source-banner@graphite": {
-  "sha": "b980a7f294e7adeb45b45e9d27992ef344da8ae7",
+  "sha": "1e73b6d73d3816415bbf8dc07a8d9b288e9d8c05",
   "w": 1416,
   "h": 664
  },
  "taken-down-by-its-source-banner@typewriter": {
-  "sha": "b980a7f294e7adeb45b45e9d27992ef344da8ae7",
+  "sha": "1e73b6d73d3816415bbf8dc07a8d9b288e9d8c05",
   "w": 1416,
   "h": 664
  }
