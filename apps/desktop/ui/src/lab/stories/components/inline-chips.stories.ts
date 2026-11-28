@@ -55,8 +55,8 @@ const story: Story = {
     typical: stage(['typical'], botMessage(NINA), { width: W, ground: 'ground' }),
     'every kind in a bot message': stage(['variant'], botMessage(NINA + '\n\n' + ALL), { width: W, ground: 'ground' }),
     'in a request bubble': stage(['variant'], request('@nina ' + ALL), { width: W, ground: 'ground' }),
-    'in a paragraph': stage(['variant'], paragraph(ALL + ' ' + NINA), { width: W, ground: 'frame' }),
-    'in dense text': stage(['variant'], dense(ALL + ' ' + NINA), { width: W, ground: 'frame' }),
+    'in a paragraph': stage(['variant'], paragraph(ALL + ' ' + NINA), { width: W, ground: 'ground' }),
+    'in dense text': stage(['variant'], dense(ALL + ' ' + NINA), { width: W, ground: 'ground' }),
     long: stage(['long'], botMessage(NINA + ' ' + LONG_TITLE + ' @nina @moss `' + LONG_TITLE + '` ' + PATH), { width: W, ground: 'ground' })
   }
 };

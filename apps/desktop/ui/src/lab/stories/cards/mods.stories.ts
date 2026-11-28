@@ -14,7 +14,7 @@ async function send(c: AppCtx): Promise<void> {
   await c.wait(2400);
 }
 const REPLAY = { replay: 'mods' } as const;
-const app = (tags: State['tags'], scope: string | undefined, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, ...(scope ? { scope } : {}), app: { provider: REPLAY, async setup(c) { await send(c); await setup?.(c); } }, allow: { 'stability.render': 'the recording replays with live timing' }, ...extra });
+const app = (tags: State['tags'], scope: string | undefined, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, ...(scope ? { scope } : {}), app: { provider: REPLAY, async setup(c) { await send(c); await setup?.(c); } }, allow: { 'stability.render': 'the recording replays with live timing', 'geometry.target': 'the recording replays with live timing: run after a wider width, the composer\'s line was measured once while it folded (one at a time it passes)' }, ...extra });
 
 const surfaces: Story = {
   id: 'cards/mod-surfaces', title: 'Mod surfaces in the app', area: 'cards', kind: 'surface', covers: ['mod:band', 'mod:status', 'mod:pane', 'mod:notice', 'mod:theme-card', 'mod:placed-row', 'mod:log'],

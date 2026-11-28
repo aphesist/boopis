@@ -137,10 +137,10 @@ export function mountSigninCard(host: HTMLElement, bridge: SigninBridge, copy: S
       el('p', { style: 'margin:0' }, copy.explain(hasCode)),
       el('div', { style: 'display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center' },
         button('Open the sign-in page', 'primary', () => { void bridge.open(page.url); }, { 'data-act': 'open' }),
-        el('span', { style: 'color:var(--text-quiet);font:var(--fs-2xs)/1.45 var(--mono);overflow-wrap:anywhere;min-width:0', 'data-page': '' }, pageText(page.url)))
+        el('span', { style: 'color:var(--text-dim);font:var(--fs-2xs)/1.45 var(--mono);overflow-wrap:anywhere;min-width:0', 'data-page': '' }, pageText(page.url)))
     ];
     if (hasCode) {
-      const copied = el('span', { role: 'status', style: 'color:var(--text-quiet);font:var(--fs-2xs)/1.45 var(--sans)' });
+      const copied = el('span', { role: 'status', style: 'color:var(--text-dim);font:var(--fs-2xs)/1.45 var(--sans)' });
       kids.push(el('div', { style: 'display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center' },
         el('output', { 'aria-label': 'One-time code', 'data-code': '', style: 'font:600 var(--fs-xl)/var(--lh-tight) var(--mono);user-select:all' }, page.code),
         button('Copy code', 'ghost', () => {
@@ -149,7 +149,7 @@ export function mountSigninCard(host: HTMLElement, bridge: SigninBridge, copy: S
         copied));
     }
     kids.push(
-      el('p', { style: 'margin:0;color:var(--text-quiet)' }, copy.caution(page, (opts.now ?? Date.now)())),
+      el('p', { style: 'margin:0;color:var(--text-dim)' }, copy.caution(page, (opts.now ?? Date.now)())),
       el('p', { role: 'status', style: 'margin:0;color:var(--text-dim)', 'data-waiting': '' }, 'Waiting for you to finish signing in…'),
       button('Cancel', 'ghost', () => { void bridge.cancel(); }, { 'data-act': 'cancel' })
     );

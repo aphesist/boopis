@@ -31,7 +31,7 @@ const SHORT_CODE = '```json\n{ "n": 5, "en": "A pot hangs over the fire all day.
 const TABLE = '| beat | en | pt | es |\n| --- | --- | --- | --- |\n| 5 | A pot hangs over the fire all day, and the cook adds whatever there is. | Um caldeirão fica sobre o fogo o dia todo. | Un caldero cuelga sobre el fuego todo el día. |';
 const body = (text: string, ctx: MarkdownCtx = CTX) => ({ root }: { root: HTMLElement }): void => { const m = markdown(text, ctx); m.style.maxWidth = '560px'; put(root, m); };
 
-const typical = stage(['typical', 'variant'], body(FIRST), { width: 600, ground: 'frame' });
+const typical = stage(['typical', 'variant'], body(FIRST), { width: 600, ground: 'ground' });
 
 const story: Story = {
   id: 'components/markdown', title: 'Markdown', area: 'components', kind: 'component', covers: ['engine:markdown'],
@@ -41,13 +41,13 @@ const story: Story = {
       const m = markdown('Saved in `episodes/cooking-pot/episode.json`, not in `nowhere/at/all.ts`.', CTX);
       markdown.upgradePaths(m, new Map([['episodes/cooking-pot/episode.json', { path: 'episodes/cooking-pot/episode.json', abs: '/work/boopis/episodes/cooking-pot/episode.json', kind: 'file' as const }]]));
       put(root, m);
-    }, { width: 600, ground: 'frame' }),
-    'fenced code, folded': stage(['variant', 'scroll'], body(CODE), { width: 600, ground: 'frame', allow: { 'geometry.hscroll': 'fenced code scrolls sideways by default (R-scroll-7); Wrap turns it off' } }),
-    'fenced code, short': stage(['variant'], body(SHORT_CODE), { width: 600, ground: 'frame' }),
-    'a table': stage(['variant', 'scroll'], body(TABLE), { width: 420, ground: 'frame', allow: { 'geometry.hscroll': 'a wide table scrolls sideways inside its own area (R-scroll-7)' } }),
-    'a mention of nobody': stage(['variant'], body('@nobody is not here, and `@nina` in code is code.'), { width: 600, ground: 'frame' }),
-    empty: stage(['empty'], ({ root }) => { line(root, markdown('', CTX)); }, { width: 600, ground: 'frame' }),
-    long: stage(['long'], body('**' + LONG_TITLE + '** ' + UNBROKEN + ' https://billing-api.internal.example.com/v2/invoices/inv_01HZX9Q2Y7K3M8N4P6R5S0T1V2W3/reconcile?dry_run=true @kai'), { width: 320, ground: 'frame' })
+    }, { width: 600, ground: 'ground' }),
+    'fenced code, folded': stage(['variant', 'scroll'], body(CODE), { width: 600, ground: 'ground', allow: { 'geometry.hscroll': 'fenced code scrolls sideways by default (R-scroll-7); Wrap turns it off' } }),
+    'fenced code, short': stage(['variant'], body(SHORT_CODE), { width: 600, ground: 'ground' }),
+    'a table': stage(['variant', 'scroll'], body(TABLE), { width: 420, ground: 'ground', allow: { 'geometry.hscroll': 'a wide table scrolls sideways inside its own area (R-scroll-7)' } }),
+    'a mention of nobody': stage(['variant'], body('@nobody is not here, and `@nina` in code is code.'), { width: 600, ground: 'ground' }),
+    empty: stage(['empty'], ({ root }) => { line(root, markdown('', CTX)); }, { width: 600, ground: 'ground' }),
+    long: stage(['long'], body('**' + LONG_TITLE + '** ' + UNBROKEN + ' https://billing-api.internal.example.com/v2/invoices/inv_01HZX9Q2Y7K3M8N4P6R5S0T1V2W3/reconcile?dry_run=true @kai'), { width: 320, ground: 'ground' })
   }
 };
 export default story;
