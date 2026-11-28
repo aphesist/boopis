@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lookAttrs, lookFor, lookOf, rollLook, sameLook, SHAPES, SWATCHES } from './look';
+import { drawnColour, lookAttrs, lookFor, lookOf, rollLook, sameLook, SHAPES, SWATCHES } from './look';
 
 const colours = SWATCHES.map(([c]) => c);
 /** a seeded generator (mulberry32): the same seed, the same rolls */
@@ -54,16 +54,16 @@ describe('lookOf: the one look of a bot', () => {
     expect(lookOf({ name: 'moss', shape: 'blob', color: '#2fd26a' })).toEqual({ shape: lookFor('moss').shape, color: '#2fd26a' });
     expect(lookOf({ name: 'moss', shape: 'squircle', color: 'green' })).toEqual({ shape: 'squircle', color: lookFor('moss').color });
   });
-  it('draws an orb with it, with the light eyes of a dark body and never an eye shape', () => {
-    expect(lookAttrs({ shape: 'circle', color: '#1c1c24' })['eye-color']).toBe('var(--ink-on-dock)');
-    expect(lookAttrs({ shape: 'circle', color: '#4fc9a8' })['eye-color']).toBeNull();
+  it('draws an orb with it, its eyes cut to its surface whatever its colour, and never an eye shape', () => {
+    for (const [hex] of SWATCHES) expect(lookAttrs({ shape: 'circle', color: hex })['eye-color']).toBeNull();
+    expect(lookAttrs({ shape: 'circle', color: '#000000' })['eye-color']).toBeNull();
     expect(Object.keys(lookAttrs(lookOf({ name: 'hex', shape: 'hexagon', color: '#a6a6ab' })))).not.toContain('eye-shape');
     expect(sameLook({ name: 'kai' }, lookFor('kai'))).toBe(true);
   });
   it('draws Bone and Ink as their theme does, the other swatches as they are', () => {
-    expect(lookAttrs({ shape: 'circle', color: '#efece6' })).toEqual({ shape: 'circle', color: 'var(--look-bone, #efece6)', 'eye-color': 'var(--look-bone-eye, var(--bg-2))' });
-    expect(lookAttrs({ shape: 'circle', color: '#EFECE6' }, '--bg-3')['eye-color']).toBe('var(--look-bone-eye, var(--bg-3))');
-    expect(lookAttrs({ shape: 'drop', color: '#1c1c24' })).toEqual({ shape: 'drop', color: 'var(--look-ink, #1c1c24)', 'eye-color': 'var(--ink-on-dock)' });
-    for (const [hex] of SWATCHES.filter(([c]) => c !== '#efece6' && c !== '#1c1c24')) expect(lookAttrs({ shape: 'circle', color: hex }).color).toBe(hex);
+    expect(lookAttrs({ shape: 'circle', color: '#efece6' })).toEqual({ shape: 'circle', color: 'var(--look-bone, #efece6)', 'eye-color': null });
+    expect(lookAttrs({ shape: 'drop', color: '#1c1c24' })).toEqual({ shape: 'drop', color: 'var(--look-ink, #1c1c24)', 'eye-color': null });
+    expect(drawnColour('#EFECE6')).toBe('var(--look-bone, #efece6)');
+    for (const [hex] of SWATCHES.filter(([c]) => c !== '#efece6' && c !== '#1c1c24')) expect(drawnColour(hex)).toBe(hex);
   });
 });

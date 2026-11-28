@@ -5,7 +5,7 @@
    ONE resolver. `lookOf(bot)` is the look of a bot wherever an orb of it is drawn: its own shape and colour when it
    has them (the plugin's record, the new-bot sheet, the look editor), else the look its name gives. `ui.orb` draws
    every orb through it, the live provider maps the plugin's record through it, and `lookAttrs` turns a look into the
-   attributes an <orb-avatar> carries (with the light eyes of a dark body, R-orb-7), so no two places can draw the same
+   attributes an <orb-avatar> carries (its eyes cut to its surface, whatever its colour), so no two places can draw the same
    bot two ways. A look derived from a name is a default, never stored: the same name always draws the same bot, until
    its owner picks another and boopis saves it with the teammate. */
 
@@ -54,7 +54,7 @@ export const sameLook = (a: LookSource, b: LookSource): boolean => { const x = l
 /** the swatch's name for a colour ("Mint"), or null for one that is not a swatch */
 export const colourName = (c: string): string | null => SWATCHES.find(([v]) => v === colourOf(c))?.[1] ?? null;
 
-/** WCAG relative luminance of `#rrggbb` (1 for anything else, so an unknown colour keeps the dark eyes) */
+/** WCAG relative luminance of `#rrggbb` (1 for anything else) */
 export function lumHex(hex: string | undefined): number {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? ''); if (!m) return 1;
   const n = parseInt(m[1] ?? '0', 16);
@@ -62,21 +62,23 @@ export function lumHex(hex: string | undefined): number {
   return 0.2126 * (c[0] ?? 0) + 0.7152 * (c[1] ?? 0) + 0.0722 * (c[2] ?? 0);
 }
 /* The two swatches that fade into their own theme (the owner, 28 November 2026: "black becomes grayish black and white becomes
-   more pearl-sand like"). Bone draws as pearl-sand in the light theme and Ink as graphite in the dark theme, each through a v7
-   token (`--look-bone`, `--look-ink`; scripts/build-tokens-v7.mjs), so one bot follows the theme of the surface it is drawn on
-   (the dock's inside is the dark theme in both). Bone on dark and Ink on light already stand out and keep the swatch. What is
-   stored, rolled and named stays the swatch: only the drawing changes. On pearl-sand the eyes cut to a near-white surface would
-   vanish, so there Bone's eyes are the theme's ink (`--look-bone-eye`); elsewhere they are cut to the surface as before. */
-const SHADED: Readonly<Record<string, { color: string; eye?: (cut: string) => string }>> = {
-  '#efece6': { color: 'var(--look-bone, #efece6)', eye: (cut) => 'var(--look-bone-eye, ' + cut + ')' },
-  '#1c1c24': { color: 'var(--look-ink, #1c1c24)' }
+   more pearl-sand like"; "show the shades in the picker too"). Bone draws as pearl-sand in the light theme and Ink as graphite in
+   the dark theme, each through a v7 token (`--look-bone`, `--look-ink`; scripts/build-tokens-v7.mjs), so one bot follows the theme
+   of the surface it is drawn on (the dock's inside is the dark theme in both), and the look picker's swatches show the same shade
+   (`drawnColour`). Bone on dark and Ink on light already stand out and keep the swatch. What is stored, rolled and named stays the
+   swatch: only the drawing changes. */
+const SHADED: Readonly<Record<string, string>> = {
+  '#efece6': 'var(--look-bone, #efece6)',
+  '#1c1c24': 'var(--look-ink, #1c1c24)'
 };
-/** the attributes of an <orb-avatar> for a look on a surface (its token, the ground `--bg-2` when left out): shape, colour (Bone and
-    Ink as their theme draws them, above), and the eyes: light on a dark body (luminance under .05, R-orb-7), the theme's ink on
-    Bone where it is pearl-sand, else null (the caller cuts them to the surface); never `eye-shape` (the eyes are the state's) */
-export function lookAttrs(look: Look, surface = '--bg-2'): { shape: string; color: string; 'eye-color': string | null } {
-  const shade = SHADED[String(look.color).toLowerCase()];
-  return { shape: look.shape, color: shade?.color ?? look.color, 'eye-color': lumHex(look.color) < 0.05 ? 'var(--ink-on-dock)' : shade?.eye ? shade.eye('var(' + surface + ')') : null };
+/** a stored colour as the theme draws it: Bone and Ink as their tokens (above), every other colour as it is */
+export const drawnColour = (hex: string): string => SHADED[String(hex).toLowerCase()] ?? hex;
+/** the attributes of an <orb-avatar> for a look: shape and colour (as the theme draws it: `drawnColour`). The eyes are the same for
+    every colour, cut to the surface the orb sits on (the owner, 28 November 2026: "make sure their eyes actually follow the same
+    rules as the other ones"; this retires R-orb-7's light eyes of a dark body), so `eye-color` is always null and the caller cuts
+    them; never `eye-shape` (the eyes are the state's) */
+export function lookAttrs(look: Look): { shape: string; color: string; 'eye-color': null } {
+  return { shape: look.shape, color: drawnColour(look.color), 'eye-color': null };
 }
 
 export interface RollOpts {

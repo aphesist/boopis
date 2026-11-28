@@ -92,7 +92,7 @@ export type * from './v7';
 export { oc, startGlance, paintLook, repaintLook, restReact } from './orb';
 export type { OrbOpts } from './orb';
 /* a bot's look: the one resolver every orb is drawn through, the name's default, the picker's palettes and the dice */
-export { lookOf, lookFor, lookAttrs, sameLook, shapeOf, colourOf, colourName, rollLook, SWATCHES, SHAPES, DRAFT_COLOR } from './look';
+export { lookOf, lookFor, lookAttrs, drawnColour, sameLook, shapeOf, colourOf, colourName, rollLook, SWATCHES, SHAPES, DRAFT_COLOR } from './look';
 export type { Look, LookSource, RollOpts } from './look';
 export { clusterLayout, namesList, stackSplit } from './stack';
 export type { ClusterPlace, StackOpts } from './stack';

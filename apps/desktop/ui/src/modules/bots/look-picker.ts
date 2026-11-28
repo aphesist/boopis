@@ -6,7 +6,7 @@
    moves the selection; a new colour repaints the shape faces in place. Eyes are never offered: they belong to the state, never to a look
    (owner decision, 19 November 2026). The palettes are the kit's (bot data, not interface colour). */
 import { cap1, el } from '../../core/dom';
-import { kit } from '@boopis/ui';
+import { drawnColour, kit } from '@boopis/ui';
 import { paintOrbColour, SHAPES, SWATCHES } from './paint';
 
 export type LookTab = 'colour' | 'shape';
@@ -61,7 +61,7 @@ export function lookPicker(o: LookPickerOpts): LookPicker {
     /* the picker's faces are the one place orbs stay still: 28px, many at once, a choice not a creature; no id, so a face is never taken
        for the bot itself when its look is repainted */
     const items = tab === 'colour'
-      ? SWATCHES.map(([hex, label]) => ({ label, hex, value: hex }))
+      ? SWATCHES.map(([hex, label]) => ({ label, hex: drawnColour(hex), value: hex }))   /* the shade the theme draws (Bone, Ink), the swatch as the value */
       : offeredShapes().map((s) => ({ label: cap1(s), hex: value.color, value: s, face: kit.html.avatar({ bot: { shape: s, color: value.color, name: cap1(s) }, size: 28, still: true }) }));
     panel.replaceChildren(kit.swatches({ label: cap1(tab), choose: true, value: current(), items, attrs: { 'data-look-kind': tab } }));
   }

@@ -1,6 +1,6 @@
 /* orb body paint for a bot being made or re-looked. The palettes of the picker are the kit's (`components/look.ts`):
    orb colours, bot data, not interface colour. Painting goes through the kit's `paintLook`, the same attributes `ui.orb`
-   writes (the light eyes of a dark body included), and only what changed is written, so orb2 morphs. */
+   writes (eyes cut to the surface, whatever the colour), and only what changed is written, so orb2 morphs. */
 import { paintLook } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 

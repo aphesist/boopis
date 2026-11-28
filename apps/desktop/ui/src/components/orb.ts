@@ -38,7 +38,7 @@ export const orbIsStill = (o: Pick<OrbOpts, 'live' | 'still'>, size: number): bo
 export function orbHtml(b: BotLike, o: OrbOpts = {}): string {
   const size = o.size ?? 20, s = botState(o.state ? { ...b, state: o.state } : b);
   const still = orbIsStill(o, size);
-  const look = lookAttrs(lookOf(b), o.surface ?? '--bg-2');   /* the one resolver: the bot's own look, else its name's */
+  const look = lookAttrs(lookOf(b));   /* the one resolver: the bot's own look, else its name's */
   const render = o.render && o.render !== size ? o.render : null;
   /* orb3 (ORBS.md §23): every bot carries the home orientation, which holds only at rest; at rest on a rest surface it wears the pose */
   const rest = !!o.rest, atRest = rest && s.reaction === 'idle';
@@ -67,7 +67,7 @@ export function restReact(o: Element | null | undefined, reaction: string): void
     colour instead of starting again (the same attributes `orbHtml` writes: `lookAttrs`) */
 export function paintLook(o: Element | null | undefined, look: Look): void {
   if (!o) return;
-  for (const [k, v0] of Object.entries(lookAttrs(look, o.getAttribute('data-surface') ?? '--bg-2'))) {
+  for (const [k, v0] of Object.entries(lookAttrs(look))) {
     /* the boopis bot keeps the theme's ink (kit `inkOrb`), and an orb with no eye colour of its own keeps its eyes cut to its surface */
     if (k === 'color' && o.hasAttribute('data-ink')) continue;
     const v = k === 'eye-color' && v0 === null ? 'var(' + (o.getAttribute('data-surface') ?? '--bg-2') + ')' : v0;

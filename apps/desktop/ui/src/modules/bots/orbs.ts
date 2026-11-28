@@ -1,4 +1,4 @@
-/* Orbs in the bots tab. Drawn by the library (ui.orb: one wrapper, the state map, light eyes on dark bodies).
+/* Orbs in the bots tab. Drawn by the library (ui.orb: one wrapper, the state map, eyes cut to the surface, whatever the colour).
    Owner decision: reduced motion reduces and never freezes; ui.liven / glance keep orbs over 16px live, lower the
    jelly and give small glances under reduced motion. Every live orb answers: click pokes (orb2 escalates on repeats),
    hover looks at the pointer and listens, double-click plays an emote. */

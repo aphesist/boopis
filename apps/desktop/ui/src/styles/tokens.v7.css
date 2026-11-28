@@ -60,7 +60,6 @@
   --shadow-modal: none;
   --shadow-window: none;
   --look-bone: #efece6;
-  --look-bone-eye: initial;
   --look-ink: #42424d;
   --composer-line: var(--line-strong);
   --float-line: var(--line);
@@ -133,7 +132,6 @@
   --shadow-modal: 0 20px 32px -5px #1c1c1c1a, 0 8px 12px -6px #1c1c1c1a, 0 0 0 1px #1c1c1c03;
   --shadow-window: 0 22px 70px 4px #1c1c1c8f, 0 0 0 0.5px #1c1c1c1a;
   --look-bone: #ddd2bd;
-  --look-bone-eye: var(--ink);
   --look-ink: #1c1c24;
   --composer-line: #1c1c1c14;
   --float-line: #1c1c1c0d;

@@ -7,6 +7,7 @@ import { S } from './model';
 import { openNew } from './new-bot';
 import { mountView } from './room';
 import { NAME_POOL } from './names';
+import { drawnColour } from '@boopis/ui';
 
 const q = <T extends HTMLElement>(sel: string): T => { const n = document.querySelector<T>(sel); if (!n) throw new Error('missing ' + sel); return n; };
 const alt = (code: string, extra: KeyboardEventInit = {}): KeyboardEvent => new KeyboardEvent('keydown', { key: 'r', code, altKey: true, bubbles: true, cancelable: true, ...extra });
@@ -104,7 +105,14 @@ describe('the new-bot form: the dice rolls the look', () => {
     const d = S.draft!;
     expect(d.shape !== before.shape || d.color !== before.color).toBe(true);
     expect(orb.getAttribute('shape')).toBe(d.shape);
-    expect(orb.getAttribute('color')).toBe(d.color);
+    expect(orb.getAttribute('color')).toBe(drawnColour(d.color));
+  });
+  it('the colour swatches show Bone and Ink in the shade the theme draws, and choose the swatch itself', () => {
+    const dot = (v: string): string => q('[data-look] [role=radio][data-value="' + v + '"] .k7-swatches__dot').style.background;
+    expect(dot('#efece6')).toBe('var(--look-bone, #efece6)');
+    expect(dot('#1c1c24')).toBe('var(--look-ink, #1c1c24)');
+    q<HTMLElement>('[data-look] [role=radio][data-value="#efece6"]').click();
+    expect(S.draft?.color).toBe('#efece6');
   });
   it('a manual pick stays until the next roll', () => {
     [...document.querySelectorAll<HTMLElement>('[role=tab]')].find((t) => t.textContent === 'Shape')!.click();
