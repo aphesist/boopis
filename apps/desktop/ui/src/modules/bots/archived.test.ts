@@ -47,44 +47,44 @@ describe('the "made outside boopis" mark', () => {
   it('a bot with no record of boopis’s own carries it in the roster, with its words in the row’s name and description', () => {
     mount(mock(['outside']));
     const row = q('.bt-rows [data-kit~="ListRow"][data-value="sage"]');
-    expect(row.querySelector('.bt-outside')?.textContent).toBe('outside');
+    expect(row.querySelector('[data-outside]')?.textContent).toBe('outside');
     expect(row.getAttribute('aria-label')).toBe('sage, reads release notes, outside');
     const desc = row.getAttribute('aria-describedby') ?? '';
     expect(document.getElementById(desc)?.textContent).toBe(OUTSIDE_WORDS);
-    expect(row.querySelector('.bt-outside')?.getAttribute('data-tip')).toBe(OUTSIDE_WORDS);
+    expect(row.querySelector('[data-outside]')?.getAttribute('data-tip')).toBe(OUTSIDE_WORDS);
   });
   it('a bot boopis made carries nothing, and its name is only its own words', () => {
     mount(mock(['outside']));
     const row = q('.bt-rows [data-kit~="ListRow"][data-value="atlas"]');
-    expect(row.querySelector('.bt-outside')).toBeNull();
+    expect(row.querySelector('[data-outside]')).toBeNull();
     expect(row.getAttribute('aria-label')).toMatch(/^atlas, /);   /* its name, then its line (its last words) */
     expect(row.getAttribute('aria-label')).not.toMatch(/outside/i);
     expect(row.hasAttribute('aria-describedby')).toBe(false);
-    expect(qa('.bt-outside')).toHaveLength(1);
+    expect(qa('[data-outside]')).toHaveLength(1);
   });
   it('the room of such a bot shows it too, on the line over the thread, reachable by keyboard, with the same sentence as its tooltip and its description', () => {
     mount(mock(['outside']));
     openBot('sage');
-    const mark = q('.bt-topline .bt-outside');
+    const mark = q('.bt-topline [data-outside]');
     expect(mark.textContent).toBe(OUTSIDE_LABEL);
     expect(mark.getAttribute('data-tip')).toBe(OUTSIDE_WORDS);
     expect(mark.tabIndex).toBe(0);
     expect(document.getElementById(mark.getAttribute('aria-describedby') ?? '')?.textContent).toBe(OUTSIDE_WORDS);
     openBot('atlas');
-    expect(document.querySelector('.bt-topline .bt-outside')).toBeNull();
+    expect(document.querySelector('.bt-topline [data-outside]')).toBeNull();
   });
   it('saving any boopis setting for it creates the store, and the mark goes, in the roster and in the header', () => {
     mount(mock(['outside']));
     openBot('sage');
-    expect(qa('.bt-outside')).toHaveLength(2);
+    expect(qa('[data-outside]')).toHaveLength(2);
     data().bots.update('sage', { cfg: { cap: '1.00' } });
-    expect(document.querySelector('.bt-outside')).toBeNull();
+    expect(document.querySelector('[data-outside]')).toBeNull();
     expect(q('.bt-rows [data-kit~="ListRow"][data-value="sage"]').getAttribute('aria-label')).toBe('sage, reads release notes');
   });
   it('a setting that is Hermes’s own, such as the role, is not a store of boopis’s and keeps the mark', () => {
     mount(mock(['outside']));
     data().bots.update('sage', { role: 'reads changelogs' });
-    expect(qa('.bt-outside')).toHaveLength(1);
+    expect(qa('[data-outside]')).toHaveLength(1);
   });
   it('a plugin that did not say is not read as "made outside": nothing is marked', () => {
     const p = mock(['outside']);
@@ -92,7 +92,7 @@ describe('the "made outside boopis" mark', () => {
     const sage: Bot = { ...p.bots.snapshot().bots.find((b) => b.id === 'sage') as Bot };
     delete (sage as { madeOutside?: true }).madeOutside;
     mount({ ...p, bots: { ...p.bots, snapshot: () => ({ bots: [sage], threads: { sage: [] } }), subscribe: (fn) => events.subscribe(fn) } });
-    expect(document.querySelector('.bt-outside')).toBeNull();
+    expect(document.querySelector('[data-outside]')).toBeNull();
   });
 });
 

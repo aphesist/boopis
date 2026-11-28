@@ -18,7 +18,7 @@
 import { emit } from '../../core/bus';
 import { el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { EVERYONE_HANDLES, kit, ui } from '@boopis/ui';
+import { announce, EVERYONE_HANDLES, kit, markdown, orbHtml, scrollClass } from '@boopis/ui';
 import type { BotLike, MarkdownCtx, MdBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, Group, GroupMember, GroupMessage, GroupNote, GroupText, GroupsEvent, MemberActivity } from '../../data';
@@ -59,7 +59,7 @@ const G = {
 };
 export function mountGroupPane(root: HTMLElement): HTMLElement {
   const pane = el('section', { class: 'bt-room bt-group', 'aria-label': 'Group conversation', hidden: true });
-  const scroll = el('div', { class: 'bt-scroll ' + ui.scrollClass({ ground: true }) });
+  const scroll = el('div', { class: 'bt-scroll ' + scrollClass({ ground: true }) });
   const col = el('div', { class: 'bt-col' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Group messages' });
   const boardEl = el('section', { class: 'bt-board', 'aria-label': 'Kanban board', hidden: true });
@@ -162,12 +162,12 @@ const mdBot = (m: GroupMember): MdBot => { const b = bot(m.profile); return { ..
 const outsiders = (g: Group): Array<MdBot & { handle: string }> => S.bots.filter((b) => !g.members.some((m) => m.profile === b.id)).map((b) => ({ ...b, id: b.id, name: b.name, handle: b.id }));
 /* `you`: in what a member writes, `@user` is the person (the engine's handle for them in a room): their own capsule, and the message
    marked for them. What the person writes (their messages, their draft) addresses nobody by it */
-const ctxOf = (g: Group, you = true): MarkdownCtx => ({ ...mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) }), ...(you ? { you } : {}), kit: true });
+const ctxOf = (g: Group, you = true): MarkdownCtx => ({ ...mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) }), ...(you ? { you } : {}) });
 /** a member's message that addresses the person by the engine's handle for them (`@user`, markdown.ts) */
-const toYou = (g: Group) => (m: GroupMessage): boolean => m.kind === 'text' && m.who !== 'you' && ui.markdown.toYou(m.text, ctxOf(g));
+const toYou = (g: Group) => (m: GroupMessage): boolean => m.kind === 'text' && m.who !== 'you' && markdown.toYou(m.text, ctxOf(g));
 /** the hint over a draft that names a bot that is not here: "nimbus isn't in this room: send it to their chat, or send without them" */
 export function outsideHint(g: Group, text: string): string {
-  const out = ui.markdown.outsiders(text, g.members, outsiders(g));
+  const out = markdown.outsiders(text, g.members, outsiders(g));
   return out.length ? listWords(out.map((b) => b.name)) + (out.length === 1 ? " isn't" : " aren't") + ' in this room: send it to ' + (out.length === 1 ? 'their' : 'their own') + ' chat, or send without them' : '';
 }
 /** "@kai." names nobody: the engine reads a full stop (or a colon, a hyphen, an underscore) right after a handle as part of it. The
@@ -175,7 +175,7 @@ export function outsideHint(g: Group, text: string): string {
 export function nearMissHint(g: Group, text: string): string {
   const handles = new Set([...g.members.map((m) => m.handle.toLowerCase()), ...EVERYONE_HANDLES]);
   const said: string[] = [];
-  for (const h of ui.markdown.handles(text)) {
+  for (const h of markdown.handles(text)) {
     if (handles.has(h)) continue;
     const bare = h.replace(/[._:-]+$/, ''), mark = h.slice(bare.length);
     if (bare && mark && handles.has(bare) && !said.some((x) => x.startsWith('“@' + h))) said.push('“@' + h + '” names nobody: the “' + mark + '” right after the name counts as part of it.');
@@ -190,10 +190,10 @@ export function sendToBot(b: { id: string }, text: string): void {
 }
 /** under a member's message that names a bot that is not in the room: the kit's Notice says so, and offers the message in that bot's own chat */
 function outsideNote(g: Group, m: GroupText): HTMLElement | null {
-  const out = ui.markdown.outsiders(m.text, g.members, outsiders(g));
+  const out = markdown.outsiders(m.text, g.members, outsiders(g));
   if (!out.length) return null;
   const note = kit.notice({ place: 'page', text: listWords(out.map((b) => b.name)) + (out.length === 1 ? " isn't" : " aren't") + ' in this room', actions: out.slice(0, 2).map((b) => ({ label: 'Send to ' + b.name, ghost: true, value: b.id })) });
-  note.classList.add('bt-outside');
+  note.setAttribute('data-outside', '');
   note.addEventListener('click', (e) => {
     const id = (e.target as Element).closest<HTMLElement>('[data-value]')?.dataset['value'], b = out.find((x) => x.id === id);
     if (b) sendToBot(b, 'From ' + (memberOf(g, m.who)?.name ?? m.who) + ' in ' + g.name + ':\n' + m.text.split('\n').map((l) => '> ' + l).join('\n') + '\n\n');
@@ -210,7 +210,7 @@ const rootsOf = (g: Group, who: string): string[] => { const m = memberOf(g, who
 function recipients(g: Group, m: GroupText): string[] {
   if (m.who === 'you') return [];
   if (m.round === 0) return ['you'];
-  const ids = m.to?.length ? m.to : ui.markdown.resolve(m.text, g.members).members.map((x) => x.id);
+  const ids = m.to?.length ? m.to : markdown.resolve(m.text, g.members).members.map((x) => x.id);
   const names = ids.filter((id) => id !== m.who).map((id) => memberOf(g, id)?.name ?? id);
   return toYou(g)(m) ? [...names, 'you'] : names;
 }
@@ -273,8 +273,8 @@ function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEnt
   }
   const you = m.who === 'you';
   let node: HTMLElement;
-  if (you) { node = el('p', { class: 'bt-request' }); node.innerHTML = ui.markdown.plain(m.text, ctxOf(g, false)); }
-  else node = ui.markdown(m.text, ctxOf(g));
+  if (you) { node = el('p', { class: 'bt-request' }); node.innerHTML = markdown.plain(m.text, ctxOf(g, false)); }
+  else node = markdown(m.text, ctxOf(g));
   NODE.set(m.id, node);
   const away = you ? null : outsideNote(g, m);
   /* the kit's Bubble: yours in ink (a room is not one bot's chat, 18.1), a member's on --bubble-agent; a message to you gets the
@@ -447,7 +447,7 @@ function buildComposer(slot: HTMLElement): void {
     mentions: {
       label: 'Members',
       foot: () => (group(S.groupSel)?.lead ? 'An @name brings that bot in now.' : 'Only the bots you name answer. With no name, every member does.'),
-      entries: () => { const g = group(S.groupSel); return [...members().map((b) => ({ value: b.handle, label: b.name, ...(b.role ? { desc: b.role } : {}), leadHTML: ui.html.orb({ ...b, state: 'idle', attention: null }, { size: 16, still: true })   })), ...(g ? [{ value: 'all', label: 'all', desc: 'Everyone in ' + g.name, icon: 'bots' }] : [])]; },
+      entries: () => { const g = group(S.groupSel); return [...members().map((b) => ({ value: b.handle, label: b.name, ...(b.role ? { desc: b.role } : {}), leadHTML: orbHtml({ ...b, state: 'idle', attention: null }, { size: 16, still: true })   })), ...(g ? [{ value: 'all', label: 'all', desc: 'Everyone in ' + g.name, icon: 'bots' }] : [])]; },
       chips: (t) => { const g = group(S.groupSel); return g ? mentionChips(t, ctxOf(g, false)) : []; }
     }
   });
@@ -489,7 +489,7 @@ function paintHint(): void {
   const host = G.hint, g = group(S.groupSel), c = G.composer; if (!host) return;
   const value = c?.value ?? '', why = groups().note();
   const draft = g && !why ? [nearMissHint(g, value), outsideHint(g, value)].filter(Boolean).join(' ') : '';
-  const out = g && draft ? ui.markdown.outsiders(value, g.members, outsiders(g)) : [];
+  const out = g && draft ? markdown.outsiders(value, g.members, outsiders(g)) : [];
   const onBoard = g ? g.members.filter((m) => !!bot(m.profile)?.info?.worker) : [];
   const t = why || draft || (onBoard.length ? namesOf(onBoard) + (onBoard.length === 1 ? ' is also running a kanban task' : ' are also running kanban tasks') : '');
   if (host.dataset['sig'] === t) return;
@@ -522,7 +522,7 @@ export function repaintRoom(): void { const g = group(S.groupSel); if (g && S.vi
 /** a message while members are working is held and sent when they are done (it never stops them); "Send now" stops them */
 function send(text: string): void {
   const g = group(S.groupSel); if (!g || !text.trim() || !GUARDS.every((f) => f(g, text))) return;
-  void groups().send(g.id, text.trim(), 'when-done').then((how) => { if (how === 'queued') ui.announce('Message held until the group has finished'); });
+  void groups().send(g.id, text.trim(), 'when-done').then((how) => { if (how === 'queued') announce('Message held until the group has finished'); });
 }
 export function stopTalk(): boolean {
   const g = group(S.groupSel); if (!g) return false;

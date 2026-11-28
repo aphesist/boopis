@@ -40,7 +40,7 @@ body {
 .hx-side { --hx-side-w: var(--hx-side-w-to); transition: --hx-side-w var(--dur-3) var(--spring); }
 .hx-right { --hx-right-vw: var(--hx-right-vw-to); }
 .hx-view { --hx-view-left: var(--hx-view-left-to); --hx-view-right: var(--hx-view-right-to); }
-:is(.bt-scroll, .bt-new-scroll, .ss-view, .ss-col, .ssr-strip, .hx-stub-col, .hx-stub-empty, .hx-stub-rail) { --hx-dock-space: var(--hx-dock-space-to); transition: --hx-dock-space var(--dur-3) var(--spring); }
+:is(.bt-scroll, .bt-new-scroll, .ss-view, .ss-col, .ssr-strip, .hx-stub-empty) { --hx-dock-space: var(--hx-dock-space-to); transition: --hx-dock-space var(--dur-3) var(--spring); }
 :is(.bt-col, .bt-new-col) { --hx-col-w: var(--hx-col-w-to); --hx-col-left: var(--hx-col-left-to); --hx-view-left: var(--hx-view-left-to); transition: --hx-col-w var(--dur-3) var(--spring), --hx-col-left var(--dur-3) var(--spring), --hx-view-left var(--dur-3) var(--spring); }
 .bt-composer-zone { --hx-center-x: var(--hx-center-x-to); --hx-col-w: var(--hx-col-w-to); --hx-view-left: var(--hx-view-left-to); --hx-dock-space: var(--hx-dock-space-to);
   transition: --hx-center-x var(--dur-3) var(--spring), --hx-col-w var(--dur-3) var(--spring), --hx-view-left var(--dur-3) var(--spring), --hx-dock-space var(--dur-3) var(--spring); }
@@ -186,31 +186,15 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 .hx-probe i { display: block; height: 1px; }
 
 
-/* ───────────── placeholders: shown only when a module never registered (drawn with HX.ui) ───────────── */
+/* ───────────── placeholders: shown only when a module never registered (the kit's EmptyState) ───────────── */
 .hx-stub { position: absolute; inset: 0; overflow: auto; color: var(--text); }
-.hx-stub-col { width: min(var(--col-w), calc(100% - 48px)); margin: 0 auto; padding: 32px 0 calc(var(--hx-dock-space) + 200px); }
 .hx-stub-composer { position: absolute; left: 50%; translate: -50% 0; bottom: calc(var(--hx-dock-space) + var(--composer-gap)); width: min(var(--composer-w), calc(100% - 48px)); }
 .hx-stub-empty { position: absolute; inset: 0 0 var(--hx-dock-space); display: grid; place-content: center; justify-items: center; }
-.hx-stub-list { padding: 0 8px 16px; }
-.hx-stub-list ul { margin: 0; padding: 0; list-style: none; }
-.hx-stub-rail { position: absolute; inset: 0 0 var(--hx-dock-space); display: grid; place-content: center; gap: 6px; justify-items: center; }
-.hx-stub-rail i { width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-faint); }
-.hx-stub-rail i.on { background: var(--text-dim); }
-.hx-stub-panel { position: absolute; inset: 0; padding: 8px 20px; }
-.hx-stub-panel dl { margin: 0; }
-.hx-stub-panel dl > div { display: flex; justify-content: space-between; align-items: center; height: 40px; border-top: 1px solid var(--hair); font-size: var(--fs-s); }
-.hx-stub-panel dt { color: var(--text); text-transform: var(--ui-case); }
-.hx-stub-panel dd { margin: 0; color: var(--text-quiet); font: 400 var(--fs-2xs)/1 var(--mono); }
-.hx-stub-dock { position: absolute; bottom: 0; left: var(--hx-center-x); translate: -50% 0; --hx-center-x: var(--hx-center-x-to); transition: opacity var(--dur-2) var(--ease), translate var(--dur-3) var(--spring), --hx-center-x var(--dur-3) var(--spring); }
-.hx-stub-orb { width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; display: grid; place-items: center; cursor: pointer; }
-.hx[data-dock="off"] .hx-stub-dock { opacity: 0; translate: -50% 24px; visibility: hidden; transition: opacity var(--dur-1) var(--ease), translate var(--dur-3) var(--spring), visibility 0s linear var(--dur-3), --hx-center-x var(--dur-3) var(--spring); }
 
 /* ───────────── narrow windows ───────────── */
 @media (max-width: 639px) {
-  .hx-bar { padding: 0 max(6px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px)); }
+  .hx-bar { padding: 0 max(var(--gap-s), env(safe-area-inset-right, 0px)) 0 max(var(--sp-2), env(safe-area-inset-left, 0px)); }
   #hx-btn-back, #hx-btn-fwd, .hx-win { display: none; }
-  .hx-cmd { position: static; translate: none; flex: 1; width: auto; min-width: 0; margin: 0 8px; }
-  .hx-cmd__project { display: none; }
   .hx-palette > .k7-cpal { top: var(--sp-2); }
 }
 
@@ -221,13 +205,11 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 
 /* ───────────── keyboard: sheet, go-to hint, region focus ───────────── */
 .hx-goto {
-  position: absolute; z-index: var(--z-notify); top: calc(var(--chrome-h) + 12px); left: 50%; translate: -50% 0;
-  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; max-width: calc(100% - 32px); box-sizing: border-box;
-  padding: 8px 14px; border-radius: var(--r-m); background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
-  font-size: var(--fs-xs); color: var(--text-dim); animation: hx-drop var(--dur-2) var(--ease);
+  position: absolute; z-index: var(--z-notify); top: calc(var(--chrome-h) + var(--sp-3)); left: 50%; translate: -50% 0;
+  flex-wrap: wrap; row-gap: var(--sp-1); max-width: calc(100% - 2 * var(--sp-4)); box-sizing: border-box; white-space: normal; animation: hx-drop var(--dur-2) var(--ease);
 }
-.hx-goto__title { color: var(--text-strong); font-weight: 600; text-transform: var(--ui-case); }
-.hx-goto__opt { display: inline-flex; align-items: center; gap: 6px; text-transform: var(--ui-case); }
+.hx-goto__title { font-weight: 600; }
+.hx-goto__opt { display: inline-flex; align-items: center; gap: var(--gap-s); color: var(--text-dim); }
 .hx [data-hx-region-focus]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
 /* ───────────── drawn corners (DESIGN-SYSTEM.md §8; bound in boot() with HX.ui.squircle.auto) ─────────────
@@ -236,7 +218,6 @@ html[data-right-tools] :is(.hx, .hx-probe) { --right-w: min(520px, 100vw); }   /
 /* A drawn surface does not transition. Reduced motion gives every element a 1 ms transition (all properties), and a corner radius
    that transitions is read half-way by the squircle after a preset change, which writes it into --r-outer and keeps the old
    radius for good (a Settings dialog 30px in Typewriter, which wants 36). The surfaces animate with their own keyframes. */
-.hx-goto { --sq-bg: var(--bg-3); --sq-line: var(--line); }
 
 /* the floating Notice (conflict 31, step 2a: the v7 spec's "floating (bottom centre)"): on the column's centre line, just above the open
    view's composer (`--hx-notify-bottom`, notices.ts), or above the dock where the view has none */

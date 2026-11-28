@@ -1,0 +1,7 @@
+/* A lab's mark (signin-marks.ts, ADR-0040): in a sign-in Button (the kit's, led by it) or beside a name, a 20 px box with the lab's own
+   file inside, never recoloured: the black or the white file, whichever reads on the ground. */
+.hx-sso__logo { display: inline-flex; flex: none; width: calc(var(--sp-4) + var(--sp-1)); height: calc(var(--sp-4) + var(--sp-1)); }
+.hx-sso__ink { display: none; width: 100%; height: 100%; }
+.hx-sso__ink > svg { display: block; width: 100%; height: 100%; }
+.hx-sso__ink[data-ink="colour"] { display: block; }
+:root[data-hx-theme="light"] .hx-sso__ink[data-ink="black"], :root:not([data-hx-theme="light"]) .hx-sso__ink[data-ink="white"] { display: block; }

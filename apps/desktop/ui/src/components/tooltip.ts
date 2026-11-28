@@ -2,7 +2,7 @@
    the library's one placement primitive (place.ts). 480ms before the first, none
    while warm (700ms after the last), at once on keyboard focus. It repeats the button's aria-label for sight, so it
    is hidden from assistive tech; shortcuts go in aria-keyshortcuts. */
-import { html } from './html';
+import { tooltipInner } from './v7/tooltip/tooltip';
 import { parsePos, placeAt } from './place';
 import type { Side } from './place';
 
@@ -16,13 +16,14 @@ function show(t: HTMLElement, now: boolean): void {
   const label = t.getAttribute('data-tip'); if (!label) return;
   timer = window.setTimeout(() => {
     if (!t.isConnected || t.closest('[inert]')) return;
-    if (!node) { node = document.createElement('div'); node.className = 'ui-tip'; node.setAttribute('aria-hidden', 'true'); }
+    /* the kit's Tooltip (2b), floating: one element for the app */
+    if (!node) { node = document.createElement('span'); node.className = 'k7-tip'; node.setAttribute('data-kit', 'Tooltip'); node.setAttribute('data-floating', ''); node.setAttribute('aria-hidden', 'true'); }
     const into = host(t);
     if (node.parentElement !== into) into.appendChild(node);
     const n = node;
     cur = t;
     const state = t.getAttribute('data-tip-state'), tone = t.getAttribute('data-tip-tone'), kbd = t.getAttribute('data-kbd');
-    n.innerHTML = html.tipBody(label, kbd, state ? { text: state, tone } : null);
+    n.innerHTML = tooltipInner({ label, ...(kbd ? { keys: kbd } : {}), ...(state ? { state: { text: state, tone } } : {}) });
     /* the control's preferred side (its own data-tip-pos or a container's), else below, or above near the window's foot;
        place.ts flips, shifts and keeps clear of a text the container names */
     const pref = parsePos(t.closest('[data-tip-pos]')?.getAttribute('data-tip-pos'));

@@ -52,14 +52,14 @@ export interface EndpointFlowOptions {
   saved?: (state: ProviderState) => void;
 }
 
-/** Start the flow in `ui`. Returns what stops it early (the section is closed): the typed key is dropped. */
-export function startEndpointFlow(ui: FlowUi, bridge: ProvidersBridge, opts: EndpointFlowOptions = {}): { abort: () => void } {
+/** Start the flow in `view`. Returns what stops it early (the section is closed): the typed key is dropped. */
+export function startEndpointFlow(view: FlowUi, bridge: ProvidersBridge, opts: EndpointFlowOptions = {}): { abort: () => void } {
   let key = '';
   const forget = (): void => { key = ''; };
 
   const stepSave = (typed: Partial<EndpointValues>, found: readonly string[]): void => {
     const model = endpointForm('save', { found, values: typed });
-    ui.show(ui.card(model.spec, {
+    view.show(view.card(model.spec, {
       async submit(_id, outcome) {
         const v = outcome.values;
         const request: EndpointRequest = {
@@ -69,15 +69,15 @@ export function startEndpointFlow(ui: FlowUi, bridge: ProvidersBridge, opts: End
         let saved: ProviderState;
         try { saved = await bridge.addEndpoint(request); } catch (e) { forget(); throw new Error(e instanceof Error ? e.message : 'The endpoint was not saved.'); }
         forget();
-        ui.later(() => { ui.notify(saved.status === 'error' ? (saved.detail ?? 'Saved, but it has a problem.') : 'Saved. Choose it from your model list.'); opts.saved?.(saved); ui.back(); });
+        view.later(() => { view.notify(saved.status === 'error' ? (saved.detail ?? 'Saved, but it has a problem.') : 'Saved. Choose it from your model list.'); opts.saved?.(saved); view.back(); });
       },
-      cancel() { forget(); ui.back(); return Promise.resolve(); }
+      cancel() { forget(); view.back(); return Promise.resolve(); }
     }));
   };
 
   const stepTest = (values?: Partial<EndpointValues>): void => {
     const model = endpointForm('test', { values: values ?? opts.prefill ?? {} });
-    ui.show(ui.card(model.spec, {
+    view.show(view.card(model.spec, {
       async submit(_id, outcome) {
         const v = outcome.values;
         const typed: Partial<EndpointValues> = { name: text(v['name']).trim(), base_url: text(v['base_url']).trim(), api_mode: (text(v['api_mode']) || 'chat_completions') as EndpointValues['api_mode'], discover: v['discover'] !== false };
@@ -85,9 +85,9 @@ export function startEndpointFlow(ui: FlowUi, bridge: ProvidersBridge, opts: End
         let t: EndpointTest;
         try { t = await bridge.testEndpoint({ base_url: typed.base_url ?? '', api_mode: typed.api_mode ?? 'chat_completions', key: key || null }); } catch (e) { forget(); throw new Error(e instanceof Error ? e.message : 'The test did not run.'); }
         if (t.outcome !== 'listed' && t.outcome !== 'empty') { forget(); throw new Error(testProblem(t)); }
-        ui.later(() => { stepSave(typed, t.outcome === 'listed' ? t.models : []); });
+        view.later(() => { stepSave(typed, t.outcome === 'listed' ? t.models : []); });
       },
-      cancel() { forget(); ui.back(); return Promise.resolve(); }
+      cancel() { forget(); view.back(); return Promise.resolve(); }
     }));
   };
   stepTest();

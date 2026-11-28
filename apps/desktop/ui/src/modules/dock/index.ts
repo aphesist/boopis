@@ -20,7 +20,7 @@ import { emit, on } from '../../core/bus';
 import { register, setDockApi } from '../../core/registry';
 import { getLayout, setState, state as appState } from '../../core/state';
 import { $$, clamp, isMac, onReducedChange, reduced } from '../../core/dom';
-import { FACE_SCALE_MAX, kit, lookOf, oc, paintLook, repaintLook, restReact, ui } from '@boopis/ui';
+import { announce, botLabel, botState, FACE_SCALE_MAX, kit, lookOf, oc, orbHtml, paintLook, repaintLook, restReact } from '@boopis/ui';
 import type { AskCardOpts, DockBot } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
@@ -62,8 +62,8 @@ const T = (ms: number): number => (reduced() ? 0 : ms / S.timeScale);
 const botById = (id: string | null | undefined): Bot | undefined => S.bots.find((b) => b.id === id);
 const nameOf = (id: string): string => botById(id)?.name ?? id;
 const asks = (): Wait[] => asksOf(S.waits, S.bots);
-const stateWords = (b: Bot): [string, 'owe' | 'neutral'] => { const s = ui.botState(b); return [s.word, s.attention ? 'owe' : 'neutral']; };
-const dockBot = (b: Bot): DockBot => ({ id: b.id, name: b.name, shape: b.shape, color: b.color, state: b.state, attention: b.attention, paused: b.paused, needs: !!ui.botState(b).attention, ink: b.id === BOOPIS_ID });
+const stateWords = (b: Bot): [string, 'owe' | 'neutral'] => { const s = botState(b); return [s.word, s.attention ? 'owe' : 'neutral']; };
+const dockBot = (b: Bot): DockBot => ({ id: b.id, name: b.name, shape: b.shape, color: b.color, state: b.state, attention: b.attention, paused: b.paused, needs: !!botState(b).attention, ink: b.id === BOOPIS_ID });
 const HINT = `Click or Enter opens its card here. Click it again, or Esc, to close. Double-click or ${isMac ? 'Command' : 'Control'}+Enter opens the full chat in the Bots tab.`;
 
 /* ───────── the geometry: one set of attributes, the kit's ───────── */
@@ -88,7 +88,7 @@ function paintSlab(w: number, h: number): void {
 }
 
 /* ───────── the row ───────── */
-function orbAttrs(b: Bot): Record<string, string> { return { 'aria-label': ui.botLabel(b), 'aria-describedby': 'dk-hint' }; }
+function orbAttrs(b: Bot): Record<string, string> { return { 'aria-label': botLabel(b), 'aria-describedby': 'dk-hint' }; }
 /** a bot's orb: made once, in place in the row (an orb made in a template and moved in is not painted by its worker) */
 function addOrb(b: Bot): HTMLButtonElement {
   const html = kit.dockParts.orb(dockBot(b), row().orb, { attrs: orbAttrs(b) });
@@ -102,8 +102,8 @@ function addOrb(b: Bot): HTMLButtonElement {
 /** a bot's orb follows it in place: its name, its flag, its look and its reaction (the pose at rest) */
 function patchOrb(b: Bot): void {
   const btn = X.orbs.get(b.id); if (!btn) return;
-  const s = ui.botState(b);
-  btn.setAttribute('aria-label', ui.botLabel(b));
+  const s = botState(b);
+  btn.setAttribute('aria-label', botLabel(b));
   const flag = btn.querySelector('.k7-flag');
   if (s.attention && !flag) btn.insertAdjacentHTML('beforeend', '<span class="k7-flag" aria-hidden="true"></span>'); else if (!s.attention && flag) flag.remove();
   const o = btn.querySelector('orb-avatar');
@@ -280,7 +280,7 @@ function composerFor(id: string): CardComposer | null {
     mentions: {
       label: 'Bots', foot: () => nameOf(id) + ' reads the name. The bot you name does not see this chat.',
       chips: (t) => mentionChips(t, mentionCtx(others().map((x) => ({ ...x, id: x.id, name: x.name })))),
-      entries: () => others().map((x) => ({ value: x.id, label: x.name, ...(x.role ? { desc: x.role } : {}), leadHTML: ui.html.orb(x, { size: 16, still: true }) }))
+      entries: () => others().map((x) => ({ value: x.id, label: x.name, ...(x.role ? { desc: x.role } : {}), leadHTML: orbHtml(x, { size: 16, still: true }) }))
     }
   });
   const text = (): HTMLElement | null => slot.querySelector<HTMLElement>('.k7-composer__text');
@@ -305,11 +305,11 @@ function composerFor(id: string): CardComposer | null {
     const t = (ev as CustomEvent<{ text: string }>).detail.text, x = botById(id);
     if (!t || !x) return;
     data().bots.send(id, t, 'dock');
-    ui.announce(`Sent to ${x.name}`);
+    announce(`Sent to ${x.name}`);
   };
   slot.addEventListener('ui:send', send);
   slot.addEventListener('ui:steer', send);   /* ctrl Enter sends as Enter does until the keys get their own pass (owner, 25 November) */
-  slot.addEventListener('ui:stop', () => { if (data().bots.stop(id)) ui.announce('Stopped ' + nameOf(id)); });
+  slot.addEventListener('ui:stop', () => { if (data().bots.stop(id)) announce('Stopped ' + nameOf(id)); });
   slot.addEventListener('ui:dictate', (ev) => listen((ev as CustomEvent<{ on: boolean }>).detail.on));
   /* Esc while dictating stops dictating (the card stays), and alt+V switches the mic or talks while held: the kit Composer's own keys */
   made.draw();
@@ -375,7 +375,7 @@ function openPanel(open: NonNullable<Open>, focus = true): void {
     const to = open.kind === 'card' ? X.panel?.querySelector<HTMLElement>('.k7-composer__text') : X.panel?.querySelector<HTMLElement>('[data-kit~="AskCard"] [data-hold]');
     (to ?? X.panel?.querySelector<HTMLElement>('button'))?.focus({ preventScroll: true });
   }
-  if (open.kind === 'card') ui.announce('Card of ' + nameOf(open.id)); else ui.announce('Waiting on you');
+  if (open.kind === 'card') announce('Card of ' + nameOf(open.id)); else announce('Waiting on you');
   emitDock();
 }
 /** back to the row: the panel shrinks with the slab (it clips by its own overflow) and goes once the slab has settled */
@@ -473,7 +473,7 @@ function setHover(id: string | null): void { if (S.hover === id) return; awake(S
 function awake(id: string | null, on: boolean): void {
   const b = botById(id), o = id ? X.orbs.get(id)?.querySelector<HTMLElement & { _hover?: boolean }>('orb-avatar') : null;
   if (!b || !o) return;
-  const r = X.composers.get(b.id)?.listening ? 'listening' : ui.botState(b).reaction;
+  const r = X.composers.get(b.id)?.listening ? 'listening' : botState(b).reaction;
   if (!on) { if (o._hover) { o._hover = false; restReact(o, r); } return; }   /* only a bot this woke is put back */
   if (r !== 'idle' || reduced()) return;
   o._hover = true;   /* restReact leaves a woken orb alone until the pointer has left */
@@ -642,7 +642,7 @@ function mount(slot: HTMLElement): void {
   document.addEventListener('pointerdown', (e) => {
     if (!S.open) return;
     const t = e.target as Element | null;
-    if (!t || X.root.contains(t) || t.closest('[data-floating], .ui-menu, .ui-pop, .ui-listbox, .k7-pop, .ui-tip')) return;
+    if (!t || X.root.contains(t) || t.closest('[data-floating], .k7-pop, .k7-tip')) return;
     closePanel(false);
   }, true);
   if (document.fonts?.addEventListener) document.fonts.addEventListener('loadingdone', () => layoutRow());

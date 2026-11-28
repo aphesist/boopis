@@ -57,7 +57,8 @@ export interface PopoverOpts extends LayerOpts { label?: string | undefined; /**
 export const popover = {
   /** a dialog-like layer with a focus loop */
   open(anchor: HTMLElement, content: Node, o: PopoverOpts = {}): HTMLElement | null {
-    const node = frag('<div class="ui-pop" role="dialog"' + attrs({ 'aria-label': o.label }) + '></div>');
+    /* the kit's popover surface (the Menu's floating pop, menu.css `.k7-pop`): --bg-3, radius 16, the float line */
+    const node = frag('<div class="k7-pop" role="dialog" data-kit="Menu" data-variant="popover" data-sq data-sq-mode="surface"' + attrs({ 'aria-label': o.label }) + '></div>');
     node.appendChild(content);
     if (!openLayerAt(anchor, node, o)) return null;
     const f = node.querySelector<HTMLElement>('[data-autofocus]') ?? node.querySelector<HTMLElement>('button, input, textarea, select, [tabindex="0"]');

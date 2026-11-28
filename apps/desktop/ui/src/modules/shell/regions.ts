@@ -128,6 +128,8 @@ export function startLeader(withMod: boolean): void {
   if (leader) clearTimeout(leader.t);
   const hint = $('#hx-goto', sh.app);
   hint.hidden = false;
+  /* the kit's Tooltip surface (2b: its look is the kit's, shell.css only places it): "Go to", then each key and where it goes */
+  hint.classList.add('k7-tip'); hint.setAttribute('data-kit', 'Tooltip');
   hint.innerHTML = '<span class="hx-goto__title">Go to</span>' + ([['L', 'list'], ['M', 'conversation'], ['I', 'composer'], ['P', 'panel'], ['D', 'dock'], ['S', 'Session'], ['B', 'Bots'], ['1-9', 'bot in the dock']] as Array<[string, string]>).concat(withMod ? [] : [['G', 'first turn']])
     .map(([k, l]) => '<span class="hx-goto__opt">' + kit.html.kbd({ keys: k }) + esc(l) + '</span>').join('');
   leader = { t: window.setTimeout(endLeader, 1600), withMod };

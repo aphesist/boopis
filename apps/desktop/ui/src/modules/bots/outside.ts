@@ -4,7 +4,7 @@
    a stamp (nothing is owed), never colour. It goes once any boopis setting is saved for the bot (the store exists then).
    The sentence is its tooltip and its accessible description; the visible words stay short and the row's name carries them. */
 import { el, frag } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { kit } from '@boopis/ui';
 
 export const OUTSIDE_LABEL = 'made outside boopis';
 export const OUTSIDE_WORDS = 'Made outside boopis, for example on the command line. boopis keeps its look and settings once you change them here.';
@@ -15,7 +15,7 @@ export const OUTSIDE_SHORT = 'outside';
 export const outsideDescription = (id: string): HTMLElement => el('span', { class: 'ui-sr', id, text: OUTSIDE_WORDS });
 
 /** in a roster row (markup for the row's end slot; the row is a button, so the mark is not a control: the row's description carries the sentence) */
-export const outsideRowMark = (): string => ui.html.badge({ label: OUTSIDE_SHORT, class: 'bt-outside', tip: OUTSIDE_WORDS, tipPos: 'right', attrs: { 'data-outside': true } });
+export const outsideRowMark = (): string => kit.html.badge({ text: OUTSIDE_SHORT, attrs: { 'data-outside': '', 'data-tip': OUTSIDE_WORDS, 'data-tip-pos': 'right' } });
 
 /** in the room's header: reachable by keyboard, so the tooltip shows on focus and a screen reader reads the sentence after the words */
 export function outsideRoomMark(describedBy: string): HTMLElement {

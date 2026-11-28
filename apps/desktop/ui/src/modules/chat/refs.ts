@@ -9,8 +9,8 @@
      a link       an `<a href>` the shell already hands to the system browser (`host/links.ts`)
    The surface owns its words: what "Ask in this room" and "Attach to my message" do is its own callback. */
 import { emit } from '../../core/bus';
-import { el, esc } from '../../core/dom';
-import { kit, ui } from '@boopis/ui';
+import { el } from '../../core/dom';
+import { botState, copyText, kit, modelMark, orb, pathCandidates, popover, upgradePaths } from '@boopis/ui';
 import type { BotLike, MarkdownCtx, MdBot, PathTarget } from '@boopis/ui';
 
 /** a row of the kit's Menu (the v7 menus: their key chips and corners are the kit's) */
@@ -48,7 +48,7 @@ const key = (p: string, roots: readonly string[]): string => roots.join('\u0001'
 /** turn the path candidates under `root` into buttons where the host found them; nothing is drawn for the others */
 export async function resolvePaths(root: ParentNode, roots: readonly string[]): Promise<void> {
   const src = data().files.paths; if (!src) return;
-  const want = ui.markdown.candidates(root);
+  const want = pathCandidates(root);
   if (!want.length) return;
   const ask = want.filter((p) => !RESOLVED.has(key(p, roots)));
   if (ask.length) {
@@ -62,7 +62,7 @@ export async function resolvePaths(root: ParentNode, roots: readonly string[]): 
   /* a path button is wider than its code: a conversation that was at its end stays there */
   const sc = (root as Element).closest?.('.ui-scroll') as HTMLElement | null | undefined;
   const atEnd = !!sc && sc.scrollHeight - sc.scrollTop - sc.clientHeight < 48;
-  ui.markdown.upgradePaths(root, map);
+  upgradePaths(root, map);
   if (sc && atEnd) sc.scrollTop = sc.scrollHeight;
   for (const b of root.querySelectorAll<HTMLElement>('[data-path][data-abs]')) {
     const r = RESOLVED.get(key(b.dataset['path'] ?? '', roots));
@@ -95,29 +95,30 @@ async function pathMenu(b: HTMLElement, o: RefsOpts): Promise<void> {
       if (v === 'open') openPath(p);
       else if (v.startsWith('editor:')) openPath(p, v.slice(7));
       else if (v === 'reveal') src.reveal(p.abs).catch((e: unknown) => { kit.notify('It could not be shown: ' + sentence(e)); });
-      else if (v === 'copy') void ui.copyText(p.abs, 'Copied the path');
-      else if (v === 'copy-rel' && p.rel) void ui.copyText(p.rel, 'Copied the path');
+      else if (v === 'copy') void copyText(p.abs, 'Copied the path');
+      else if (v === 'copy-rel' && p.rel) void copyText(p.rel, 'Copied the path');
       else if (v === 'attach') o.attach?.(p);
     }
   });
 }
 
 /* ───────── mentions ───────── */
-function openChat(id: string): void { ui.popover.close(false); emit('hx:bot-select', { id, from: 'mention' }); }
+function openChat(id: string): void { popover.close(false); emit('hx:bot-select', { id, from: 'mention' }); }
 function openSettings(id: string): void { openChat(id); emit('hx:bot-settings', { open: true, from: 'mention' }); }
 /** the card a mention shows: the bot's orb, its name and role, what it is doing and on which model, and the two ways to reach it */
 export function mentionCard(r: RefBot, o: Pick<RefsOpts, 'ask'>): HTMLElement {
-  const s = ui.botState({ ...r.bot, state: r.state ?? r.bot.state ?? 'idle' });
+  const s = botState({ ...r.bot, state: r.state ?? r.bot.state ?? 'idle' });
   const line = el('p', { class: 'ch-card__line' });
-  line.insertAdjacentHTML('beforeend', '<span class="ch-card__state">' + (s.busy ? ui.html.dot('run', { size: 's' }) : s.attention ? ui.html.dot('attention', { size: 's' }) : '') + '<span>' + esc(s.word) + '</span></span>');
-  if (r.model) line.insertAdjacentHTML('beforeend', '<span class="ch-card__model">' + ui.html.model(r.model, { size: 12, mono: false }) + '</span>');
+  /* its state as the kit's StatusWord (a dot while it works or needs you), its model as the kit's InlineChip */
+  line.insertAdjacentHTML('beforeend', kit.html.statusWord({ text: s.word, tone: s.attention ? 'owe' : 'neutral', dot: s.busy || !!s.attention, pulse: s.busy }));
+  if (r.model) line.insertAdjacentHTML('beforeend', kit.html.inlineChip({ kind: 'model', model: r.model, text: modelMark.short(r.model) || r.model }));
   if (r.where) line.append(el('span', { text: 'in ' + r.where }));
   const acts = el('div', { class: 'ch-card__acts' });
-  const open = ui.button({ label: 'Open chat', size: 's', variant: 'primary' });
+  const open = kit.button({ label: 'Open chat', size: 28, variant: 'primary' });
   open.addEventListener('click', () => { openChat(r.bot.id); });
   acts.append(open);
-  if (o.ask) { const ask = o.ask; const a = ui.button({ label: 'Ask in this room', size: 's' }); a.addEventListener('click', () => { ui.popover.close(false); ask(r.bot.id); }); acts.append(a); }
-  const top = el('div', { class: 'ch-card__top' }, [ui.orb(r.bot, { size: 40, state: s.reaction === 'idle' ? 'idle' : (r.state ?? 'idle') }), el('div', { class: 'ch-card__who' }, [el('p', { class: 'ch-card__name', text: r.bot.name }), r.bot.role ? el('p', { class: 'ch-card__role', text: r.bot.role }) : null])]);
+  if (o.ask) { const ask = o.ask; const a = kit.button({ label: 'Ask in this room', size: 28, variant: 'secondary' }); a.addEventListener('click', () => { popover.close(false); ask(r.bot.id); }); acts.append(a); }
+  const top = el('div', { class: 'ch-card__top' }, [orb(r.bot, { size: 40, state: s.reaction === 'idle' ? 'idle' : (r.state ?? 'idle') }), el('div', { class: 'ch-card__who' }, [el('p', { class: 'ch-card__name', text: r.bot.name }), r.bot.role ? el('p', { class: 'ch-card__role', text: r.bot.role }) : null])]);
   return el('div', { class: 'ch-card' }, [top, line, acts]);
 }
 function mentionMenu(b: HTMLElement, id: string, o: RefsOpts): void {
@@ -135,9 +136,9 @@ export function wireRefs(root: HTMLElement, o: RefsOpts): void {
   const cancel = (): void => { window.clearTimeout(timer); timer = 0; };
   const showCard = (b: HTMLElement): void => {
     const id = b.dataset['mention'] ?? ''; const r = o.bot(id); if (!r) return;
-    if (ui.popover.current && carded === b) return;
+    if (popover.current && carded === b) return;
     carded = b;
-    ui.popover.open(b, mentionCard(r, o), { label: r.bot.name, focus: false, onClose: () => { carded = null; } });
+    popover.open(b, mentionCard(r, o), { label: r.bot.name, focus: false, onClose: () => { carded = null; } });
   };
   const later = (b: HTMLElement): void => { cancel(); timer = window.setTimeout(() => { if (b.isConnected && (b.matches(':hover') || b.matches(':focus-visible'))) showCard(b); }, HOVER_MS); };
   const target = (e: Event): HTMLElement | null => (e.target as Element | null)?.closest<HTMLElement>('[data-mention], [data-path][data-abs]') ?? null;
@@ -145,7 +146,7 @@ export function wireRefs(root: HTMLElement, o: RefsOpts): void {
     const t = target(e); if (!t) return;
     e.preventDefault();
     cancel();
-    if (t.matches('.ui-path')) { openPath(pathOf(t)); return; }
+    if (t.matches('[data-path]')) { openPath(pathOf(t)); return; }
     const id = t.dataset['mention'] ?? '';
     if (id === '@all') return;
     openChat(id);
@@ -153,17 +154,17 @@ export function wireRefs(root: HTMLElement, o: RefsOpts): void {
   root.addEventListener('contextmenu', (e) => {
     const t = target(e); if (!t) return;
     e.preventDefault(); cancel();
-    if (t.matches('.ui-path')) void pathMenu(t, o); else if (t.dataset['mention'] !== '@all') mentionMenu(t, t.dataset['mention'] ?? '', o);
+    if (t.matches('[data-path]')) void pathMenu(t, o); else if (t.dataset['mention'] !== '@all') mentionMenu(t, t.dataset['mention'] ?? '', o);
   });
   root.addEventListener('keydown', (e) => {
     const t = target(e); if (!t || e.target !== t) return;
     if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
       e.preventDefault(); cancel();
-      if (t.matches('.ui-path')) void pathMenu(t, o); else if (t.dataset['mention'] !== '@all') mentionMenu(t, t.dataset['mention'] ?? '', o);
+      if (t.matches('[data-path]')) void pathMenu(t, o); else if (t.dataset['mention'] !== '@all') mentionMenu(t, t.dataset['mention'] ?? '', o);
     }
   });
-  root.addEventListener('pointerover', (e) => { const t = target(e); if (t?.matches('.ui-mention') && t.dataset['mention'] !== '@all') later(t); });
+  root.addEventListener('pointerover', (e) => { const t = target(e); if (t?.matches('[data-mention]') && t.dataset['mention'] !== '@all') later(t); });
   root.addEventListener('pointerout', (e) => { const t = target(e); if (t && !t.contains(e.relatedTarget as Node | null)) cancel(); });
-  root.addEventListener('focusin', (e) => { const t = target(e); if (t?.matches('.ui-mention') && t.dataset['mention'] !== '@all') later(t); });
+  root.addEventListener('focusin', (e) => { const t = target(e); if (t?.matches('[data-mention]') && t.dataset['mention'] !== '@all') later(t); });
   root.addEventListener('focusout', () => { cancel(); });
 }

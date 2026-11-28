@@ -28,7 +28,7 @@ describe('the window group', () => {
     expect(g.getAttribute('aria-label')).toBe('Window');
     const buttons = [...g.querySelectorAll('button')];
     expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Minimize', 'Maximize', 'Close window']);
-    for (const b of buttons) expect(b.className).toContain('ui-ib--window');
+    for (const b of buttons) expect([b.getAttribute('data-kit'), b.dataset['variant']]).toEqual(['IconButton', 'ghost']);
   });
 
   it('draws each layout: close alone, the three, the three in macOS\'s order', () => {

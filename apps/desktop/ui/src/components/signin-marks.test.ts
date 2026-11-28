@@ -2,28 +2,30 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ui } from '@boopis/ui';
-import { markOf, SIGNIN_BRANDS, signinLabel } from './signin-button';
+import { markOf, SIGNIN_BRANDS, signinButton, signinLabel } from './signin-marks';
 import { brandOf } from '../host/signin-brands';
 import { entries } from '../data/providers';
 
 const VENDOR = join(__dirname, '..', 'vendor', 'signin-marks');
 const pathsOf = (svg: string): string[] => [...svg.matchAll(/\sd="([^"]+)"/g)].map((m) => m[1] ?? '');
 
-describe('the branded sign-in buttons (ADR-0040)', () => {
+const el = (o: Parameters<typeof signinButton>[0]): HTMLButtonElement => { const t = document.createElement('template'); t.innerHTML = signinButton(o); return t.content.firstElementChild as HTMLButtonElement; };
+
+describe('the branded sign-in buttons (ADR-0040; 2b: the kit\'s Button led by the lab\'s mark)', () => {
   it('has one for each of the four labs, "Continue with <lab>", and the words are its accessible name', () => {
     expect(SIGNIN_BRANDS).toEqual(['chatgpt', 'github', 'claude', 'xai']);
     const names = SIGNIN_BRANDS.map((b) => {
-      const el = ui.signinButton({ brand: b });
-      expect(el.querySelector('.ui-sso__logo')?.getAttribute('aria-hidden'), 'the logo is hidden from screen readers: the words name the button').toBe('true');
-      expect(el.querySelector('svg')).toBeTruthy();
-      return el.textContent?.replace(/\s+/g, ' ').trim();
+      const e = el({ brand: b });
+      expect(e.getAttribute('data-kit')).toBe('Button');
+      expect(e.querySelector('.hx-sso__logo')?.getAttribute('aria-hidden'), 'the logo is hidden from screen readers: the words name the button').toBe('true');
+      expect(e.querySelector('svg')).toBeTruthy();
+      return e.textContent?.replace(/\s+/g, ' ').trim();
     });
     expect(names).toEqual(['Sign in with ChatGPT', 'Sign in with GitHub', 'Sign in with Claude', 'Sign in with xAI']);
     expect(signinLabel('chatgpt')).toBe('Sign in with ChatGPT');
   });
   it('is one shell: the same markup and class for every lab, so none is more prominent', () => {
-    const shapes = new Set(SIGNIN_BRANDS.map((b) => ui.signinButton({ brand: b }).outerHTML.replace(/data-brand="\w+"/, '').replace(/<span class="ui-sso__logo"[\s\S]*?<\/span><span class="ui-sso__label">[^<]*<\/span>/, '')));
+    const shapes = new Set(SIGNIN_BRANDS.map((b) => el({ brand: b }).outerHTML.replace(/data-brand="\w+"/, '').replace(/<span class="hx-sso__logo"[\s\S]*?<\/span><span class="k7-btn__label">[^<]*<\/span>/, '')));
     expect(shapes.size).toBe(1);
   });
   it('draws ChatGPT, GitHub and Copilot from the labs\' own files, unmodified in their paths, in pure black and pure white', () => {
@@ -35,7 +37,7 @@ describe('the branded sign-in buttons (ADR-0040)', () => {
       expect(pathsOf(m.white), key).toEqual(pathsOf(w));
       expect(m.black + m.white, 'never recoloured: no colour is added to the lab\'s file').not.toMatch(/#D97757/i);
     }
-    const html = ui.signinButton({ brand: 'chatgpt' }).outerHTML;
+    const html = el({ brand: 'chatgpt' }).outerHTML;
     expect(html.match(/data-ink="/g)?.length, 'both inks are there; the preset shows the one that reads').toBe(2);
   });
   it('draws Claude from Anthropic\'s own file at its own colour, and xAI from its mark in flat black or white', () => {
@@ -57,7 +59,7 @@ describe('the branded sign-in buttons (ADR-0040)', () => {
     expect(brandOf('openai.key')).toBeNull();
   });
   it('is disabled with its words and no click', () => {
-    const b = ui.signinButton({ brand: 'github', disabled: true });
+    const b = el({ brand: 'github', disabled: true });
     expect(b.disabled).toBe(true);
   });
 });

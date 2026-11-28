@@ -20,6 +20,8 @@
 .k7-field__input::-webkit-search-cancel-button, .k7-field__input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
 .k7-field__input:focus-visible { outline: none; }   /* the box draws the ring (`:focus-within` below); the input never draws a second one */
 .k7-field__input.k7-mono { font-family: var(--mono); font-size: var(--fs-xs); }
+/* autofill keeps the theme's colours (2b: the rule the v6 field kept, on the kit's own field): the platform's yellow never shows */
+.k7-field__input:-webkit-autofill, .k7-field__input:-webkit-autofill:hover, .k7-field__input:-webkit-autofill:focus { -webkit-text-fill-color: var(--text); caret-color: var(--text); transition: background-color 9999s; }
 @media (hover: hover) and (pointer: fine) { .k7-field__box:hover { box-shadow: inset 0 0 0 var(--hl) var(--text-quiet); transition-duration: var(--dur-1); } }
 .k7-field__box:focus-within { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-off); }
 .k7-field[data-error] .k7-field__box { box-shadow: inset 0 0 0 var(--hl) var(--red); }

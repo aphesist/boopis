@@ -1,7 +1,7 @@
 /* Which ways of the catalogue get a branded sign-in button (ADR-0040): ChatGPT (`openai.signin`), GitHub for Copilot
    (`github-copilot.signin`), xAI's SuperGrok (`xai.signin`) and Claude Code's own login (`anthropic.signin`). Everything else
    keeps the plain button: a key row says "Add key", Gemini is a key and never gets the Google mark, and the grok program
-   (`xai.cli`) is not a sign-in of xAI's but a program the person runs. The buttons themselves are the kit's (`ui.signinButton`). */
+   (`xai.cli`) is not a sign-in of xAI's but a program the person runs. The buttons themselves are the kit's Button led by the lab's mark (`signinButton`). */
 import type { SigninBrand } from '@boopis/ui';
 
 const BRAND_OF: Readonly<Record<string, SigninBrand>> = {

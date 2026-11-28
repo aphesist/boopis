@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /* The endpoint flow (ADR-0039): Test, then Save; the key is typed once, held in memory only and never in the page's text. */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ui } from '@boopis/ui';
+import { card } from '@boopis/ui';
 import '../modules/cards';
 import { setProvider } from '../data';
 import type { FormSpec, FormsSource } from '../data';
@@ -27,7 +27,7 @@ function harness(test: () => Promise<EndpointTest>) {
     card(spec: FormSpec, handlers: FlowHandlers) {
       const src: FormsSource = { submit: handlers.submit, cancel: handlers.cancel, signin: () => Promise.reject(new Error('no')), can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null) };
       useFormsHost(src);
-      return ui.card('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
+      return card('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
     },
     show: (...kids) => { host.replaceChildren(...kids); },
     back: () => { log.backs += 1; },

@@ -15,7 +15,7 @@
    The card starts at its button, or at the page and code when a sign-in already waits in the host (a redrawn view picks it
    up again). `destroy` takes the card away and stops listening; the host's wait goes on (Cancel ends it, and so does the
    code's lifetime). A flow with no code to type gives `code: ''`, and the card then shows the page button and the wait only. */
-import { ui } from '@boopis/ui';
+import { kit, signinButton } from '@boopis/ui';
 import type { SigninBrand } from '@boopis/ui';
 import { commands, events } from './bindings';
 import type { ProviderState, SigninCode } from './bindings';
@@ -97,9 +97,17 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record
   return node;
 }
 function button(text: string, variant: 'primary' | 'ghost' | '', onClick: () => void, attrs: Partial<Record<string, string>> = {}): HTMLButtonElement {
-  const b = ui.button({ label: text, type: 'button', ...(variant ? { variant } : {}), attrs });
+  const { disabled, ...rest } = attrs;
+  const b = kit.button({ label: text, variant: variant || 'secondary', size: 32, ...(disabled != null ? { disabled: true } : {}), attrs: rest }) as HTMLButtonElement;
   b.addEventListener('click', (e) => { e.preventDefault(); onClick(); });
   return b;
+}
+
+/** the lab's own sign-in (ADR-0040): the kit's Button led by its mark */
+function brandButton(brand: SigninBrand, disabled: boolean): HTMLButtonElement {
+  const t = document.createElement('template');
+  t.innerHTML = signinButton({ brand, disabled, attrs: { 'data-act': 'start' } });
+  return kit.wire(t.content.firstElementChild as HTMLButtonElement);
 }
 
 /** Put the sign-in card into `host`. */
@@ -116,7 +124,7 @@ export function mountSigninCard(host: HTMLElement, bridge: SigninBridge, copy: S
     const kids: Node[] = [];
     if (note) kids.push(el('p', { role: alert ? 'alert' : 'status', style: 'margin:0;color:' + (alert ? 'var(--red-text)' : 'var(--text-dim)') }, note));
     if (copy.brand && !note) {
-      const b = ui.signinButton({ brand: copy.brand, attrs: { 'data-act': 'start' } });
+      const b = brandButton(copy.brand, false);
       b.addEventListener('click', (e) => { e.preventDefault(); void begin(); });
       kids.push(b);
     } else kids.push(button(note ? 'Try again' : (opts.label ?? copy.button), 'primary', () => { void begin(); }, { 'data-act': 'start' }));
@@ -158,7 +166,7 @@ export function mountSigninCard(host: HTMLElement, bridge: SigninBridge, copy: S
     idle(e.message || 'The sign-in did not finish.', e.outcome !== 'cancelled');
   };
   const begin = async (): Promise<void> => {
-    if (copy.brand) draw(ui.signinButton({ brand: copy.brand, disabled: true, attrs: { 'data-act': 'start' } }));
+    if (copy.brand) draw(brandButton(copy.brand, true));
     else draw(button(copy.starting, 'primary', () => undefined, { disabled: '', 'data-act': 'start' }));
     try {
       stop ??= await bridge.onEnd(ended).catch(() => null);

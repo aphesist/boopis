@@ -11,7 +11,7 @@ import type { SlotName } from '../../core/registry';
 import { followScheme, followWindowWidth, prefs, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
 import { loadLook, TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
-import { kit, ui } from '@boopis/ui';
+import { icon, kit, popover, squircle } from '@boopis/ui';
 import { applyChromePrefs, drawChrome, drawSideFoot, drawSideHead, selectTab, syncV7Theme } from './chrome';
 import { mountSettings } from '../settings';
 import { applyLook } from '../../styles/v7-look';
@@ -31,7 +31,7 @@ import { closePalette, openPalette, renderPalette, resetActive, runPal } from '.
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
-ui.squircle.auto('.hx-goto', { mode: 'surface' });
+squircle.auto('.hx-goto', { mode: 'surface' });
 
 const log = logger('shell');
 
@@ -81,7 +81,7 @@ function applyState(): void {
 
 /* ───────── the keyboard ───────── */
 const typingIn = (n: Element | null): boolean => !!n && (n.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]') || !!n.closest('[contenteditable="true"]'));
-const layerOpen = (): boolean => !els().palette.hidden || els().settings.open || !!(document.getElementById('hx-store') as HTMLDialogElement | null)?.open || !!(document.getElementById('hx-keys-sheet') as HTMLDialogElement | null)?.open || !!ui.popover.current;
+const layerOpen = (): boolean => !els().palette.hidden || els().settings.open || !!(document.getElementById('hx-store') as HTMLDialogElement | null)?.open || !!(document.getElementById('hx-keys-sheet') as HTMLDialogElement | null)?.open || !!popover.current;
 
 function onKey(e: KeyboardEvent): void {
   if (e.defaultPrevented || e.isComposing) return;
@@ -147,7 +147,9 @@ function mountModule(name: SlotName): void {
 }
 /** a module that failed shows what happened, never invented content */
 function notice(slot: HTMLElement, name: string): void {
-  slot.innerHTML = '<div class="hx-stub"><div class="hx-stub-empty">' + ui.html.empty({ title: 'This part did not load', text: 'The ' + name + ' module failed to start. Reload the window; the error is in the log.' }) + '</div></div>';
+  /* the kit's EmptyState: one line and its one action (the copy rules) */
+  slot.innerHTML = '<div class="hx-stub"><div class="hx-stub-empty">' + kit.html.emptyState({ text: 'The ' + name + ' part didn’t load.', action: 'Reload' }) + '</div></div>';
+  slot.querySelector('.hx-stub-empty button')?.addEventListener('click', () => { location.reload(); });
   slot.dataset['module'] = name + ' (failed)';
 }
 
@@ -166,7 +168,7 @@ export function boot(): void {
   const el = els();
 
   // icons: one set, from the library
-  $$('[data-icon]', app).forEach((n) => { n.outerHTML = ui.icon(n.dataset['icon'] ?? ''); });
+  $$('[data-icon]', app).forEach((n) => { n.outerHTML = icon(n.dataset['icon'] ?? ''); });
 
   /* the floating Notice's place: just above the open view's composer, or above the dock (notices.ts) */
   mountNotices();
@@ -175,7 +177,6 @@ export function boot(): void {
   mountSettings($<HTMLDialogElement>('#hx-settings', app));
 
   // keyboard chips in static markup
-  $$('kbd[data-kbd]', app).forEach((k) => { k.outerHTML = ui.html.keys(k.dataset['kbd'], k.hasAttribute('data-fit') ? { fit: true } : undefined); });
   el.btnNew.setAttribute('aria-keyshortcuts', ariaKeys('mod+shift+O'));
   // shortcuts for assistive tech
   for (const n of $$('[data-kbd]', app)) n.setAttribute('aria-keyshortcuts', ariaKeys(n.dataset['kbd'] ?? ''));

@@ -8,7 +8,7 @@
 
    Built from the v7 kit only (step 7a): a section head and a settings Card of rows per lab, the search Field, filter Chips, Buttons and
    StatusWords, and the one form card family. A lab's own sign-in button keeps its brand (ADR-0040). No CSS of its own. */
-import { kit, ui } from '@boopis/ui';
+import { card as hostCard, kit, signinButton } from '@boopis/ui';
 import type { RowOpts } from '@boopis/ui';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
@@ -95,7 +95,7 @@ export const installActions = (hint: InstallHint): Action[] => [
 /** the command line under a row or on a plate: where to paste it, then the command as the kit's code (on a line of its own where
     the column is narrow, so it wraps at its spaces and not after the first word) */
 export const installLineHtml = (hint: InstallHint, cls: string, ownLine = false): string =>
-  `<p class="${cls}" data-install>In ${esc(hint.shell)}: ${ownLine ? '<br>' : ''}${ui.html.code(hint.command)}</p>`;
+  `<p class="${cls}" data-install>In ${esc(hint.shell)}: ${ownLine ? '<br>' : ''}${kit.html.inlineChip({ kind: 'code', text: hint.command })}</p>`;
 
 /** the word a way's state gets (text, never colour alone) */
 export function statusWord(state: ProviderState | null | undefined): string {
@@ -206,7 +206,7 @@ export function plan(states: ReadonlyMap<string, ProviderState>, filter: Filter,
 const button = (a: Action, way: string, label: string, calm = false): string => {
   /* a sign-in button of a lab with a brand is that lab's own (ADR-0040); its name is its words, so it needs no label of ours */
   const brand = a.do === 'signin' ? brandOf(way) : null;
-  if (brand) return ui.html.signinButton({ brand, attrs: { 'data-do': a.do, 'data-way': way } });
+  if (brand) return signinButton({ brand, attrs: { 'data-do': a.do, 'data-way': way } });
   return plainButton(calm ? { ...a, primary: false } : a, way, label);
 };
 const plainButton = (a: Action, way: string, label: string): string => kit.html.button({
@@ -329,7 +329,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     deps.onStates?.(states);
     if (readError && !states.size) { body.innerHTML = ''; say(); return; }
     body.innerHTML = (deps.layout?.planHtml ?? planHtml)(plan(states, filter, query), canSignin, tailOpen);
-    if (deps.layout) ui.hydrate(body); else kit.wire(body);
+    kit.wire(body);
     say();
   };
 
@@ -360,7 +360,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   const later = (fn: () => void): void => { window.setTimeout(() => { if (flowOpen) fn(); }, settle); };
   const cardOf = (spec: FormSpec, handlers: FlowHandlers): HTMLElement => {
     useFormsHost(sink(handlers));
-    const c = ui.card('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
+    const c = hostCard('form', spec as unknown as Record<string, unknown>, { size: 'inline' });
     queueMicrotask(() => { focusForm(c); });
     return c;
   };

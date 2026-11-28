@@ -5,7 +5,7 @@
    lays out every group it is given by the same rule (`resolveControls`: close alone on a tiling desktop, macOS's order, the
    Settings preference), so a layer's bar and the shell's never disagree. In the page build (no host) the buttons keep the
    browser's stand-ins: full screen for maximise, a note for the two that need a window. */
-import { kit, ui } from '@boopis/ui';
+import { icon, kit } from '@boopis/ui';
 import { on } from '../core/bus';
 import { loadWindowPref, saveWindowPref } from '../core/settings';
 import { logger } from '../core/log';
@@ -21,16 +21,16 @@ type WinState = { maximized: boolean; fullscreen: boolean };
 /** the three buttons of a group, found by their `data-win` */
 const part = (group: HTMLElement, which: Which): HTMLElement | null => group.querySelector<HTMLElement>(`[data-win="${which}"]`);
 
-/** The window group as the shell's bar has it (index.html): the kit's window buttons (`ui.iconButton({ window: true })`). */
+/** The window group as a full-window layer's bar has it: the kit's window buttons (IconButton, ghost: the kit's window controls). */
 export function windowGroup(): HTMLElement {
   const group = document.createElement('div');
   group.className = 'hx-win';
   group.setAttribute('role', 'group');
   group.setAttribute('aria-label', 'Window');
   group.append(
-    ui.iconButton({ icon: 'minimize', label: 'Minimize', window: true, attrs: { 'data-win': 'min' } }),
-    ui.iconButton({ icon: 'maximize', label: 'Maximize', window: true, attrs: { 'data-win': 'max' } }),
-    ui.iconButton({ icon: 'close', label: 'Close window', window: true, attrs: { 'data-win': 'close' } }));
+    kit.iconButton({ icon: 'minimize', label: 'Minimize', variant: 'ghost', attrs: { 'data-win': 'min' } }),
+    kit.iconButton({ icon: 'maximize', label: 'Maximize', variant: 'ghost', attrs: { 'data-win': 'max' } }),
+    kit.iconButton({ icon: 'close', label: 'Close window', variant: 'ghost', attrs: { 'data-win': 'close' } }));
   return group;
 }
 
@@ -54,9 +54,9 @@ export function maxLabel(state: WinState | null, layout: ControlsLayout, pageFul
 function syncMax(group: HTMLElement, state: WinState | null): void {
   const b = part(group, 'max');
   if (!b) return;
-  const { label, icon } = maxLabel(state, (group.dataset['layout'] as ControlsLayout | undefined) ?? 'all', !!document.fullscreenElement);
-  /* the glyph keeps the size its button drew it at: the v7 chrome's 16 (the kit's `k7-ic`), the v6 bars' own */
-  b.innerHTML = b.closest('[data-kit~="WindowChrome"], .k7-chrome') ? ui.icon(icon, { size: 'm', class: 'k7-ic' }) : ui.icon(icon);
+  const { label, icon: glyph } = maxLabel(state, (group.dataset['layout'] as ControlsLayout | undefined) ?? 'all', !!document.fullscreenElement);
+  /* the glyph as the kit draws it (16, `k7-ic`) */
+  b.innerHTML = icon(glyph, { size: 'm', class: 'k7-ic' });
   b.dataset['tip'] = label;
   b.setAttribute('aria-label', label);
 }

@@ -1,8 +1,6 @@
-/* The branded sign-in button (the owner's decisions of 21 November 2026, ADR-0040: brand marks are allowed on sign-in buttons, and
-   the style is "A1": one shared shell in the theme's neutral fills, with each lab's actual logo unrecoloured).
-   One shell for all four labs, "Sign in with <lab>", the same size and weight for every button so no lab looks more prominent
-   (OpenAI, Google, Apple and X ask for equal prominence). The shell is drawn from the preset's tokens, so it is a light button
-   in the light presets and a dark one in the dark presets.
+/* The labs' marks and the branded sign-in button (the owner's decisions of 21 November 2026, ADR-0040: brand marks are allowed on
+   sign-in buttons, each lab's actual logo unrecoloured). 2b: the button is the kit's Button (secondary, 36) led by the lab's mark, the
+   same for all four labs, "Sign in with <lab>", so no lab looks more prominent (OpenAI, Google, Apple and X ask for equal prominence).
 
    Marks are never recoloured: the labs' own files, unmodified in vendor/signin-marks (with their notes). ChatGPT, GitHub, Copilot
    and xAI are flat black or white (the preset shows the one that reads); Claude keeps #D97757. The xAI mark is a faithful vector of
@@ -19,7 +17,7 @@ import copilotBlack from '../vendor/signin-marks/github-copilot-icon-black.svg?r
 import copilotWhite from '../vendor/signin-marks/github-copilot-icon-white.svg?raw';
 import claudeLogo from '../vendor/signin-marks/claude-logo.svg?raw';
 import xaiLogo from '../vendor/signin-marks/xai-logo.svg?raw';
-import { esc } from '../core/dom';
+import { button } from './v7/button/button';
 
 export type SigninBrand = 'chatgpt' | 'github' | 'claude' | 'xai';
 export const SIGNIN_BRANDS: readonly SigninBrand[] = ['chatgpt', 'github', 'claude', 'xai'];
@@ -62,18 +60,14 @@ export const signinLabel = (brand: SigninBrand, verb = 'Sign in'): string => `${
 /** a lab's logo as markup: both inks for a black-or-white file (the preset shows the one that reads), or the mark's own colour */
 export function signinMark(key: SigninBrand | 'copilot'): string {
   const m = MARKS[key];
-  if ('colour' in m) return `<span class="ui-sso__ink" data-ink="colour">${m.colour}</span>`;
-  return `<span class="ui-sso__ink" data-ink="black">${m.black}</span><span class="ui-sso__ink" data-ink="white">${m.white}</span>`;
+  if ('colour' in m) return `<span class="hx-sso__ink" data-ink="colour">${m.colour}</span>`;
+  return `<span class="hx-sso__ink" data-ink="black">${m.black}</span><span class="hx-sso__ink" data-ink="white">${m.white}</span>`;
 }
 
 /** the mark in its 20 px box, hidden from screen readers (a name always sits beside it) */
-export const signinLogo = (key: SigninBrand | 'copilot'): string => `<span class="ui-sso__logo" aria-hidden="true">${signinMark(key)}</span>`;
+export const signinLogo = (key: SigninBrand | 'copilot'): string => `<span class="hx-sso__logo" aria-hidden="true">${signinMark(key)}</span>`;
 
+/** a lab's sign-in: the kit's Button, led by the lab's mark (its `leadHTML`), the lab carried as `data-brand` */
 export function signinButton(o: SigninButtonOpts): string {
-  const label = signinLabel(o.brand, o.verb);
-  const extra = Object.entries(o.attrs ?? {}).filter(([, v]) => v != null).map(([k, v]) => ` ${k}="${esc(String(v))}"`).join('');
-  return `<button type="button" class="ui-sso" data-sq data-sq-mode="clip" data-brand="${o.brand}"${o.disabled ? ' disabled' : ''}${extra}>` +
-    `${signinLogo(o.brand)}<span class="ui-sso__label">${esc(label)}</span></button>`;
+  return button({ label: signinLabel(o.brand, o.verb), variant: 'secondary', leadHTML: signinLogo(o.brand), disabled: !!o.disabled, attrs: { 'data-brand': o.brand, ...(o.attrs ?? {}) } });
 }
-
-export const signinVariants = { brand: SIGNIN_BRANDS, disabled: [false, true] } as const;

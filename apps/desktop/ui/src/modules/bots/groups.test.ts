@@ -91,11 +91,11 @@ describe('a bot that is not in the room, named in it', () => {
     const { onGroupsEvent } = await import('./group-room');
     const g = provider.groups.snapshot().groups[0]!;
     onGroupsEvent({ type: 'message', groupId: g.id, message: { kind: 'text', id: 'x1', who: g.members[0]!.id, t: '10:05', text: '@sol please confirm the tag. Thanks @kai.', round: 1, to: [] } });
-    const note = q('.bt-group .bt-outside');
+    const note = q('.bt-group [data-kit~="Notice"][data-outside]');
     expect(note.matches('[data-kit~="Notice"]')).toBe(true);
     expect(note.textContent).toContain("sol isn't in this room");
     expect(note.textContent).not.toContain('kai');
-    q<HTMLButtonElement>('.bt-group .bt-outside button').click();
+    q<HTMLButtonElement>('.bt-group [data-kit~="Notice"][data-outside] button').click();
     expect(S.view).toBe('bot');
     expect(S.sel).toBe('sol');
     expect(S.composer!.value).toContain('> @sol please confirm the tag.');
